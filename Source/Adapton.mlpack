@@ -1,5 +1,7 @@
 Adapton/All
 Adapton/Default
+Adapton/Exceptions
 Adapton/LazySANaive
+Adapton/NonSALazy
 Adapton/SAList
 Adapton/Signatures

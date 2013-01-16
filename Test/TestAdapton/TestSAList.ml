@@ -29,8 +29,15 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             let ys = List.filter pred xs in
             let zs = ys in
 
-            I.push 4 xs';
-            I.refresh ();
+            let ys' = try
+                I.push 4 xs';
+                I.refresh ();
+                ys'
+            with Adapton.Exceptions.NonSelfAdjustingValue ->
+                let xs' = I.of_list xs in
+                let ys' = I.filter pred xs' in
+                ys'
+            in
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"update" zs zs';
@@ -51,8 +58,15 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             let ys = List.append xs xs in
             let zs = ys in
 
-            I.push 4 xs';
-            I.refresh ();
+            let ys' = try
+                I.push 4 xs';
+                I.refresh ();
+                ys'
+            with Adapton.Exceptions.NonSelfAdjustingValue ->
+                let xs' = I.of_list xs in
+                let ys' = I.append xs' xs' in
+                ys'
+            in
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"update" zs zs';
@@ -75,8 +89,15 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             let ys = List.map fn xs in
             let zs = ys in
 
-            I.push 4 xs';
-            I.refresh ();
+            let ys' = try
+                I.push 4 xs';
+                I.refresh ();
+                ys'
+            with Adapton.Exceptions.NonSelfAdjustingValue ->
+                let xs' = I.of_list xs in
+                let ys' = I.map (module I) fn xs' in
+                ys'
+            in
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"update" zs zs';
@@ -103,8 +124,16 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             let ys = List.map fn xs in
             let zs = ys in
 
-            I.push 4 ws';
-            I.refresh ();
+            let ys' = try
+                I.push 4 ws';
+                I.refresh ();
+                ys'
+            with Adapton.Exceptions.NonSelfAdjustingValue ->
+                let ws' = I.of_list ws in
+                let xs' = I.filter pred ws' in
+                let ys' = I.map (module I) fn xs' in
+                ys'
+            in
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"update" zs zs';
@@ -134,8 +163,17 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             let ys = List.append xs xs in
             let zs = ys in
 
-            I.push 4 vs';
-            I.refresh ();
+            let ys' = try
+                I.push 4 vs';
+                I.refresh ();
+                ys'
+            with Adapton.Exceptions.NonSelfAdjustingValue ->
+                let vs' = I.of_list vs in
+                let ws' = I.filter pred vs' in
+                let xs' = I.map (module I) fn ws' in
+                let ys' = I.append xs' xs' in
+                ys'
+            in
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"update" zs zs';

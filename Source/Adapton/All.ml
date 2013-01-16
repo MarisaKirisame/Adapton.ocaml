@@ -2,7 +2,8 @@
 
 (** List of all names and modules for self-adjusting values. *)
 let sa_list = [
-    ( "LazySANaive", (module LazySANaive : Signatures.SAType) )
+    ( "LazySANaive", (module LazySANaive : Signatures.SAType) );
+    ( "NonSALazy", (module NonSALazy : Signatures.SAType) );
 ]
 
 (** List of all names and modules for self-adjusting lists. *)
