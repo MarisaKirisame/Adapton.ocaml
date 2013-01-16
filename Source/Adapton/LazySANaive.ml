@@ -3,16 +3,14 @@
 (** Types and operations common to lazy self-adjusting values containing any type. *)
 module T = struct
     (** Lazy self-adjusting values containing ['a]. *)
-    type 'a thunk = 'a thunk'
-    (**/**) (* auxiliary types *)
-    and 'a thunk' = {
+    type 'a thunk = {
         id : int;
-        mutable thunk : 'a thunk'';
+        mutable thunk : 'a thunk';
     }
-    and 'a thunk'' =
-        | Const of 'a const
+    (**/**) (* auxiliary types *)
+    and 'a thunk' =
+        | Const of 'a * receipt
         | Var of 'a var
-    and 'a const = 'a * receipt
     and 'a var = {
         mutable result : 'a result option;
         repair : repair;
