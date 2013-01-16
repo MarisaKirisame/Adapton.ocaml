@@ -24,7 +24,6 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
 
         (** Create a regular list from a self-adjusting list. *)
         let to_list xs =
-            refresh ();
             let rec to_list acc xs = match force xs with
                 | `Cons ( x, xs ) -> to_list (x::acc) xs
                 | `Nil -> List.rev acc
@@ -33,7 +32,6 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
 
         (** Create a regular list from the first [k] elements of a self-adjusting list. *)
         let take xs k =
-            refresh ();
             let rec take acc xs k = if k = 0 then List.rev acc else match force xs with
                 | `Cons ( x, xs ) -> take (x::acc) xs (pred k)
                 | `Nil -> List.rev acc
@@ -42,14 +40,12 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
 
         (** Return the head of a self-adjusting list. *)
         let hd xs =
-            refresh ();
             match force xs with
                 | `Cons ( x, _ ) -> x
                 | `Nil -> failwith "hd"
 
         (** Return the tail of a self-adjusting list. *)
         let tl xs =
-            refresh ();
             match force xs with
                 | `Cons ( _, xs ) -> xs
                 | `Nil -> failwith "tl"
