@@ -1,0 +1,103 @@
+# Makefile implicit rules
+
+OCAMLBUILD ?= ocamlbuild
+OCAMLFIND ?= ocamlfind
+OCAMLBUILD_BUILDDIR ?= _build
+OCAMLBUILD_PRODUCTDIR ?= _product
+OCAMLBUILD_DOCDIR ?= doc/api
+OCAMLTOP_RLWRAP_FLAGS ?= -rc
+OCAMLTOP_RLWRAP := $(shell which rlwrap)
+
+# helper to find the location of the first existing $(1) in . or $(VPATH)
+vpath_for = $(or $(firstword $(wildcard $(foreach foo,$(1),$(addsuffix /$(foo),. $(VPATH))))),$(error $(1) not found in . or VPATH="$(VPATH)"))
+
+# helper to read the contents of the first existing $(1) in . or $(VPATH)
+read_file = $(shell cat $(call vpath_for,$(1)))
+
+# ocamlbuild helper to build a target $(1), and copy the product into a directory $(2) if given;
+# if $(3) is also given, then it will be copied instead of $(1).
+# $(call OCAMLBUILD.build,<ocamlbuild targets>,<target directory>)
+define OCAMLBUILD.build
+	@echo "ocamlbuild $(1)..." && \
+	$(OCAMLBUILD) -build-dir $(OCAMLBUILD_BUILDDIR) -no-links -use-ocamlfind -classic-display \
+		$(OCAMLBUILD_FLAGS) $(VPATH:%=-I %) $(OCAMLBUILD_EXTRATARGETS) $(1) && \
+	if [ -n "$(2)" ]; then \
+		mkdir -p "$(2)" && \
+		if [ -n "$(3)" ]; then target="$(3)"; else target="$(1)"; fi && \
+		for foo in $$target; do \
+			for v in . $(VPATH); do \
+				build="$(OCAMLBUILD_BUILDDIR)/$$v/$$foo"; \
+				product="$(2)/`basename $$foo`"; \
+				if [ -e "$$build" -a ! "$$build" -ot "$$product" ]; then \
+					cp -R "$$build" "$(2)"; \
+					break; \
+				fi; \
+			done; \
+		done; \
+	fi
+endef
+
+
+# ocamlbuild: build and install into the appropriate directory
+.NOTPARALLEL : ocamlbuild//%
+
+ocamlbuild//%.native : $(OCAMLBUILD_BUILDDIR)
+	$(call OCAMLBUILD.build,$*.native,$(OCAMLBUILD_PRODUCTDIR))
+
+ocamlbuild//%.byte : $(OCAMLBUILD_BUILDDIR)
+	$(call OCAMLBUILD.build,$*.byte,$(OCAMLBUILD_PRODUCTDIR))
+
+ocamlbuild//%.cma ocamlbuild//%.cmi ocamlbuild//%.cmxa ocamlbuild//%.a : MORE_CMI = $(addsuffix .cmi,$(call read_file,$*.mllib))
+
+ocamlbuild//%.cma ocamlbuild//%.cmi : $(OCAMLBUILD_BUILDDIR)
+	$(call OCAMLBUILD.build,$*.cma $*.cmi $(MORE_CMI),$(OCAMLBUILD_PRODUCTDIR))
+
+ocamlbuild//%.cmxa ocamlbuild//%.a : ocamlbuild//%.cmi $(OCAMLBUILD_BUILDDIR)
+	$(call OCAMLBUILD.build,$*.cmxa $*.a $(MORE_CMI),$(OCAMLBUILD_PRODUCTDIR))
+
+ocamlbuild//%.top : MORE_CMI = $(addsuffix .cmi,$(call read_file,$*.mltop))
+ocamlbuild//%.top : $(OCAMLBUILD_BUILDDIR)
+	$(call OCAMLBUILD.build,$*.top $(MORE_CMI),$(OCAMLBUILD_PRODUCTDIR))
+
+
+# %.docdir requires a workaround because:
+# - ocamlbuild will not search -I include paths for targets with directory components such as %.docdir/html.stamp;
+ocamlbuild//%.docdir : DOCDIR = $(addsuffix .docdir,$(basename $(call vpath_for,$*.mlpack $*.odocl)))
+ocamlbuild//%.docdir : $(OCAMLBUILD_BUILDDIR)
+	$(call OCAMLBUILD.build,$(DOCDIR)/html.stamp,$(OCAMLBUILD_DOCDIR),$(DOCDIR))
+
+
+# recompile everything if any of the below is newer than the build directory:
+# - an ocamlfind package specified via OCAMLBUILD_FLAGS = ... pkg_% ... -pkg % ... -pkgs %,%,% ...
+# - an external dependency specified via OCAMLBUILD_DEPS
+# - any file in MAKEFILE_LIST
+EMPTY:=
+SPACE:= $(EMPTY) $(EMPTY)
+COMMA:=,
+$(OCAMLBUILD_BUILDDIR) : \
+	$(wildcard $(shell OCAMLPATH=$(OCAMLPATH) $(OCAMLFIND) query -r -format "%d/*" \
+		$(patsubst pkg_%,%,$(filter pkg_%,$(subst $(COMMA),$(SPACE),$(subst -pkg$(SPACE),pkg_,$(OCAMLBUILD_FLAGS))))) \
+		$(patsubst pkgs_%,%,$(subst $(COMMA),$(SPACE),$(filter pkgs_%,$(subst -pkgs$(SPACE),pkgs_,$(OCAMLBUILD_FLAGS)))))))
+$(OCAMLBUILD_BUILDDIR) : $(wildcard $(OCAMLBUILD_DEPS)) $(MAKEFILE_LIST)
+	$(OCAMLBUILD) -clean
+
+ocamlbuild//clean :
+	$(OCAMLBUILD) -clean
+	$(RM) -r $(OCAMLBUILD_PRODUCTDIR) $(OCAMLBUILD_DOCDIR)
+
+
+# ounit: build and run
+ounit//%.native : ocamlbuild//%.native
+	$(OCAMLBUILD_PRODUCTDIR)/$*.native $(OUNIT_FLAGS)
+
+ounit//%.byte : ocamlbuild//%.byte
+	$(OCAMLBUILD_PRODUCTDIR)/$*.byte $(OUNIT_FLAGS)
+
+
+# ocamltop: build and run
+ocamltop//%.top : USE_RECTYPES = \
+	$(shell $(OCAMLBUILD) -quiet -show-tags $(patsubst %.mltop,%.top,$(call vpath_for,$*.mltop)) \
+		| awk 'BEGIN { enable = 0 } /{./ { enable = 1 } enable && /({. |, |^ *)rectypes(,$$|, *| .})/ { print "-rectypes"; exit } /.}/ { enable = 0 }')
+ocamltop//%.top : ocamlbuild//%.top
+	$(OCAMLTOP_RLWRAP:%=% $(OCAMLTOP_RLWRAP_FLAGS)) \
+		$(OCAMLBUILD_PRODUCTDIR)/$*.top -I $(OCAMLBUILD_PRODUCTDIR) $(USE_RECTYPES) $(OCAMLTOP_FLAGS)
