@@ -18,7 +18,7 @@ module T = struct
     (** Compute whether two non-self-adjusting values are equal. *)
     let equal = (==)
 
-    (** Recompute non-self-adjusting values if necessary (unused by this module; raises Failure). *)
+    (** Recompute non-self-adjusting values if necessary (not supported by this module; raises {!NonSelfAdjustingValue}). *)
     let refresh () = raise Exceptions.NonSelfAdjustingValue
 
     (** Return the value contained by a non-self-adjusting value, computing it if necessary. *)
@@ -43,7 +43,7 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
         incr eager_id_counter;
         m
 
-    (** Update an eager non-self-adjusting value with a value. *)
+    (** Update an eager non-self-adjusting value with a value (not supported by this module; raises {!NonSelfAdjustingValue}). *)
     let update _ _ = raise Exceptions.NonSelfAdjustingValue
 
     (** Create a non-memoizing constructor for an eager non-self-adjusting value. *)

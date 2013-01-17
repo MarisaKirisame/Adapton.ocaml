@@ -40,7 +40,7 @@ module T = struct
     (** Compute whether two self-adjusting values are equal. *)
     let equal = (==)
 
-    (** Recompute self-adjusting values if necessary (a no-op unused by this module). *)
+    (** Recompute self-adjusting values if necessary (unused by this module; a no-op). *)
     let refresh () = ()
 
     (** Return the value contained by a self-adjusting value, (re-)computing it if necessary. *)
