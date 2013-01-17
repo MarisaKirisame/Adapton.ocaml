@@ -80,10 +80,17 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
 
     (** Create a lazy self-adjusting value from a constant value that does not depend on other lazy self-adjusting values. *)
     let const x =
-        let rec receipt s k = k s begin match m.thunk with
-            | Const ( value, _ ) | Var { result=Some { value; _ }; _ } -> R.equal value x
-            | Var _ -> false
-        end
+        let rec receipt s k = match m.thunk with
+            | Var { repair; _ } ->
+                repair s begin fun s -> k s begin match m.thunk with
+                    | Const ( value, _ ) | Var { result=Some { value; _ }; _ } -> R.equal value x
+                    | Var _ -> false
+                end end
+            | Const _ ->
+                k s begin match m.thunk with
+                    | Const ( value, _ ) | Var { result=Some { value; _ }; _ } -> R.equal value x
+                    | Var _ -> false
+                end
         and thunk = Const ( x, receipt )
         and id = !lazy_id_counter
         and m = { id; thunk } in
@@ -96,10 +103,18 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
             | Var v -> v.unmemo ()
             | Const _ -> ()
         end;
-        let receipt s k = k s begin match m.thunk with
-            | Const ( value, _ ) | Var { result=Some { value; _ }; _ } -> R.equal value x
-            | Var _ -> false
-        end in
+        let receipt s k = match m.thunk with
+            | Var { repair; _ } ->
+                repair s begin fun s -> k s begin match m.thunk with
+                    | Const ( value, _ ) | Var { result=Some { value; _ }; _ } -> R.equal value x
+                    | Var _ -> false
+                end end
+            | Const _ ->
+                k s begin match m.thunk with
+                    | Const ( value, _ ) | Var { result=Some { value; _ }; _ } -> R.equal value x
+                    | Var _ -> false
+                end
+        in
         m.thunk <- Const ( x, receipt )
 
     (** Create a lazy self-adjusting value from a thunk that may depend on other lazy self-adjusting values. *)

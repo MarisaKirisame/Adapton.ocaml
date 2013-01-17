@@ -9,5 +9,6 @@ end
 
 let _ =
     run_test_tt_main begin "TestAdapton" >::: [
+        TestAdapton.TestSA.testsuite;
         TestAdapton.TestSAList.testsuite;
     ] end
