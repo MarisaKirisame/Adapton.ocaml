@@ -29,7 +29,6 @@ module T = struct
 
     (**/**) (* change-propagation state *)
     let lazy_id_counter = ref 0
-    let lazy_change_propagation_level = ref 0
     let lazy_stack = ref []
     (**/**)
 
@@ -50,14 +49,7 @@ module T = struct
                 ( value, receipt )
             | Var v ->
                 (* compute the value if necessary *)
-                incr lazy_change_propagation_level;
-                begin try
-                    v.repair (Hashtbl.create 0) (fun _ -> ())
-                with exn ->
-                    decr lazy_change_propagation_level;
-                    raise exn
-                end;
-                decr lazy_change_propagation_level;
+                v.repair (Hashtbl.create 0) (fun _ -> ());
                 match v.result with
                     | Some { value; receipt; _ } ->
                         ( value, receipt )
@@ -250,10 +242,7 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
             and id = !lazy_id_counter
             and m = { id; thunk } in
             incr lazy_id_counter;
-            if !lazy_change_propagation_level > 0 then
-                snd (Memotable.merge memotable binding)
-            else
-                m
+            snd (Memotable.merge memotable binding)
         in
         memo
 end
