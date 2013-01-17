@@ -2,10 +2,10 @@
 
 (** Functor to make self-adjusting lists, given a particular module for self-adjusting values. *)
 module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist = [ `Cons of 'a * 'b | `Nil ] M.thunk as 'b = struct
-    (** Lazy self-adjusting lists containing ['a]. *)
+    (** Self-adjusting lists containing ['a]. *)
     type 'a salist = 'a salist' M.thunk
 
-    (** Constructor tags for lazy self-adjusting lists containing ['a]. *)
+    (** Constructor tags for self-adjusting lists containing ['a]. *)
     and 'a salist' = [ `Cons of 'a * 'a salist | `Nil ]
 
     (** Types and operations common to lazy self-adjusting lists containing any type. *)
@@ -54,7 +54,7 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
 
     module type S = Signatures.SAListType.S
 
-    (** Functor to make various list constructors, mutators, and combinators for lazy self-adjusting lists of a specific type. *)
+    (** Functor to make various list constructors, mutators, and combinators for self-adjusting lists of a specific type. *)
     module Make (R : Hashtbl.HashedType) : Signatures.SAListType.S with type data = R.t and type t = R.t salist and type t' = R.t salist' = struct
 
         module L = M.Make (struct
@@ -67,13 +67,13 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
                 | (`Cons _ | `Nil), (`Cons _ | `Nil) -> false
         end)
 
-        (** Value contained by lazy self-adjusting lists for a specific type. *)
+        (** Value contained by self-adjusting lists for a specific type. *)
         type data = R.t
 
-        (** Lazy self-adjusting lists for a specific type. *)
+        (** Self-adjusting lists for a specific type. *)
         type t = L.t
 
-        (** Tags for lazy self-adjusting lists for a specific type. *)
+        (** Tags for self-adjusting lists for a specific type. *)
         type t' = L.data
 
         include T
