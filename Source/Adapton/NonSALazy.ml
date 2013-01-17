@@ -37,14 +37,23 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
     (** Lazy non-self-adjusting values for a specific type. *)
     type t = R.t thunk
 
-    (** Create a lazy non-self-adjusting value containing a value. *)
-    let create x =
+    (** Create a lazy non-self-adjusting value from a constant value. *)
+    let const x =
         let m = { id=(!lazy_id_counter); thunk=lazy x } in
         incr lazy_id_counter;
         m
 
-    (** Update a lazy non-self-adjusting value with a value (not supported by this module; raises {!NonSelfAdjustingValue}). *)
-    let update _ _ = raise Exceptions.NonSelfAdjustingValue
+    (** Update a lazy non-self-adjusting value with a constant value (not supported by this module; raises {!NonSelfAdjustingValue}). *)
+    let update_const _ _ = raise Exceptions.NonSelfAdjustingValue
+
+    (** Create a lazy non-self-adjusting value from a thunk. *)
+    let thunk f =
+        let m = { id=(!lazy_id_counter); thunk=Lazy.from_fun f } in
+        incr lazy_id_counter;
+        m
+
+    (** Update a lazy non-self-adjusting value with a thunk (not supported by this module; raises {!NonSelfAdjustingValue}). *)
+    let update_thunk _ _ = raise Exceptions.NonSelfAdjustingValue
 
     (** Create a non-memoizing constructor for a lazy non-self-adjusting value. *)
     let memo (type a) (module A : Hashtbl.HashedType with type t = a) f =

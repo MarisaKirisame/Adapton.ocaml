@@ -12,8 +12,10 @@ module rec SAType : sig
         val equal : t -> t -> bool
         val force : t -> data
         val refresh : unit -> unit
-        val create : data -> t
-        val update : t -> data -> unit
+        val const : data -> t
+        val update_const : t -> data -> unit
+        val thunk : (unit -> data) -> t
+        val update_thunk : t -> (unit -> data) -> unit
         val memo : (module Hashtbl.HashedType with type t = 'a) -> (('a -> t) -> 'a -> data) -> ('a -> t)
     end
 end = SAType
@@ -45,8 +47,10 @@ module rec SAListType : sig
         val take : t -> int -> data list
         val hd : t -> data
         val tl : t -> t
-        val create : t' -> t
-        val update : t -> t' -> unit
+        val const : t' -> t
+        val update_const : t -> t' -> unit
+        val thunk : (unit -> t') -> t
+        val update_thunk : t -> (unit -> t') -> unit
         val memo : (module Hashtbl.HashedType with type t = 'a) -> (('a -> t) -> 'a -> t') -> 'a -> t
         val of_list : data list -> t
         val push : data -> t -> unit

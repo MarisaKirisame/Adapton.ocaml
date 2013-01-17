@@ -5,7 +5,7 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
     (** Lazy self-adjusting lists containing ['a]. *)
     type 'a salist = 'a salist' M.thunk
 
-    (** Tags for lazy self-adjusting lists containing ['a]. *)
+    (** Constructor tags for lazy self-adjusting lists containing ['a]. *)
     and 'a salist' = [ `Cons of 'a * 'a salist | `Nil ]
 
     (** Types and operations common to lazy self-adjusting lists containing any type. *)
@@ -78,11 +78,17 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
 
         include T
 
-        (** Create a self-adjusting list. *)
-        let create = L.create
+        (** Create a self-adjusting list from a constant list constructor that does not depend on other self-adjusting values. *)
+        let const = L.const
 
-        (** Update a self-adjusting list. *)
-        let update = L.update
+        (** Update a self-adjusting list with a constant list constructor that does not depend on other self-adjusting values. *)
+        let update_const = L.update_const
+
+        (** Create a self-adjusting list from a thunk returning a list constructor that may depend on other self-adjusting values. *)
+        let thunk = L.thunk
+
+        (** Update a self-adjusting list with a thunk returning a list constructor that may depend on other self-adjusting values. *)
+        let update_thunk = L.update_thunk
 
         (** Create a memoizing constructor of a self-adjusting list. *)
         let memo = L.memo
@@ -90,19 +96,19 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
         (** Create a self-adjusting list from a regular list. *)
         let of_list xs =
             let rec of_list acc = function
-                | x::xs -> of_list (create (`Cons ( x, acc ))) xs
+                | x::xs -> of_list (const (`Cons ( x, acc ))) xs
                 | [] -> acc
             in
-            of_list (create `Nil) (List.rev xs)
+            of_list (const `Nil) (List.rev xs)
 
         (** Update the head of a self-adjusting list to push a value in front. *)
         let push x xs = match force xs with
-            | `Cons ( x', xs' ) -> update xs (`Cons ( x, create (`Cons ( x', xs' )) ))
-            | `Nil -> update xs (`Cons ( x, create `Nil ))
+            | `Cons ( x', xs' ) -> update_const xs (`Cons ( x, const (`Cons ( x', xs' )) ))
+            | `Nil -> update_const xs (`Cons ( x, const `Nil ))
 
         (** Update the head of a self-adjusting list to pop a value from the front. *)
         let pop xs = match force xs with
-            | `Cons ( _, xs' ) -> update xs (force xs')
+            | `Cons ( _, xs' ) -> update_const xs (force xs')
             | `Nil -> failwith "pop"
 
         (** Concatenate two self-adjusting lists. *)

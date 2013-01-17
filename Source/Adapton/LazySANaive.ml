@@ -86,8 +86,8 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
     (** Lazy self-adjusting values for a specific type. *)
     type t = R.t thunk
 
-    (** Create a lazy self-adjusting value containing a value. *)
-    let create x =
+    (** Create a lazy self-adjusting value from a constant value that does not depend on other lazy self-adjusting values. *)
+    let const x =
         let rec receipt s k = k s begin match m.thunk with
             | Const ( value, _ ) | Var { result=Some { value; _ }; _ } -> R.equal value x
             | Var _ -> false
@@ -98,8 +98,8 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
         incr lazy_id_counter;
         m
 
-    (** Update a lazy self-adjusting value with a value. *)
-    let update m x =
+    (** Update a lazy self-adjusting value with a constant value that does not depend on other lazy self-adjusting values. *)
+    let update_const m x =
         begin match m.thunk with
             | Var v -> v.unmemo ()
             | Const _ -> ()
@@ -109,6 +109,94 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
             | Var _ -> false
         end in
         m.thunk <- Const ( x, receipt )
+
+    (** Create a lazy self-adjusting value from a thunk that may depend on other lazy self-adjusting values. *)
+    let thunk f =
+        let rec evaluate () =
+            (* add self to call stack and evaluate *)
+            let dependencies = ref [] in
+            lazy_stack := dependencies::!lazy_stack;
+            let value = try
+                f ()
+            with exn ->
+                lazy_stack := List.tl !lazy_stack;
+                raise exn
+            in
+            lazy_stack := List.tl !lazy_stack;
+            v.result <- Some { value; receipt=receipt value; dependencies=List.rev !dependencies }
+
+        (* receipt/repair performs an truncated inorder traversal of the dependency graph *)
+        and receipt x s k = repair s begin fun s -> k s begin match m.thunk with
+            | Const ( value, _ ) | Var { result=Some { value; _ }; _ } -> R.equal value x
+            | Var _ -> false
+        end end
+
+        and repair s k =
+            let k s = Hashtbl.add s id (); k s in
+            if Hashtbl.mem s id then
+                k s
+            else match v.result with
+                | None ->
+                    evaluate ()
+                | Some { dependencies; _ } ->
+                    let rec repair s = function
+                        | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
+                        | [] -> k s
+                    in
+                    repair s dependencies
+
+        and unmemo () = ()
+
+        and v = { result=None; repair; unmemo }
+        and thunk = Var v
+        and id = !lazy_id_counter
+        and m = { id; thunk } in
+        incr lazy_id_counter;
+        m
+
+    (** Update a lazy self-adjusting value with a thunk that may depend on other lazy self-adjusting values. *)
+    let update_thunk m f =
+        begin match m.thunk with
+            | Var v -> v.unmemo ()
+            | Const _ -> ()
+        end;
+        let rec evaluate () =
+            (* add self to call stack and evaluate *)
+            let dependencies = ref [] in
+            lazy_stack := dependencies::!lazy_stack;
+            let value = try
+                f ()
+            with exn ->
+                lazy_stack := List.tl !lazy_stack;
+                raise exn
+            in
+            lazy_stack := List.tl !lazy_stack;
+            v.result <- Some { value; receipt=receipt value; dependencies=List.rev !dependencies }
+
+        (* receipt/repair performs an truncated inorder traversal of the dependency graph *)
+        and receipt x s k = repair s begin fun s -> k s begin match m.thunk with
+            | Const ( value, _ ) | Var { result=Some { value; _ }; _ } -> R.equal value x
+            | Var _ -> false
+        end end
+
+        and repair s k =
+            let k s = Hashtbl.add s m.id (); k s in
+            if Hashtbl.mem s m.id then
+                k s
+            else match v.result with
+                | None ->
+                    evaluate ()
+                | Some { dependencies; _ } ->
+                    let rec repair s = function
+                        | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
+                        | [] -> k s
+                    in
+                    repair s dependencies
+
+        and unmemo () = ()
+
+        and v = { result=None; repair; unmemo } in
+        m.thunk <- Var v
 
     (** Create a memoizing constructor for a lazy self-adjusting value. *)
     let memo (type a) (module A : Hashtbl.HashedType with type t = a) f =
@@ -140,8 +228,8 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
             end end
 
             and repair s k =
-                let k s = Hashtbl.add s id (); k s in
-                if Hashtbl.mem s id then
+                let k s = Hashtbl.add s m.id (); k s in
+                if Hashtbl.mem s m.id then
                     k s
                 else match v.result with
                     | None ->

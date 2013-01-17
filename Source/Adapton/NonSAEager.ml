@@ -37,14 +37,23 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
     (** Eager non-self-adjusting values for a specific type. *)
     type t = R.t thunk
 
-    (** Create an eager non-self-adjusting value containing a value. *)
-    let create x =
+    (** Create an eager non-self-adjusting value from a constant value. *)
+    let const x =
         let m = { id=(!eager_id_counter); value=x } in
         incr eager_id_counter;
         m
 
-    (** Update an eager non-self-adjusting value with a value (not supported by this module; raises {!NonSelfAdjustingValue}). *)
-    let update _ _ = raise Exceptions.NonSelfAdjustingValue
+    (** Update an eager non-self-adjusting value with a constant value (not supported by this module; raises {!NonSelfAdjustingValue}). *)
+    let update_const _ _ = raise Exceptions.NonSelfAdjustingValue
+
+    (** Create an eager non-self-adjusting value from a thunk. *)
+    let thunk f =
+        let m = { id=(!eager_id_counter); value=f () } in
+        incr eager_id_counter;
+        m
+
+    (** Update an eager non-self-adjusting value with a thunk (not supported by this module; raises {!NonSelfAdjustingValue}). *)
+    let update_thunk _ _ = raise Exceptions.NonSelfAdjustingValue
 
     (** Create a non-memoizing constructor for an eager non-self-adjusting value. *)
     let memo (type a) (module A : Hashtbl.HashedType with type t = a) f =
