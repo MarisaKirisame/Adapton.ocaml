@@ -11,7 +11,7 @@ let assert_list_equal = assert_equal ~printer:(list_printer pp_print_int ",")
 let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
     let module I = L.Make (Int) in
 
-    "]" >::: [
+    "Regression" >::: [
         "filter" >:: begin fun () ->
             let pred = (<) 1 in
 
