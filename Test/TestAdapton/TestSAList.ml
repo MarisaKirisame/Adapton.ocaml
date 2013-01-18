@@ -180,6 +180,27 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             assert_list_equal ~msg:"update" zs zs';
         end;
 
+        "memo" >:: begin fun () ->
+            try
+                let update_count = ref 0 in
+                let pred s = incr update_count; succ s in
+                let xs = I.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9 ] in
+                I.push 0 xs; (* to detect if non-self-adjusting *)
+                let ys = I.map (module I) pred xs in
+                assert_int_equal ~msg:"initial" 0 !update_count;
+                I.refresh ();
+                ignore (I.to_list ys);
+                assert_int_equal ~msg:"force" 10 !update_count;
+                I.push 0 xs;
+                ignore (I.to_list ys);
+                assert_int_equal ~msg:"push and force" 12 !update_count; (* the first and second elements *)
+                I.pop xs;
+                ignore (I.to_list ys);
+                assert_int_equal ~msg:"pop and force" 13 !update_count; (* the first element *)
+            with Adapton.Exceptions.NonSelfAdjustingValue ->
+                ()
+        end;
+
         "gc" >:: begin fun () ->
             try
                 let gc_count = ref 0 in
