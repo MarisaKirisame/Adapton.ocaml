@@ -118,15 +118,10 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
 
         (** Concatenate two self-adjusting lists. *)
         let append =
-            let append = memo (module struct
-                type t = L.t * L.t
-                let hash ( xs, ys ) = Hashtbl.hash ( L.hash xs, L.hash ys )
-                let equal ( xs, ys ) ( xs', ys' ) = L.equal xs xs' && L.equal ys ys'
-            end) begin fun append ( xs, ys ) -> match force xs with
-                | `Cons ( x, xs ) -> `Cons (x, append ( xs, ys ))
+            memo2 (module L) (module L) begin fun append xs ys -> match force xs with
+                | `Cons ( x, xs ) -> `Cons (x, append xs ys)
                 | `Nil -> force ys
-            end in
-            fun xs ys -> append ( xs, ys )
+            end
 
         (** Filter a self-adjusting list with a predicate. *)
         let filter f =
@@ -144,14 +139,9 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
 
         (** Scan (fold over prefixes of) a self-adjusting list with an scanning function. *)
         let scan (type a) (type b) (module L : Signatures.SAListType.S with type data = a and type t = b) f =
-            let scan = memo (module struct
-                type t = L.t * R.t
-                let hash ( xs, acc ) = Hashtbl.hash ( L.hash xs, R.hash acc )
-                let equal ( xs, acc ) ( xs', acc' ) = L.equal xs xs' && R.equal acc acc'
-            end) begin fun scan ( xs, acc ) -> match L.force xs with
-                | `Cons ( x, xs ) -> let acc = f x acc in `Cons (acc, scan ( xs, acc ))
+            memo2 (module L) (module R) begin fun scan xs acc -> match L.force xs with
+                | `Cons ( x, xs ) -> let acc = f x acc in `Cons (acc, scan xs acc)
                 | `Nil -> `Nil
-            end in
-            fun xs acc -> scan ( xs, acc )
+            end
     end
 end
