@@ -90,8 +90,13 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
         (** Update a self-adjusting list with a thunk returning a list constructor that may depend on other self-adjusting values. *)
         let update_thunk = L.update_thunk
 
-        (** Create a memoizing constructor of a self-adjusting list. *)
-        let memo = L.memo
+        include MemoN.Make (struct
+            type data = L.data
+            type t = L.t
+
+            (** Create a memoizing constructor of a self-adjusting list. *)
+            let memo = L.memo
+        end)
 
         (** Create a self-adjusting list from a regular list. *)
         let of_list xs =

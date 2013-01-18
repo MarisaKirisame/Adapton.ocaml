@@ -205,59 +205,65 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
         and v = { result=None; repair; unmemo } in
         m.thunk <- Var v
 
-    (** Create a memoizing constructor for a lazy self-adjusting value. *)
-    let memo (type a) (module A : Hashtbl.HashedType with type t = a) f =
-        let module Memotable = Weak.Make (struct
-            type t = A.t * R.t thunk
-            let hash ( a, _ ) = A.hash a
-            let equal ( a, _ ) ( a', _ ) = A.equal a a'
-        end) in
-        let memotable = Memotable.create 0 in
+    (* create memoizing constructors *)
+    include MemoN.Make (struct
+        type data = R.t
+        type t = R.t thunk
 
-        let rec memo x =
-            let rec evaluate () =
-                (* add self to call stack and evaluate *)
-                let dependencies = ref [] in
-                lazy_stack := dependencies::!lazy_stack;
-                let value = try
-                    f memo x
-                with exn ->
+        (** Create a memoizing constructor for a lazy self-adjusting value. *)
+        let memo (type a) (module A : Hashtbl.HashedType with type t = a) f =
+            let module Memotable = Weak.Make (struct
+                type t = A.t * R.t thunk
+                let hash ( a, _ ) = A.hash a
+                let equal ( a, _ ) ( a', _ ) = A.equal a a'
+            end) in
+            let memotable = Memotable.create 0 in
+
+            let rec memo x =
+                let rec evaluate () =
+                    (* add self to call stack and evaluate *)
+                    let dependencies = ref [] in
+                    lazy_stack := dependencies::!lazy_stack;
+                    let value = try
+                        f memo x
+                    with exn ->
+                        lazy_stack := List.tl !lazy_stack;
+                        raise exn
+                    in
                     lazy_stack := List.tl !lazy_stack;
-                    raise exn
-                in
-                lazy_stack := List.tl !lazy_stack;
-                v.result <- Some { value; receipt=receipt value; dependencies=List.rev !dependencies }
+                    v.result <- Some { value; receipt=receipt value; dependencies=List.rev !dependencies }
 
-            (* receipt/repair performs an truncated inorder traversal of the dependency graph *)
-            and receipt x s k = repair s begin fun s -> k s begin match m.thunk with
-                | Const ( value, _ ) | Var { result=Some { value; _ }; _ } -> R.equal value x
-                | Var _ -> false
-            end end
+                (* receipt/repair performs an truncated inorder traversal of the dependency graph *)
+                and receipt x s k = repair s begin fun s -> k s begin match m.thunk with
+                    | Const ( value, _ ) | Var { result=Some { value; _ }; _ } -> R.equal value x
+                    | Var _ -> false
+                end end
 
-            and repair s k =
-                let k s = Hashtbl.add s m.id (); k s in
-                if Hashtbl.mem s m.id then
-                    k s
-                else match v.result with
-                    | None ->
-                        evaluate ()
-                    | Some { dependencies; _ } ->
-                        let rec repair s = function
-                            | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
-                            | [] -> k s
-                        in
-                        repair s dependencies
+                and repair s k =
+                    let k s = Hashtbl.add s m.id (); k s in
+                    if Hashtbl.mem s m.id then
+                        k s
+                    else match v.result with
+                        | None ->
+                            evaluate ()
+                        | Some { dependencies; _ } ->
+                            let rec repair s = function
+                                | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
+                                | [] -> k s
+                            in
+                            repair s dependencies
 
-            (* create a strong reference to binding and hide it in the closure unmemo stored in m *)
-            and binding = ( x, m )
-            and unmemo () = Memotable.remove memotable binding
+                (* create a strong reference to binding and hide it in the closure unmemo stored in m *)
+                and binding = ( x, m )
+                and unmemo () = Memotable.remove memotable binding
 
-            and v = { result=None; repair; unmemo }
-            and thunk = Var v
-            and id = !lazy_id_counter
-            and m = { id; thunk } in
-            incr lazy_id_counter;
-            snd (Memotable.merge memotable binding)
-        in
-        memo
+                and v = { result=None; repair; unmemo }
+                and thunk = Var v
+                and id = !lazy_id_counter
+                and m = { id; thunk } in
+                incr lazy_id_counter;
+                snd (Memotable.merge memotable binding)
+            in
+            memo
+    end)
 end

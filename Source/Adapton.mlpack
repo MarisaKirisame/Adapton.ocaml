@@ -2,6 +2,7 @@ Adapton/All
 Adapton/Default
 Adapton/Exceptions
 Adapton/LazySANaive
+Adapton/MemoN
 Adapton/NonSAEager
 Adapton/NonSALazy
 Adapton/SAList

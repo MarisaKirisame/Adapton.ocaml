@@ -16,7 +16,7 @@ module rec SAType : sig
         val update_const : t -> data -> unit
         val thunk : (unit -> data) -> t
         val update_thunk : t -> (unit -> data) -> unit
-        val memo : (module Hashtbl.HashedType with type t = 'a) -> (('a -> t) -> 'a -> data) -> ('a -> t)
+        include MemoN.S with type data := data and type t := t
     end
 end = SAType
 
@@ -51,7 +51,7 @@ module rec SAListType : sig
         val update_const : t -> t' -> unit
         val thunk : (unit -> t') -> t
         val update_thunk : t -> (unit -> t') -> unit
-        val memo : (module Hashtbl.HashedType with type t = 'a) -> (('a -> t) -> 'a -> t') -> 'a -> t
+        include MemoN.S with type data := t' and type t := t
         val of_list : data list -> t
         val push : data -> t -> unit
         val pop : t -> unit
