@@ -6,6 +6,7 @@ module Int = struct
     let hash x = x
     let equal = (==)
 end
+let assert_int_equal = assert_equal ~printer:pp_print_int
 let assert_list_equal = assert_equal ~printer:(list_printer pp_print_int ",")
 
 let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
@@ -177,6 +178,36 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"update" zs zs';
+        end;
+
+        "gc" >:: begin fun () ->
+            try
+                let gc_count = ref 0 in
+                let rec finalise xs =
+                    Gc.finalise (fun _ -> incr gc_count) xs;
+                    match I.force xs with `Cons (_, xs) -> finalise xs | `Nil -> ()
+                in
+                let xs = I.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9; 0 ] in
+                let ys = I.map (module I) succ xs in
+                I.refresh ();
+                finalise ys;
+                assert_int_equal ~msg:"initial" 0 !gc_count;
+                Gc.compact ();
+                assert_int_equal ~msg:"compact nothing" 0 !gc_count;
+                I.update_const xs `Nil;
+                assert_int_equal ~msg:"update" 0 !gc_count;
+                Gc.compact ();
+                assert_int_equal ~msg:"compact nothing again" 0 !gc_count;
+                Gc.compact ();
+                I.refresh ();
+                ignore (I.to_list ys);
+                (* GC shouldn't be triggered yet in OCaml's default GC policies *)
+                assert_int_equal ~msg:"before compact yet again" 0 !gc_count;
+                Gc.compact ();
+                (* GC should collect all of ys that obsolete after update (clear the memoization tables) *)
+                assert_int_equal ~msg:"compact ys" 10 !gc_count;
+            with Adapton.Exceptions.NonSelfAdjustingValue ->
+                ()
         end;
     ]
 
