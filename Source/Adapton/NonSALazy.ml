@@ -27,7 +27,7 @@ end
 include T
 
 
-(** Functor to make a constructor, a mutator, and a non-memoizing constructor for lazy non-self-adjusting values of a specific type. *)
+(** Functor to make constructors and updaters for lazy non-self-adjusting values of a specific type. *)
 module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t and type t = R.t thunk = struct
     include T
 

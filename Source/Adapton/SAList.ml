@@ -54,7 +54,7 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
 
     module type S = Signatures.SAListType.S
 
-    (** Functor to make various list constructors, mutators, and combinators for self-adjusting lists of a specific type. *)
+    (** Functor to make various list constructors, updaters, and combinators for self-adjusting lists of a specific type. *)
     module Make (R : Hashtbl.HashedType) : Signatures.SAListType.S with type data = R.t and type t = R.t salist and type t' = R.t salist' = struct
 
         module L = M.Make (struct
