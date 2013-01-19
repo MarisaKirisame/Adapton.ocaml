@@ -198,7 +198,7 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                 ignore (I.to_list ys);
                 assert_int_equal ~msg:"pop and force" 13 !update_count; (* the first element *)
             with Adapton.Exceptions.NonSelfAdjustingValue ->
-                ()
+                skip "not self-adjusting"
         end;
 
         "gc" >:: begin fun () ->
@@ -228,7 +228,7 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                 (* GC should collect all of ys that obsolete after update (clear the memoization tables) *)
                 assert_int_equal ~msg:"compact ys" 10 !gc_count;
             with Adapton.Exceptions.NonSelfAdjustingValue ->
-                ()
+                skip "not self-adjusting"
         end;
     ]
 
