@@ -28,5 +28,5 @@ Quick-start
         # module IntList = Adapton.Default.SAList.Make (Int);;
         # let xs = IntList.of_list [1;2;3];;
         # let ys = IntList.filter (fun x -> x > 1) xs;;
-        # let zs = IntList.map (module Int) succ xs;;
+        # let zs = IntList.map (module IntList) succ xs;;
         # IntList.to_list ys;;
