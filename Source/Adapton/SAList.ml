@@ -94,7 +94,7 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
             type data = L.data
             type t = L.t
 
-            (** Create a memoizing constructor of a self-adjusting list. *)
+            (** Create memoizing constructor and updater of a self-adjusting list. *)
             let memo = L.memo
         end)
 
@@ -116,29 +116,29 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
             | `Cons ( _, xs' ) -> update_const xs (force xs')
             | `Nil -> failwith "pop"
 
-        (** Concatenate two self-adjusting lists. *)
-        let append =
+        (** Create memoizing constructor and updater that concatenate two self-adjusting lists. *)
+        let memo_append =
             memo2 (module L) (module L) begin fun append xs ys -> match force xs with
                 | `Cons ( x, xs ) -> `Cons (x, append xs ys)
                 | `Nil -> force ys
             end
 
-        (** Filter a self-adjusting list with a predicate. *)
-        let filter f =
+        (** Create memoizing constructor and updater that filter a self-adjusting list with a predicate. *)
+        let memo_filter f =
             memo (module L) begin fun filter xs -> match force xs with
                 | `Cons ( x, xs ) -> if f x then `Cons ( x, filter xs ) else force (filter xs)
                 | `Nil -> `Nil
             end
 
-        (** Map a self-adjusting list with a mapping function. *)
-        let map (type a) (type b) (module L : Signatures.SAListType.S with type data = a and type t = b) f =
+        (** Create memoizing constructor and updater that map a self-adjusting list with a mapping function. *)
+        let memo_map (type a) (type b) (module L : Signatures.SAListType.S with type data = a and type t = b) f =
             memo (module L) begin fun map xs -> match L.force xs with
                 | `Cons ( x, xs ) -> `Cons ( f x, map xs )
                 | `Nil -> `Nil
             end
 
-        (** Scan (fold over prefixes of) a self-adjusting list with an scanning function. *)
-        let scan (type a) (type b) (module L : Signatures.SAListType.S with type data = a and type t = b) f =
+        (** Create memoizing constructor and updater that scan (fold over prefixes of) a self-adjusting list with an scanning function. *)
+        let memo_scan (type a) (type b) (module L : Signatures.SAListType.S with type data = a and type t = b) f =
             memo2 (module L) (module R) begin fun scan xs acc -> match L.force xs with
                 | `Cons ( x, xs ) -> let acc = f x acc in `Cons (acc, scan xs acc)
                 | `Nil -> `Nil

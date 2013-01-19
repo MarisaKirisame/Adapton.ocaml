@@ -15,13 +15,14 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
     "Regression" >::: [
         "filter" >:: begin fun () ->
             let pred = (<) 1 in
+            let filter_pred, _ = I.memo_filter pred in
 
             let xs = [ 1; 2; 3 ] in
             let ys = List.filter pred xs in
             let zs = ys in
 
             let xs' = I.of_list xs in
-            let ys' = I.filter pred xs' in
+            let ys' = filter_pred xs' in
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"initial" zs zs';
@@ -36,7 +37,7 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                 ys'
             with Adapton.Exceptions.NonSelfAdjustingValue ->
                 let xs' = I.of_list xs in
-                let ys' = I.filter pred xs' in
+                let ys' = filter_pred xs' in
                 ys'
             in
             let zs' = I.to_list ys' in
@@ -45,12 +46,13 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
         end;
 
         "append" >:: begin fun () ->
+            let append, _ = I.memo_append in
             let xs = [ 1; 2; 3 ] in
             let ys = List.append xs xs in
             let zs = ys in
 
             let xs' = I.of_list xs in
-            let ys' = I.append xs' xs' in
+            let ys' = append xs' xs' in
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"initial" zs zs';
@@ -65,7 +67,7 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                 ys'
             with Adapton.Exceptions.NonSelfAdjustingValue ->
                 let xs' = I.of_list xs in
-                let ys' = I.append xs' xs' in
+                let ys' = append xs' xs' in
                 ys'
             in
             let zs' = I.to_list ys' in
@@ -75,13 +77,14 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
 
         "map" >:: begin fun () ->
             let fn = succ in
+            let map_fn, _ = I.memo_map (module I) fn in
 
             let xs = [ 1; 2; 3 ] in
             let ys = List.map fn xs in
             let zs = ys in
 
             let xs' = I.of_list xs in
-            let ys' = I.map (module I) fn xs' in
+            let ys' = map_fn xs' in
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"initial" zs zs';
@@ -96,7 +99,7 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                 ys'
             with Adapton.Exceptions.NonSelfAdjustingValue ->
                 let xs' = I.of_list xs in
-                let ys' = I.map (module I) fn xs' in
+                let ys' = map_fn xs' in
                 ys'
             in
             let zs' = I.to_list ys' in
@@ -106,7 +109,9 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
 
         "filter map" >:: begin fun () ->
             let pred = (<) 1 in
+            let filter_pred, _ = I.memo_filter pred in
             let fn = succ in
+            let map_fn, _ = I.memo_map (module I) fn in
 
             let ws = [ 1; 2; 3 ] in
             let xs = List.filter pred ws in
@@ -114,8 +119,8 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             let zs = ys in
 
             let ws' = I.of_list ws in
-            let xs' = I.filter pred ws' in
-            let ys' = I.map (module I) fn xs' in
+            let xs' = filter_pred ws' in
+            let ys' = map_fn xs' in
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"initial" zs zs';
@@ -131,8 +136,8 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                 ys'
             with Adapton.Exceptions.NonSelfAdjustingValue ->
                 let ws' = I.of_list ws in
-                let xs' = I.filter pred ws' in
-                let ys' = I.map (module I) fn xs' in
+                let xs' = filter_pred ws' in
+                let ys' = map_fn xs' in
                 ys'
             in
             let zs' = I.to_list ys' in
@@ -142,7 +147,10 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
 
         "filter map append" >:: begin fun () ->
             let pred = (<) 1 in
+            let filter_pred, _ = I.memo_filter pred in
             let fn = succ in
+            let map_fn, _ = I.memo_map (module I) fn in
+            let append, _ = I.memo_append in
 
             let vs = [ 1; 2; 3 ] in
             let ws = List.filter pred vs in
@@ -151,9 +159,9 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             let zs = ys in
 
             let vs' = I.of_list vs in
-            let ws' = I.filter pred vs' in
-            let xs' = I.map (module I) fn ws' in
-            let ys' = I.append xs' xs' in
+            let ws' = filter_pred vs' in
+            let xs' = map_fn ws' in
+            let ys' = append xs' xs' in
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"initial" zs zs';
@@ -170,9 +178,9 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                 ys'
             with Adapton.Exceptions.NonSelfAdjustingValue ->
                 let vs' = I.of_list vs in
-                let ws' = I.filter pred vs' in
-                let xs' = I.map (module I) fn ws' in
-                let ys' = I.append xs' xs' in
+                let ws' = filter_pred vs' in
+                let xs' = map_fn ws' in
+                let ys' = append xs' xs' in
                 ys'
             in
             let zs' = I.to_list ys' in
@@ -183,10 +191,11 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
         "memo" >:: begin fun () ->
             try
                 let update_count = ref 0 in
-                let pred s = incr update_count; succ s in
-                let xs = I.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9; 0 ] in
+                let fn s = incr update_count; succ s in
+                let map_fn, _ = I.memo_map (module I) fn in
+                let xs = I.of_list [ 0; 1; 2; 3; 4; 5; 6; 7; 8; 9 ] in
                 I.refresh (); (* to detect if non-self-adjusting *)
-                let ys = I.map (module I) pred xs in
+                let ys = map_fn xs in
                 assert_int_equal ~msg:"initial" 0 !update_count;
                 I.refresh ();
                 ignore (I.to_list ys);
@@ -208,8 +217,9 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                     Gc.finalise (fun _ -> incr gc_count) xs;
                     match I.force xs with `Cons (_, xs) -> finalise xs | `Nil -> ()
                 in
+                let map_succ, _ = I.memo_map (module I) succ in
                 let xs = I.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9; 0 ] in
-                let ys = I.map (module I) succ xs in
+                let ys = map_succ xs in
                 I.refresh ();
                 finalise ys;
                 assert_int_equal ~msg:"initial" 0 !gc_count;

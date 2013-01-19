@@ -55,10 +55,10 @@ module rec SAListType : sig
         val of_list : data list -> t
         val push : data -> t -> unit
         val pop : t -> unit
-        val append : t -> t -> t
-        val filter : (data -> bool) -> t -> t
-        val map : (module SAListType.S with type data = 'a and type t = 'b) -> ('a -> data) -> 'b -> t
-        val scan : (module SAListType.S with type data = 'a and type t = 'b) -> ('a -> data -> data) -> 'b -> data -> t
+        val memo_append : (t -> t -> t) * (t -> t -> t -> unit)
+        val memo_filter : (data -> bool) -> (t -> t) * (t -> t -> unit)
+        val memo_map : (module SAListType.S with type data = 'a and type t = 'b) -> ('a -> data) -> ('b -> t) * (t -> 'b -> unit)
+        val memo_scan : (module SAListType.S with type data = 'a and type t = 'b) -> ('a -> data -> data) -> ('b -> data -> t) * (t -> 'b -> data -> unit)
     end
 end = SAListType
 

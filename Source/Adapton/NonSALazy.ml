@@ -55,18 +55,22 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
     (** Update a lazy non-self-adjusting value with a thunk (not supported by this module; raises {!NonSelfAdjustingValue}). *)
     let update_thunk _ _ = raise Exceptions.NonSelfAdjustingValue
 
-    (* create memoizing constructors *)
+    (* create memoizing constructors and updaters *)
     include MemoN.Make (struct
         type data = R.t
         type t = R.t thunk
 
-        (** Create a non-memoizing constructor for a lazy non-self-adjusting value. *)
+        (** Create non-memoizing constructor and updater for a lazy non-self-adjusting value
+            (updater not supported by this module; raises {!NonSelfAdjustingValue}). *)
         let memo (type a) (module A : Hashtbl.HashedType with type t = a) f =
+            (* non-memoizing constructor *)
             let rec memo x =
                 let m = { id=(!lazy_id_counter); thunk=lazy (f memo x) } in
                 incr lazy_id_counter;
                 m
             in
-            memo
+            (* non-memoizing updater *)
+            let update_memo _ _ = raise Exceptions.NonSelfAdjustingValue in
+            ( memo, update_memo )
     end)
 end
