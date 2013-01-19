@@ -6,6 +6,7 @@ type test = OUnit.test = TestCase of (unit -> unit) | TestList of test list | Te
 let bracket : (unit -> 'a) -> ('a -> unit) -> ('a -> unit) -> unit -> unit = OUnit.bracket
 
 exception MyOUnitFailure
+exception MyOUnitSkip of string
 
 (* error message buffer *)
 let buffer = Buffer.create 4096
@@ -27,6 +28,7 @@ let wrap_test testfn = fun () ->
     try testfn () with e -> begin
         begin match e with
             | MyOUnitFailure -> ()
+            | MyOUnitSkip _ -> raise e
             | _ ->
                 (* report unexpected exceptions *)
                 let b = Str.split (Str.regexp "\n") (Printexc.get_backtrace ()) in
@@ -47,12 +49,14 @@ let fork_test testfn = fun () ->
     let helper () =
         (* close stdin: automated tests really shouldn't rely on input *)
         Unix.close Unix.stdin;
-        try wrap_test testfn (); None
-        with Failure s -> Some s
+        try wrap_test testfn (); `None with
+            | Failure s -> `Failure s
+            | MyOUnitSkip s -> `Skip s
     in
     match UnixPlus.fork_call helper with
-        | None -> ()
-        | Some s -> failwith s
+        | `None -> ()
+        | `Failure s -> failwith s
+        | `Skip s -> OUnit.skip_if true s
 
 
 (** Test wrapper that creates a temporary file and passes it to the test. The temporary file will be automatically
@@ -129,6 +133,9 @@ let test_permutations list test =
     in
     let permutations = permute list in
     TestList (List.map test permutations)
+
+let skip msg =
+    raise (MyOUnitSkip msg)
 
 let assert_failure format =
     Format.kfprintf (fun _ -> raise MyOUnitFailure) formatter format
