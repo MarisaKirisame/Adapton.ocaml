@@ -184,8 +184,8 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             try
                 let update_count = ref 0 in
                 let pred s = incr update_count; succ s in
-                let xs = I.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9 ] in
-                I.push 0 xs; (* to detect if non-self-adjusting *)
+                let xs = I.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9; 0 ] in
+                I.refresh (); (* to detect if non-self-adjusting *)
                 let ys = I.map (module I) pred xs in
                 assert_int_equal ~msg:"initial" 0 !update_count;
                 I.refresh ();
