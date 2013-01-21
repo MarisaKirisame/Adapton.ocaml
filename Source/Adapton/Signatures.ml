@@ -59,6 +59,10 @@ module rec SAListType : sig
         val memo_filter : (data -> bool) -> (t -> t) * (t -> t -> unit)
         val memo_map : (module SAListType.S with type data = 'a and type t = 'b) -> ('a -> data) -> ('b -> t) * (t -> 'b -> unit)
         val memo_scan : (module SAListType.S with type data = 'a and type t = 'b) -> ('a -> data -> data) -> ('b -> data -> t) * (t -> 'b -> data -> unit)
+        module PartitionType : SAType.S with type data = t * t
+        val split_partition : PartitionType.t -> t * t
+        val memo_partition_with_key : (data -> data -> bool) -> (data -> t -> PartitionType.t) * (PartitionType.t -> data -> t -> unit)
+        val memo_quicksort : (data -> data -> int) -> (t -> t) * (t -> t -> unit)
     end
 end = SAListType
 

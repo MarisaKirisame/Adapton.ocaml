@@ -143,5 +143,46 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
                 | `Cons ( x, xs ) -> let acc = f x acc in `Cons (acc, scan xs acc)
                 | `Nil -> `Nil
             end
+
+        (** Output type of memo_partition (a lazy pair of lists). *)
+        module PartitionType = M.Make (struct
+            type t = L.t * L.t
+            let hash ( xs, ys ) = Hashtbl.hash ( L.hash xs, L.hash ys )
+            let equal ( xs, ys ) ( xs', ys' ) = L.equal xs xs' && L.equal ys ys'
+        end)
+
+        (** Helper function to split the output of memo_partition. *)
+        let split_partition =
+            let split_left, _ = L.memo (module PartitionType) (fun split xs -> L.force (fst (PartitionType.force xs))) in
+            let split_right, _ = L.memo (module PartitionType) (fun split xs -> L.force (snd (PartitionType.force xs))) in
+            fun xs ->
+                ( split_left xs, split_right xs )
+
+        (** Create memoizing constructor and updater to partition a self-adjusting list with a predicate and key. *)
+        let memo_partition_with_key pred =
+            PartitionType.memo2 (module R) (module L) begin fun partition k xs -> match force xs with
+                | `Cons ( x, xs ) ->
+                    let left, right = split_partition (partition k xs) in
+                    if pred k x then
+                        ( const (`Cons ( x, left )), right )
+                    else
+                        ( left, const (`Cons ( x, right )) )
+                | `Nil ->
+                    ( const `Nil, const `Nil )
+            end
+
+        (** Create memoizing constructor and updater to quicksort a self-adjusting list with a comparator. *)
+        let memo_quicksort cmp =
+            let partition, _ = memo_partition_with_key (fun k x -> cmp x k < 0) in
+            let quicksort, update_quicksort = memo2 (module L) (module L) begin fun quicksort xs rest -> match L.force xs with
+                | `Cons ( x, xs ) ->
+                    let left, right = split_partition (partition x xs) in
+                    L.force (quicksort left (const (`Cons ( x, quicksort right rest ))))
+                | `Nil ->
+                    L.force rest
+            end in
+            let quicksort xs = quicksort xs (const `Nil) in
+            let update_quicksort m xs = update_quicksort m xs (const `Nil) in
+            ( quicksort, update_quicksort )
     end
 end

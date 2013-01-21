@@ -107,6 +107,37 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             assert_list_equal ~msg:"update" zs zs';
         end;
 
+        "quicksort" >:: begin fun () ->
+            let quicksort, _ = I.memo_quicksort compare in
+
+            let xs = [ 3; 2; 1; 4 ] in
+            let ys = List.sort compare xs in
+            let zs = ys in
+
+            let xs' = I.of_list xs in
+            let ys' = quicksort xs' in
+            let zs' = I.to_list ys' in
+
+            assert_list_equal ~msg:"initial" zs zs';
+
+            let xs = 5::xs in
+            let ys = List.sort compare xs in
+            let zs = ys in
+
+            let ys' = try
+                I.push 5 xs';
+                I.refresh ();
+                ys'
+            with Adapton.Exceptions.NonSelfAdjustingValue ->
+                let xs' = I.of_list xs in
+                let ys' = quicksort xs' in
+                ys'
+            in
+            let zs' = I.to_list ys' in
+
+            assert_list_equal ~msg:"update" zs zs';
+        end;
+
         "filter map" >:: begin fun () ->
             let pred = (<) 1 in
             let filter_pred, _ = I.memo_filter pred in
