@@ -113,7 +113,7 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
 
         (** Update the head of a self-adjusting list to pop a value from the front. *)
         let pop xs = match force xs with
-            | `Cons ( _, xs' ) -> update_const xs (force xs')
+            | `Cons ( x', xs' ) -> update_const xs (force xs'); x'
             | `Nil -> failwith "pop"
 
         (** Create memoizing constructor and updater that concatenate two self-adjusting lists. *)

@@ -234,7 +234,7 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                 I.push 0 xs;
                 ignore (I.to_list ys);
                 assert_int_equal ~msg:"push and force" 12 !update_count; (* the first and second elements *)
-                I.pop xs;
+                ignore (I.pop xs);
                 ignore (I.to_list ys);
                 assert_int_equal ~msg:"pop and force" 13 !update_count; (* the first element *)
             with Adapton.Exceptions.NonSelfAdjustingValue ->

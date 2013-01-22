@@ -54,7 +54,7 @@ module rec SAListType : sig
         include MemoN.S with type data := t' and type t := t
         val of_list : data list -> t
         val push : data -> t -> unit
-        val pop : t -> unit
+        val pop : t -> data
         val memo_append : (t -> t -> t) * (t -> t -> t -> unit)
         val memo_filter : (data -> bool) -> (t -> t) * (t -> t -> unit)
         val memo_map : (module SAListType.S with type data = 'a and type t = 'b) -> ('a -> data) -> ('b -> t) * (t -> 'b -> unit)
