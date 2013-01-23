@@ -139,18 +139,20 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
         end end
 
         and repair s k =
-            let k s = Hashtbl.add s id (); k s in
             if Hashtbl.mem s id then
                 k s
-            else match v.result with
-                | None ->
-                    evaluate ()
-                | Some { dependencies; _ } ->
-                    let rec repair s = function
-                        | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
-                        | [] -> k s
-                    in
-                    repair s dependencies
+            else begin
+                Hashtbl.add s id ();
+                match v.result with
+                    | None ->
+                        evaluate ()
+                    | Some { dependencies; _ } ->
+                        let rec repair s = function
+                            | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
+                            | [] -> k s
+                        in
+                        repair s dependencies
+            end
 
         and unmemo () = ()
 
@@ -187,18 +189,20 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
         end end
 
         and repair s k =
-            let k s = Hashtbl.add s m.id (); k s in
             if Hashtbl.mem s m.id then
                 k s
-            else match v.result with
-                | None ->
-                    evaluate ()
-                | Some { dependencies; _ } ->
-                    let rec repair s = function
-                        | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
-                        | [] -> k s
-                    in
-                    repair s dependencies
+            else begin
+                Hashtbl.add s m.id ();
+                match v.result with
+                    | None ->
+                        evaluate ()
+                    | Some { dependencies; _ } ->
+                        let rec repair s = function
+                            | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
+                            | [] -> k s
+                        in
+                        repair s dependencies
+            end
 
         and unmemo () = ()
 
@@ -241,18 +245,20 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
                 end end
 
                 and repair s k =
-                    let k s = Hashtbl.add s m.id (); k s in
                     if Hashtbl.mem s m.id then
                         k s
-                    else match v.result with
-                        | None ->
-                            evaluate ()
-                        | Some { dependencies; _ } ->
-                            let rec repair s = function
-                                | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
-                                | [] -> k s
-                            in
-                            repair s dependencies
+                    else begin
+                        Hashtbl.add s m.id ();
+                        match v.result with
+                            | None ->
+                                evaluate ()
+                            | Some { dependencies; _ } ->
+                                let rec repair s = function
+                                    | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
+                                    | [] -> k s
+                                in
+                                repair s dependencies
+                    end
 
                 (* create a strong reference to binding and hide it in the closure unmemo stored in m *)
                 and binding = ( x, m )
@@ -292,18 +298,20 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
                 end end
 
                 and repair s k =
-                    let k s = Hashtbl.add s m.id (); k s in
                     if Hashtbl.mem s m.id then
                         k s
-                    else match v.result with
-                        | None ->
-                            evaluate ()
-                        | Some { dependencies; _ } ->
-                            let rec repair s = function
-                                | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
-                                | [] -> k s
-                            in
-                            repair s dependencies
+                    else begin
+                        Hashtbl.add s m.id ();
+                        match v.result with
+                            | None ->
+                                evaluate ()
+                            | Some { dependencies; _ } ->
+                                let rec repair s = function
+                                    | d::ds -> d s (fun s c -> if c then repair s ds else (evaluate (); k s))
+                                    | [] -> k s
+                                in
+                                repair s dependencies
+                    end
 
                 (* create a strong reference to binding and hide it in the closure unmemo stored in m *)
                 and binding = ( x, m )
