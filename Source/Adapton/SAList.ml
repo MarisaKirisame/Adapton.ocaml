@@ -55,13 +55,13 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
     module type S = Signatures.SAListType.S
 
     (** Functor to make various list constructors, updaters, and combinators for self-adjusting lists of a specific type. *)
-    module Make (R : Hashtbl.HashedType) : Signatures.SAListType.S with type data = R.t and type t = R.t salist and type t' = R.t salist' = struct
+    module Make (R : Hashtbl.SeededHashedType) : Signatures.SAListType.S with type data = R.t and type t = R.t salist and type t' = R.t salist' = struct
 
         module L = M.Make (struct
             type t = R.t salist'
-            let hash = function
-                | `Cons ( x, xs ) -> Hashtbl.hash ( `Cons, R.hash x, hash xs )
-                | `Nil -> Hashtbl.hash `Nil
+            let hash seed = function
+                | `Cons ( x, xs ) -> hash (R.hash (Hashtbl.seeded_hash seed `Cons) x) xs
+                | `Nil -> Hashtbl.seeded_hash seed `Nil
             let equal xs xs' = xs == xs' || match xs, xs' with
                 | `Cons ( h, t ), `Cons ( h', t' ) -> R.equal h h' && equal t t'
                 | (`Cons _ | `Nil), (`Cons _ | `Nil) -> false
@@ -147,7 +147,7 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
         (** Output type of memo_partition (a lazy pair of lists). *)
         module PartitionType = M.Make (struct
             type t = L.t * L.t
-            let hash ( xs, ys ) = Hashtbl.hash ( L.hash xs, L.hash ys )
+            let hash seed ( xs, ys ) = L.hash (L.hash seed xs) ys
             let equal ( xs, ys ) ( xs', ys' ) = L.equal xs xs' && L.equal ys ys'
         end)
 

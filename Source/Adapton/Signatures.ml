@@ -8,7 +8,7 @@ module rec SAType : sig
     module type S = sig
         type data
         type t
-        val hash : t -> int
+        val hash : int -> t -> int
         val equal : t -> t -> bool
         val force : t -> data
         val refresh : unit -> unit
@@ -23,11 +23,11 @@ end = SAType
 (** Module type for self-adjusting values. *)
 module type SAType = sig
     type 'a thunk
-    val hash : 'a thunk -> int
+    val hash : int -> 'a thunk -> int
     val equal : 'a thunk -> 'a thunk -> bool
     val force : 'a thunk -> 'a
     val refresh : unit -> unit
-    module Make (R : Hashtbl.HashedType) : SAType.S with type data = R.t and type t = R.t thunk
+    module Make (R : Hashtbl.SeededHashedType) : SAType.S with type data = R.t and type t = R.t thunk
 end
 
 (** {2 Self-adjusting lists} *)
@@ -39,7 +39,7 @@ module rec SAListType : sig
         type data
         type t
         type t' = [ `Cons of data * t | `Nil ]
-        val hash : t -> int
+        val hash : int -> t -> int
         val equal : t -> t -> bool
         val force : t -> t'
         val refresh : unit -> unit
@@ -70,7 +70,7 @@ end = SAListType
 module type SAListType = sig
     type 'a salist
     type 'a salist' = [ `Cons of 'a * 'a salist | `Nil ]
-    val hash : 'a salist -> int
+    val hash : int -> 'a salist -> int
     val equal : 'a salist -> 'a salist -> bool
     val force : 'a salist -> 'a salist'
     val refresh : unit -> unit
@@ -79,5 +79,5 @@ module type SAListType = sig
     val hd : 'a salist -> 'a
     val tl : 'a salist -> 'a salist
     module type S = SAListType.S
-    module Make (R : Hashtbl.HashedType) : S with type data = R.t and type t = R.t salist and type t' = R.t salist'
+    module Make (R : Hashtbl.SeededHashedType) : S with type data = R.t and type t = R.t salist and type t' = R.t salist'
 end

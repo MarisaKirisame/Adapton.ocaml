@@ -13,7 +13,7 @@ module T = struct
     (**/**)
 
     (** Compute the hash value of a non-self-adjusting value. *)
-    let hash m = m.id
+    let hash seed m = Hashtbl.seeded_hash seed m.id
 
     (** Compute whether two non-self-adjusting values are equal. *)
     let equal = (==)
@@ -28,7 +28,7 @@ include T
 
 
 (** Functor to make constructors and updaters for lazy non-self-adjusting values of a specific type. *)
-module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t and type t = R.t thunk = struct
+module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data = R.t and type t = R.t thunk = struct
     include T
 
     (** Value contained by lazy non-self-adjusting values for a specific type. *)
@@ -62,7 +62,7 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
 
         (** Create non-memoizing constructor and updater for a lazy non-self-adjusting value
             (updater not supported by this module; raises {!NonSelfAdjustingValue}). *)
-        let memo (type a) (module A : Hashtbl.HashedType with type t = a) f =
+        let memo (type a) (module A : Hashtbl.SeededHashedType with type t = a) f =
             (* non-memoizing constructor *)
             let rec memo x =
                 let m = { id=(!lazy_id_counter); thunk=lazy (f memo x) } in

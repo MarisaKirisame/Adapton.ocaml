@@ -57,7 +57,7 @@ let _ =
     let module SAList = (val (List.assoc !opt_salist Adapton.All.salist_list)) in
     let module SAFloatList = SAList.Make (struct
         type t = float
-        let hash = Hashtbl.hash
+        let hash = Hashtbl.seeded_hash
         let equal = (=)
     end) in
     let task = (List.assoc !opt_task tasks) (module SAFloatList) in

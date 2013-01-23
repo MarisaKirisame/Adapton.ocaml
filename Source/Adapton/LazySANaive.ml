@@ -29,7 +29,7 @@ module T = struct
 
 
     (** Compute the hash value of a self-adjusting value. *)
-    let hash m = m.id
+    let hash seed m = Hashtbl.seeded_hash seed m.id
 
     (** Compute whether two self-adjusting values are equal. *)
     let equal = (==)
@@ -67,7 +67,7 @@ include T
 
 
 (** Functor to make constructors and updaters for lazy self-adjusting values of a specific type. *)
-module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t and type t = R.t thunk = struct
+module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data = R.t and type t = R.t thunk = struct
     include T
 
     (** Value contained by lazy self-adjusting values for a specific type. *)
@@ -179,10 +179,11 @@ module Make (R : Hashtbl.HashedType) : Signatures.SAType.S with type data = R.t 
         type t = R.t thunk
 
         (** Create memoizing constructor and updater for a lazy self-adjusting value. *)
-        let memo (type a) (module A : Hashtbl.HashedType with type t = a) f =
+        let memo (type a) (module A : Hashtbl.SeededHashedType with type t = a) f =
             let module Memotable = Weak.Make (struct
                 type t = A.t * R.t thunk
-                let hash ( a, _ ) = A.hash a
+                let seed = Random.bits ()
+                let hash ( a, _ ) = A.hash seed a
                 let equal ( a, _ ) ( a', _ ) = A.equal a a'
             end) in
             let memotable = Memotable.create 0 in

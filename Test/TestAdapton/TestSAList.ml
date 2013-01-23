@@ -3,7 +3,7 @@ open Format
 
 module Int = struct
     type t = int
-    let hash x = x
+    let hash = Hashtbl.seeded_hash
     let equal = (==)
 end
 let assert_int_equal = assert_equal ~printer:pp_print_int
