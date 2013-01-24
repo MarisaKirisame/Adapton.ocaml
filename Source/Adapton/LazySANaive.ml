@@ -76,6 +76,12 @@ module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data 
     (** Lazy self-adjusting values for a specific type. *)
     type t = R.t thunk
 
+    (**/**) (* helper function to call unmemo on a thunk *)
+    let unmemo m = match m.thunk with
+        | MemoValue ( _, _, _, _, _, unmemo ) | MemoThunk ( _, unmemo ) -> unmemo ()
+        | Value _  | Thunk _ | Const _ -> ()
+    (**/**)
+
     (** Create a lazy self-adjusting value from a constant value that does not depend on other lazy self-adjusting values. *)
     let const x =
         let rec receipt s k = match m.thunk with
@@ -94,10 +100,7 @@ module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data 
 
     (** Update a lazy self-adjusting value with a constant value that does not depend on other lazy self-adjusting values. *)
     let update_const m x =
-        begin match m.thunk with
-            | MemoValue ( _, _, _, _, _, unmemo ) | MemoThunk ( _, unmemo ) -> unmemo ()
-            | Value _  | Thunk _ | Const _ -> ()
-        end;
+        unmemo m;
         let receipt s k = match m.thunk with
             | MemoValue ( repair, _, _, _, _, _ ) | Value ( repair, _, _, _, _ ) ->
                 repair s begin fun s -> k s begin match m.thunk with
@@ -166,10 +169,7 @@ module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data 
 
     (** Update a lazy self-adjusting value with a thunk that may depend on other lazy self-adjusting values. *)
     let update_thunk m f =
-        begin match m.thunk with
-            | MemoValue ( _, _, _, _, _, unmemo ) | MemoThunk ( _, unmemo ) -> unmemo ()
-            | Value _ | Thunk _ | Const _ -> ()
-        end;
+        unmemo m;
         let evaluate () = make_evaluate m f () in
         m.thunk <- Thunk evaluate
 
@@ -248,10 +248,7 @@ module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data 
 
             (* memoizing updater *)
             let update_memo m x =
-                begin match m.thunk with
-                    | MemoValue ( _, _, _, _, _, unmemo ) | MemoThunk ( _, unmemo ) -> unmemo ()
-                    | Value _ | Thunk _ | Const _ -> ()
-                end;
+                unmemo m;
                 let rec evaluate () = make_memo_evaluate m x unmemo ()
                 (* create a strong reference to binding and hide it in the closure unmemo stored in m *)
                 and binding = ( x, m )
