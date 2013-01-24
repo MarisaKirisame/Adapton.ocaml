@@ -82,18 +82,22 @@ module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data 
         | Value _  | Thunk _ | Const _ -> ()
     (**/**)
 
+    (**/**) (* helper function to make a const receipt *)
+    let make_const_receipt m x s k = match m.thunk with
+        | MemoValue ( repair, _, _, _, _, _ ) | Value ( repair, _, _, _, _ ) ->
+            repair s begin fun s -> k s begin match m.thunk with
+                | MemoValue ( _, value, _, _, _, _ ) | Value ( _, value, _, _, _ ) | Const ( value, _ ) -> R.equal value x
+                | MemoThunk _ | Thunk _ -> false
+            end end
+        | MemoThunk _ | Thunk _ ->
+            k s false
+        | Const ( value, _ ) ->
+            k s (R.equal value x)
+    (**/**)
+
     (** Create a lazy self-adjusting value from a constant value that does not depend on other lazy self-adjusting values. *)
     let const x =
-        let rec receipt s k = match m.thunk with
-            | MemoValue ( repair, _, _, _, _, _ ) | Value ( repair, _, _, _, _ ) ->
-                repair s begin fun s -> k s begin match m.thunk with
-                    | MemoValue ( _, value, _, _, _, _ ) | Value ( _, value, _, _, _ ) | Const ( value, _ ) -> R.equal value x
-                    | MemoThunk _ | Thunk _ -> false
-                end end
-            | MemoThunk _ | Thunk _ ->
-                k s false
-            | Const ( value, _ ) ->
-                k s (R.equal value x)
+        let rec receipt s k = make_const_receipt m x s k
         and m = { id=(!lazy_id_counter); thunk=Const ( x, receipt ) } in
         incr lazy_id_counter;
         m
@@ -101,59 +105,54 @@ module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data 
     (** Update a lazy self-adjusting value with a constant value that does not depend on other lazy self-adjusting values. *)
     let update_const m x =
         unmemo m;
-        let receipt s k = match m.thunk with
-            | MemoValue ( repair, _, _, _, _, _ ) | Value ( repair, _, _, _, _ ) ->
-                repair s begin fun s -> k s begin match m.thunk with
-                    | MemoValue ( _, value, _, _, _, _ ) | Value ( _, value, _, _, _ ) | Const ( value, _ ) -> R.equal value x
-                    | MemoThunk _ | Thunk _ -> false
-                end end
-            | MemoThunk _ | Thunk _ ->
-                k s false
-            | Const ( value, _ ) ->
-                k s (R.equal value x)
-        in
+        let receipt s k = make_const_receipt m x s k in
         m.thunk <- Const ( x, receipt )
 
-    (**/**) (* helper function to make a function to evaluate a thunk *)
+    (**/**) (* helper function to evaluate a thunk *)
+    let evaluate_actual m f =
+        (* add self to call stack and evaluate *)
+        let dependencies = ref [] in
+        lazy_stack := dependencies::!lazy_stack;
+        let value = try
+            f ()
+        with exn ->
+            lazy_stack := List.tl !lazy_stack;
+            raise exn
+        in
+        lazy_stack := List.tl !lazy_stack;
+        let dependencies = List.rev !dependencies in
+
+        (* receipt/repair performs an truncated inorder traversal of the dependency graph *)
+        let rec receipt s k = repair s begin fun s -> k s begin match m.thunk with
+            | MemoValue ( _, value', _, _, _, _ ) | Value ( _, value', _, _, _ ) | Const ( value', _ ) -> R.equal value' value
+            | MemoThunk _ | Thunk _ -> false
+        end end
+
+        and repair s k =
+            if Hashtbl.mem s m.id then
+                k s
+            else begin
+                Hashtbl.add s m.id ();
+                match m.thunk with
+                    | MemoValue ( _, _, _, dependencies, evaluate, _ ) | Value ( _, _, _, dependencies, evaluate ) ->
+                        let rec repair s = function
+                            | d::ds -> d s (fun s c -> if c then repair s ds else (ignore (evaluate ()); k s))
+                            | [] -> k s
+                        in
+                        repair s dependencies
+                    | MemoThunk ( evaluate, _ ) | Thunk evaluate ->
+                        ignore (evaluate ()); k s
+                    | Const _ ->
+                        k s
+            end
+        in
+        ( repair, value, receipt, dependencies )
+    (**/**)
+
+    (**/**) (** helper function to make a function to evaluate a thunk *)
     let make_evaluate m f =
         let rec evaluate () =
-            (* add self to call stack and evaluate *)
-            let dependencies = ref [] in
-            lazy_stack := dependencies::!lazy_stack;
-            let value = try
-                f ()
-            with exn ->
-                lazy_stack := List.tl !lazy_stack;
-                raise exn
-            in
-            lazy_stack := List.tl !lazy_stack;
-            let dependencies = List.rev !dependencies in
-
-            (* receipt/repair performs an truncated inorder traversal of the dependency graph *)
-            let rec receipt s k = repair s begin fun s -> k s begin match m.thunk with
-                | MemoValue ( _, value', _, _, _, _ ) | Value ( _, value', _, _, _ ) | Const ( value', _ ) -> R.equal value' value
-                | MemoThunk _ | Thunk _ -> false
-            end end
-
-            and repair s k =
-                if Hashtbl.mem s m.id then
-                    k s
-                else begin
-                    Hashtbl.add s m.id ();
-                    match m.thunk with
-                        | MemoValue ( _, _, _, dependencies, evaluate, _ ) | Value ( _, _, _, dependencies, evaluate ) ->
-                            let rec repair s = function
-                                | d::ds -> d s (fun s c -> if c then repair s ds else (ignore (evaluate ()); k s))
-                                | [] -> k s
-                            in
-                            repair s dependencies
-                        | MemoThunk ( evaluate, _ ) | Thunk evaluate ->
-                            ignore (evaluate ()); k s
-                        | Const _ ->
-                            k s
-                end
-            in
-
+            let repair, value, receipt, dependencies = evaluate_actual m f in
             m.thunk <- Value ( repair, value, receipt, dependencies, evaluate );
             ( value, receipt )
         in
@@ -191,43 +190,7 @@ module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data 
             (**/**) (* helper function to make a function to evaluate a thunk with memoization *)
             let rec make_memo_evaluate m x unmemo =
                 let rec evaluate () =
-                    (* add self to call stack and evaluate *)
-                    let dependencies = ref [] in
-                    lazy_stack := dependencies::!lazy_stack;
-                    let value = try
-                        f memo x
-                    with exn ->
-                        lazy_stack := List.tl !lazy_stack;
-                        raise exn
-                    in
-                    lazy_stack := List.tl !lazy_stack;
-                    let dependencies = List.rev !dependencies in
-
-                    (* receipt/repair performs an truncated inorder traversal of the dependency graph *)
-                    let rec receipt s k = repair s begin fun s -> k s begin match m.thunk with
-                        | MemoValue ( _, value', _, _, _, _ ) | Value ( _, value', _, _, _ ) | Const ( value', _ ) -> R.equal value' value
-                        | MemoThunk _ | Thunk _ -> false
-                    end end
-
-                    and repair s k =
-                        if Hashtbl.mem s m.id then
-                            k s
-                        else begin
-                            Hashtbl.add s m.id ();
-                            match m.thunk with
-                                | MemoValue ( _, _, _, dependencies, evaluate, _ ) | Value ( _, _, _, dependencies, evaluate ) ->
-                                    let rec repair s = function
-                                        | d::ds -> d s (fun s c -> if c then repair s ds else (ignore (evaluate ()); k s))
-                                        | [] -> k s
-                                    in
-                                    repair s dependencies
-                                | MemoThunk ( evaluate, _ ) | Thunk evaluate ->
-                                    ignore (evaluate ()); k s
-                                | Const _ ->
-                                    k s
-                        end
-                    in
-
+                    let repair, value, receipt, dependencies = evaluate_actual m (fun () -> f memo x) in
                     m.thunk <- MemoValue ( repair, value, receipt, dependencies, evaluate, unmemo );
                     ( value, receipt )
                 in
