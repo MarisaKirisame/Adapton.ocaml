@@ -99,5 +99,5 @@ ocamltop//%.top : USE_RECTYPES = \
 	$(shell $(OCAMLBUILD) -quiet -show-tags $(patsubst %.mltop,%.top,$(call vpath_for,$*.mltop)) \
 		| awk 'BEGIN { enable = 0 } /{./ { enable = 1 } enable && /({. |, |^ *)rectypes(,$$|, *| .})/ { print "-rectypes"; exit } /.}/ { enable = 0 }')
 ocamltop//%.top : ocamlbuild//%.top
-	$(OCAMLTOP_RLWRAP:%=% $(OCAMLTOP_RLWRAP_FLAGS)) \
+	OCAMLRUNPARAM=b $(OCAMLTOP_RLWRAP:%=% $(OCAMLTOP_RLWRAP_FLAGS)) \
 		$(OCAMLBUILD_PRODUCTDIR)/$*.top -I $(OCAMLBUILD_PRODUCTDIR) $(USE_RECTYPES) $(OCAMLTOP_FLAGS)
