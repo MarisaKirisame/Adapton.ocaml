@@ -104,9 +104,10 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             assert_list_equal ~msg:"update" zs zs';
         end;
 
-        "quicksort" >:: QC.forall (QC.pair (QC.list QC.int) QC.int) begin fun ( xs, x ) ->
+        "quicksort" >:: QC.forall (QC.pair (QC.list QC.int) (QC.list (QC.list (QC.triple QC.bool QC.int QC.int)))) begin fun ( xs, kss ) ->
             let quicksort, _ = I.memo_quicksort compare in
 
+            let n = List.length xs in
             let ys = List.sort compare xs in
             let zs = ys in
 
@@ -116,22 +117,65 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
 
             assert_list_equal ~msg:"initial" zs zs';
 
-            let xs = x::xs in
-            let ys = List.sort compare xs in
-            let zs = ys in
+            ignore begin List.fold_left begin fun ( xs, xs', n ) ks ->
+                let xs, n' = List.fold_left begin fun ( xs, n ) ( i, k, x ) ->
+                    if n = 0 then
+                        ( [ x ], 1 )
+                    else
+                        let k = abs k mod n in
+                        if i then
+                            let rec insert k acc = function
+                                | x::xs when k > 0 -> insert (pred k) (x::acc) xs
+                                | xs -> List.rev_append acc (x::xs)
+                            in
+                            ( insert k [] xs, succ n )
+                        else
+                            let rec delete k acc = function
+                                | x::xs when k > 0 -> delete (pred k) (x::acc) xs
+                                | _::xs -> List.rev_append acc xs
+                                | [] -> failwith "delete"
+                            in
+                            ( delete k [] xs, pred n )
+                end ( xs, n ) ks in
+                let ys = List.sort compare xs in
+                let zs = ys in
 
-            let ys' = try
-                I.push x xs';
-                I.refresh ();
-                ys'
-            with Adapton.Exceptions.NonSelfAdjustingValue ->
-                let xs' = I.of_list xs in
-                let ys' = quicksort xs' in
-                ys'
-            in
-            let zs' = I.to_list ys' in
+                let xs', ys' = try
+                    ignore begin List.fold_left begin fun n ( i, k, x ) ->
+                        if n = 0 then begin
+                            I.push x xs';
+                            1
+                        end else
+                            let k = abs k mod n in
+                            if i then begin
+                                let rec insert k xs' = match I.force xs' with
+                                    | `Cons ( x', xs' ) when k > 0 -> insert (pred k) xs'
+                                    | _ -> I.push x xs'
+                                in
+                                insert k xs';
+                                succ n
+                            end else begin
+                                let rec delete k xs' = match I.force xs' with
+                                    | `Cons ( x', xs' ) when k > 0 -> delete (pred k) xs'
+                                    | `Cons _ -> ignore (I.pop xs')
+                                    | `Nil -> failwith "delete"
+                                in
+                                delete k xs';
+                                pred n
+                            end
+                    end n ks end;
+                    I.refresh ();
+                    ( xs', ys' )
+                with Adapton.Exceptions.NonSelfAdjustingValue ->
+                    let xs' = I.of_list xs in
+                    let ys' = quicksort xs' in
+                    ( xs', ys' )
+                in
+                let zs' = I.to_list ys' in
 
-            assert_list_equal ~msg:"update" zs zs';
+                assert_list_equal ~msg:"update" zs zs';
+                ( xs, xs', n' )
+            end ( xs, xs', n ) kss end
         end;
 
         "filter map" >:: QC.forall (QC.triple (QC.list QC.int) QC.int QC.int) begin fun ( ws, w, p ) ->
