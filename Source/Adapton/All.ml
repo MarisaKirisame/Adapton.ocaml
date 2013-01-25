@@ -3,6 +3,7 @@
 (** List of all names and modules for self-adjusting values. *)
 let sa_list = [
     ( "LazySABidi", (module LazySABidi : Signatures.SAType) );
+    ( "LazySABidiObject", (module LazySABidiObject : Signatures.SAType) );
     ( "LazySANaive", (module LazySANaive : Signatures.SAType) );
     ( "LazySAObject", (module LazySAObject : Signatures.SAType) );
     ( "NonSAEager", (module NonSAEager : Signatures.SAType) );
