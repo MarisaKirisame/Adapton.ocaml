@@ -104,7 +104,17 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             assert_list_equal ~msg:"update" zs zs';
         end;
 
-        "quicksort" >:: QC.forall (QC.pair (QC.list QC.int) (QC.list (QC.list (QC.triple QC.bool QC.int QC.int)))) begin fun ( xs, kss ) ->
+        "quicksort" >:: QC.forall (QC.pair (QC.list QC.int) (QC.list (QC.list (QC.triple QC.bool QC.int QC.int))))
+                ~incl:
+                    [ ( [ 8; 0; -7; 3; -2; 7; -1 ],
+                        [ [ ( true, -3, -4 ); ( false, -8, 6 ); ( true, 5, 8 ); ( true, 0, 6 ); ( true, -5, -2 ) ];
+                            [ ( false, -4, -9 ) ];
+                            [ ( false, -1, -7 ); ( false, -7, 5 ); ( true, -2, -3 ); ( true, -5, -6 ); ( false, -8, -7 ) ];
+                            [ ( false, -9, -2 ); ( true, -8, 6 ); ( true, -7, -4 ); ( false, -1, -6 ); ( true, -4, 0 ); ( true, 1, 6 ) ];
+                            [ ( true, -9, -5 ); ( true, 5, 5 ); ( false, 1, 1 ); ( true, 2, -9 ); ( false, 8, -8 ); ( false, 6, -4 ); ( false, 5, 6 ); ( true, -6, -6 ) ];
+                            [ ( false, -2, -3 ); ( true, 7, 4 ); ( false, -9, -5 ) ] ] ) ]
+                begin fun ( xs, kss ) ->
+            Gc.compact (); (* try to make GC effects consistent across tests *)
             let quicksort, _ = I.memo_quicksort compare in
 
             let n = List.length xs in
