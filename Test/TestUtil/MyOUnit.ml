@@ -223,3 +223,68 @@ let rec list_equal eq x y = match x, y with
 
 let list_printer printer sep ff list =
     ignore (List.fold_left (fun b x -> Format.fprintf ff "%(%)@[%a@]" b printer x; sep) "" list)
+
+
+(*
+ * QuickCheck
+ *)
+
+module QC = struct
+    (* generators *)
+    let bool = object
+        method generate rng size = Random.State.bool rng
+        method print = Format.pp_print_bool
+    end
+    let char = object
+        method generate rng size = char_of_int (Random.State.int rng 256)
+        method print = Format.pp_print_char
+    end
+    let string = object
+        method generate rng size =
+            let n = Random.State.int rng size in
+            let s = String.create n in
+            for i = 0 to n - 1 do s.[i] <- char_of_int (Random.State.int rng 256) done;
+            s
+        method print = Format.pp_print_string
+    end
+    let int = object
+        method generate rng size = -size + Random.State.int rng (size * 2)
+        method print = Format.pp_print_int
+    end
+    let float = object
+        method generate rng size = let size = float_of_int size in -.size +. Random.State.float rng (size *. 2.)
+        method print = Format.pp_print_float
+    end
+    let pair gx gy = object
+        method generate rng size = ( gx#generate rng size, gy#generate rng size )
+        method print ff ( x, y ) = Format.fprintf ff "(@[%a@],@ @[%a@]@,)" gx#print x gy#print y
+    end
+    let triple gx gy gz = object
+        method generate rng size = ( gx#generate rng size, gy#generate rng size, gz#generate rng size )
+        method print ff ( x, y, z ) = Format.fprintf ff "(@[%a@],@ @[%a@],@ @[%a@]@,)" gx#print x gy#print y gz#print z
+    end
+    let list ?(sep=format_of_string ";@ ") gx = object
+        method generate rng size =
+            let rec make n acc = if n > 0 then make (pred n) (gx#generate rng size::acc) else acc in
+            make (Random.State.int rng size) []
+        method print ff = Format.fprintf ff "[@[%a@]@,]" (list_printer gx#print sep)
+    end
+
+    (* test predicate *)
+    let forall ?(rng=Random.State.make_self_init ()) ?(count=100) ?(size=fun n -> 3 + n / 2) ?(incl=[]) ?(where=fun _ -> true) input testfn = fun () ->
+        let test x =
+            try
+                testfn x
+            with MyOUnitFailure as e ->
+                assert_log "@\n@[<2>on input: @[%a@]@]" input#print x;
+                raise e
+        in
+        List.iter test incl;
+        let rec gen k =
+            let x = input#generate rng (size k) in
+            if where x then x else gen (k + 1)
+        in
+        for k = 1 to count do
+            test (gen k)
+        done
+end
