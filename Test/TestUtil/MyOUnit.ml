@@ -146,22 +146,28 @@ let assert_bool msg flag =
 let assert_string msg =
     if not (msg = "") then assert_failure "@[%s@]@." msg
 
-let assert_equal ?(eq=Pervasives.(=)) ?printer ?(msg="") expected actual =
-    if not (eq expected actual) then begin match printer with
-        | Some p -> assert_failure "@[%s@]@\n  @[@[<2>expected:@ %a@]@ @[<2>but got:@ %a@]@]" msg p expected p actual
-        | None -> assert_failure "@[%s@]@\n  not equal" msg
+let assert_equal ?(eq=Pervasives.(=)) ?printer ?msg expected actual =
+    if not (eq expected actual) then begin match printer, msg with
+        | Some p, Some m -> assert_failure "@[%s@]@\n  @[@[<2>expected:@ %a@]@ @[<2>but got:@ %a@]@]" m p expected p actual
+        | Some p, None -> assert_failure "@[@[<2>expected:@ %a@]@ @[<2>but got:@ %a@]@]" p expected p actual
+        | None, Some m -> assert_failure "@[%s@]@\n  not equal" m
+        | None, None -> assert_failure "not equal"
     end
 
-let assert_at_least ?(cmp=Pervasives.compare) ?printer ?(msg="") expected actual =
-    if cmp expected actual > 0 then begin match printer with
-        | Some p -> assert_failure "@[%s@]@\n  @[@[<2>expected at least:@ %a@]@ @[<2>but got:@ %a@]@]" msg p expected p actual
-        | None -> assert_failure "@[%s@]@\n  less than" msg
+let assert_at_least ?(cmp=Pervasives.compare) ?printer ?msg expected actual =
+    if cmp expected actual > 0 then begin match printer, msg with
+        | Some p, Some m -> assert_failure "@[%s@]@\n  @[@[<2>expected at least:@ %a@]@ @[<2>but got:@ %a@]@]" m p expected p actual
+        | Some p, None -> assert_failure "@[@[<2>expected at least:@ %a@]@ @[<2>but got:@ %a@]@]" p expected p actual
+        | None, Some m -> assert_failure "@[%s@]@\n  less than" m
+        | None, None -> assert_failure "less than"
     end
 
-let assert_at_most ?(cmp=Pervasives.compare) ?printer ?(msg="") expected actual =
-    if cmp expected actual < 0 then begin match printer with
-        | Some p -> assert_failure "@[%s@]@\n  @[@[<2>expected at most:@ %a@]@ @[<2>but got:@ %a@]@]" msg p expected p actual
-        | None -> assert_failure "@[%s@]@\n  more than" msg
+let assert_at_most ?(cmp=Pervasives.compare) ?printer ?msg expected actual =
+    if cmp expected actual < 0 then begin match printer, msg with
+        | Some p, Some m -> assert_failure "@[%s@]@\n  @[@[<2>expected at most:@ %a@]@ @[<2>but got:@ %a@]@]" m p expected p actual
+        | Some p, None -> assert_failure "@[@[<2>expected at most:@ %a@]@ @[<2>but got:@ %a@]@]" p expected p actual
+        | None, Some m -> assert_failure "@[%s@]@\n  more than" m
+        | None, None -> assert_failure "more than"
     end
 
 
