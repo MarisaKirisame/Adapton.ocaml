@@ -1,16 +1,11 @@
 open TestUtil.MyOUnit
 open Format
 
-module Int = struct
-    type t = int
-    let hash = Hashtbl.seeded_hash
-    let equal = (==)
-end
 let assert_int_equal = assert_equal ~printer:pp_print_int
 let assert_list_equal = assert_equal ~printer:(list_printer pp_print_int ",")
 
 let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
-    let module I = L.Make (Int) in
+    let module I = L.Make (Adapton.Types.Int) in
 
     "Correctness" >::: [
         "filter" >:: QC.forall (QC.triple (QC.list QC.int) QC.int QC.int) begin fun ( xs, x, p ) ->
