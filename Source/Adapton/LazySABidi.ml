@@ -166,7 +166,7 @@ module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data 
         lazy_stack := List.tl !lazy_stack;
         let dependencies = List.rev !dependencies in
 
-        (* receipt/repair performs an truncated inorder traversal of the dependency graph *)
+        (* receipt/repair performs a truncated inorder traversal of the dependency graph *)
         let rec receipt k = repair begin fun () -> k begin match m.thunk with
             | MemoValue ( _, value', _, _, _, _ ) | Value ( _, value', _, _, _ ) | Const ( value', _ ) -> R.equal value' value
             | MemoThunk _ | Thunk _ -> false

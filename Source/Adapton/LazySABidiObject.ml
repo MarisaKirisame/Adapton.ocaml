@@ -129,7 +129,7 @@ module T = struct
             end;
             ( value, receipt )
 
-        (* receipt/repair performs an truncated inorder traversal of the dependency graph *)
+        (* receipt/repair performs a truncated inorder traversal of the dependency graph *)
         method private repair k = match thunk with
             | MemoValue ( _ , _, dependencies, f, _ ) | Value ( _ , _, dependencies, f ) ->
                 let rec repair = function
