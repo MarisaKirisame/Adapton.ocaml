@@ -6,6 +6,8 @@
 module rec SAType : sig
     (** Module type for self-adjusting values for a specific type. *)
     module type S = sig
+        type sa
+        type 'a thunk
         type data
         type t
         val hash : int -> t -> int
@@ -22,12 +24,13 @@ end = SAType
 
 (** Module type for self-adjusting values. *)
 module type SAType = sig
+    type sa
     type 'a thunk
     val hash : int -> 'a thunk -> int
     val equal : 'a thunk -> 'a thunk -> bool
     val force : 'a thunk -> 'a
     val refresh : unit -> unit
-    module Make (R : Hashtbl.SeededHashedType) : SAType.S with type data = R.t and type t = R.t thunk
+    module Make (R : Hashtbl.SeededHashedType) : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk
 end
 
 (** {2 Self-adjusting lists} *)
@@ -36,6 +39,8 @@ end
 module rec SAListType : sig
     (** Module type for self-adjusting lists for a specific type. *)
     module type S = sig
+        type sa
+        type 'a thunk
         type data
         type t
         type t' = [ `Cons of data * t | `Nil ]
@@ -57,9 +62,11 @@ module rec SAListType : sig
         val pop : t -> data
         val memo_append : (t -> t -> t) * (t -> t -> t -> unit)
         val memo_filter : (data -> bool) -> (t -> t) * (t -> t -> unit)
-        val memo_map : (module SAListType.S with type data = 'a and type t = 'b) -> ('a -> data) -> ('b -> t) * (t -> 'b -> unit)
-        val memo_scan : (module SAListType.S with type data = 'a and type t = 'b) -> ('a -> data -> data) -> ('b -> data -> t) * (t -> 'b -> data -> unit)
-        module PartitionType : SAType.S with type data = t * t
+        val memo_map
+            : (module SAListType.S with type sa = sa and type data = 'a and type t = 'b) -> ('a -> data) -> ('b -> t) * (t -> 'b -> unit)
+        val memo_scan
+            : (module SAListType.S with type sa = sa and type data = 'a and type t = 'b) -> ('a -> data -> data) -> ('b -> data -> t) * (t -> 'b -> data -> unit)
+        module PartitionType : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = t * t and type t = (t * t) thunk
         val split_partition : PartitionType.t -> t * t
         val memo_partition_with_key : (data -> data -> bool) -> (data -> t -> PartitionType.t) * (PartitionType.t -> data -> t -> unit)
         val memo_quicksort : (data -> data -> int) -> (t -> t) * (t -> t -> unit)
@@ -68,6 +75,8 @@ end = SAListType
 
 (** Module type for self-adjusting lists. *)
 module type SAListType = sig
+    type sa
+    type 'a thunk
     type 'a salist
     type 'a salist' = [ `Cons of 'a * 'a salist | `Nil ]
     val hash : int -> 'a salist -> int
@@ -79,5 +88,6 @@ module type SAListType = sig
     val hd : 'a salist -> 'a
     val tl : 'a salist -> 'a salist
     module type S = SAListType.S
-    module Make (R : Hashtbl.SeededHashedType) : S with type data = R.t and type t = R.t salist and type t' = R.t salist'
+    module Make (R : Hashtbl.SeededHashedType)
+        : S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t salist and type t' = R.t salist'
 end

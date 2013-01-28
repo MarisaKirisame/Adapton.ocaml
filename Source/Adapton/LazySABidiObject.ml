@@ -2,6 +2,9 @@
 
 (** Types and operations common to lazy self-adjusting values containing any type. *)
 module T = struct
+    (** Abstract type identifying this module for self-adjusting values. *)
+    type sa
+
     (**/**) (* auxiliary types *)
     module rec TT : sig
         type 'a state =
@@ -166,7 +169,8 @@ include T
 
 
 (** Functor to make a constructor, a mutator, and a memoizing constructor for lazy self-adjusting values of a specific type. *)
-module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data = R.t and type t = R.t thunk = struct
+module Make (R : Hashtbl.SeededHashedType)
+        : Signatures.SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk = struct
     include T
 
     (** Value contained by lazy self-adjusting values for a specific type. *)

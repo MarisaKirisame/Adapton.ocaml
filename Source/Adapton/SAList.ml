@@ -1,7 +1,9 @@
 (** Self-adjusting lists. *)
 
 (** Functor to make self-adjusting lists, given a particular module for self-adjusting values. *)
-module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist = [ `Cons of 'a * 'b | `Nil ] M.thunk as 'b = struct
+module Make (M : Signatures.SAType)
+        : Signatures.SAListType with type sa = M.sa and type 'a thunk = 'a M.thunk and type 'a salist = [ `Cons of 'a * 'b | `Nil ] M.thunk as 'b = struct
+
     (** Self-adjusting lists containing ['a]. *)
     type 'a salist = 'a salist' M.thunk
 
@@ -10,6 +12,12 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
 
     (** Types and operations common to lazy self-adjusting lists containing any type. *)
     module T = struct
+        (** Abstract type identifying the given module for self-adjusting values used to create this module for self-adjusting lists. *)
+        type sa = M.sa
+
+        (** Self-adjusting values from the given module used to create this module for self-adjusting lists. *)
+        type 'a thunk = 'a M.thunk
+
         (** Compute the hash value of a self-adjusting list. *)
         let hash = M.hash
 
@@ -55,7 +63,8 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
     module type S = Signatures.SAListType.S
 
     (** Functor to make various list constructors, updaters, and combinators for self-adjusting lists of a specific type. *)
-    module Make (R : Hashtbl.SeededHashedType) : Signatures.SAListType.S with type data = R.t and type t = R.t salist and type t' = R.t salist' = struct
+    module Make (R : Hashtbl.SeededHashedType)
+            : Signatures.SAListType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t salist and type t' = R.t salist' = struct
 
         module L = M.Make (struct
             type t = R.t salist'
@@ -131,14 +140,14 @@ module Make (M : Signatures.SAType) : Signatures.SAListType with type 'a salist 
             end
 
         (** Create memoizing constructor and updater that map a self-adjusting list with a mapping function. *)
-        let memo_map (type a) (type b) (module L : Signatures.SAListType.S with type data = a and type t = b) f =
+        let memo_map (type a) (type b) (module L : Signatures.SAListType.S with type sa = sa and type data = a and type t = b) f =
             memo (module L) begin fun map xs -> match L.force xs with
                 | `Cons ( x, xs ) -> `Cons ( f x, map xs )
                 | `Nil -> `Nil
             end
 
         (** Create memoizing constructor and updater that scan (fold over prefixes of) a self-adjusting list with an scanning function. *)
-        let memo_scan (type a) (type b) (module L : Signatures.SAListType.S with type data = a and type t = b) f =
+        let memo_scan (type a) (type b) (module L : Signatures.SAListType.S with type sa = sa and type data = a and type t = b) f =
             memo2 (module L) (module R) begin fun scan xs acc -> match L.force xs with
                 | `Cons ( x, xs ) -> let acc = f x acc in `Cons (acc, scan xs acc)
                 | `Nil -> `Nil

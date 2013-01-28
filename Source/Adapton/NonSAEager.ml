@@ -2,6 +2,9 @@
 
 (** Types and operations common to eager non-self-adjusting values containing any type. *)
 module T = struct
+    (** Abstract type identifying this module for non-self-adjusting values. *)
+    type sa
+
     (** Eager non-self-adjusting values containing ['a]. *)
     type 'a thunk = {
         id : int;
@@ -28,7 +31,8 @@ include T
 
 
 (** Functor to make constructors and updaters for eager non-self-adjusting values of a specific type. *)
-module Make (R : Hashtbl.SeededHashedType) : Signatures.SAType.S with type data = R.t and type t = R.t thunk = struct
+module Make (R : Hashtbl.SeededHashedType)
+        : Signatures.SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk = struct
     include T
 
     (** Value contained by eager non-self-adjusting values for a specific type. *)
