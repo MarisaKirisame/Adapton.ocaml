@@ -154,11 +154,7 @@ module Make (M : Signatures.SAType)
             end
 
         (** Output type of memo_partition (a lazy pair of lists). *)
-        module PartitionType = M.Make (struct
-            type t = L.t * L.t
-            let hash seed ( xs, ys ) = L.hash (L.hash seed xs) ys
-            let equal ( xs, ys ) ( xs', ys' ) = L.equal xs xs' && L.equal ys ys'
-        end)
+        module PartitionType = M.Make (Types.Tuple2 (L) (L))
 
         (** Helper function to split the output of memo_partition. *)
         let split_partition =

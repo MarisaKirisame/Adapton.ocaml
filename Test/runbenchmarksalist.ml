@@ -56,11 +56,7 @@ let _ =
     let rng = Random.State.make [| !opt_random_seed |] in
     Random.init (Random.State.bits rng);
     let module SAList = (val (List.assoc !opt_salist Adapton.All.salist_list)) in
-    let module SAFloatList = SAList.Make (struct
-        type t = float
-        let hash = Hashtbl.seeded_hash
-        let equal = (=)
-    end) in
+    let module SAFloatList = SAList.Make (Adapton.Types.Float) in
     let task = (List.assoc !opt_task tasks) (module SAFloatList) in
 
     let start_time = get_time () in
