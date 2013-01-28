@@ -41,11 +41,8 @@ module Make (M : MemoNType) = struct
             (type a) (module A : Hashtbl.SeededHashedType with type t = a)
             (type b) (module B : Hashtbl.SeededHashedType with type t = b)
             f =
-        let memo, update_memo = M.memo (module struct
-            type t = A.t * B.t
-            let hash seed ( a, b ) = B.hash (A.hash seed a) b
-            let equal ( a, b ) ( a', b' ) = A.equal a a' && B.equal b b'
-        end) (fun memo ( a, b ) -> f (fun a b -> memo ( a, b )) a b) in
+        let memo, update_memo =
+            M.memo (module Types.Tuple2 (A) (B)) (fun memo ( a, b ) -> f (fun a b -> memo ( a, b )) a b) in
         let memo a b = memo ( a, b ) in
         let update_memo m a b = update_memo m ( a, b ) in
         ( memo, update_memo )
@@ -56,11 +53,8 @@ module Make (M : MemoNType) = struct
             (type b) (module B : Hashtbl.SeededHashedType with type t = b)
             (type c) (module C : Hashtbl.SeededHashedType with type t = c)
             f =
-        let memo, update_memo = M.memo (module struct
-            type t = A.t * B.t * C.t
-            let hash seed ( a, b, c ) = C.hash (B.hash (A.hash seed a) b) c
-            let equal ( a, b, c ) ( a', b', c' ) = A.equal a a' && B.equal b b' && C.equal c c'
-        end) (fun memo ( a, b, c ) -> f (fun a b c -> memo ( a, b, c )) a b c) in
+        let memo, update_memo =
+            M.memo (module Types.Tuple3 (A) (B) (C)) (fun memo ( a, b, c ) -> f (fun a b c -> memo ( a, b, c )) a b c) in
         let memo a b c = memo ( a, b, c ) in
         let update_memo m a b c = update_memo m ( a, b, c ) in
         ( memo, update_memo )
@@ -72,11 +66,8 @@ module Make (M : MemoNType) = struct
             (type c) (module C : Hashtbl.SeededHashedType with type t = c)
             (type d) (module D : Hashtbl.SeededHashedType with type t = d)
             f =
-        let memo, update_memo = M.memo (module struct
-            type t = A.t * B.t * C.t * D.t
-            let hash seed ( a, b, c, d ) = D.hash (C.hash (B.hash (A.hash seed a) b) c) d
-            let equal ( a, b, c, d ) ( a', b', c', d' ) = A.equal a a' && B.equal b b' && C.equal c c' && D.equal d d'
-        end) (fun memo ( a, b, c, d ) -> f (fun a b c d -> memo ( a, b, c, d )) a b c d) in
+        let memo, update_memo =
+            M.memo (module Types.Tuple4 (A) (B) (C) (D)) (fun memo ( a, b, c, d ) -> f (fun a b c d -> memo ( a, b, c, d )) a b c d) in
         let memo a b c d = memo ( a, b, c, d ) in
         let update_memo m a b c d = update_memo m ( a, b, c, d ) in
         ( memo, update_memo )
