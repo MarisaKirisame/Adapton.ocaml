@@ -47,16 +47,14 @@ module Make (M : Signatures.SAType)
             take [] xs k
 
         (** Return the head of a self-adjusting list. *)
-        let hd xs =
-            match force xs with
-                | `Cons ( x, _ ) -> x
-                | `Nil -> failwith "hd"
+        let hd xs = match force xs with
+            | `Cons ( x, _ ) -> x
+            | `Nil -> failwith "hd"
 
         (** Return the tail of a self-adjusting list. *)
-        let tl xs =
-            match force xs with
-                | `Cons ( _, xs ) -> xs
-                | `Nil -> failwith "tl"
+        let tl xs = match force xs with
+            | `Cons ( _, xs ) -> xs
+            | `Nil -> failwith "tl"
     end
     include T
 
@@ -73,7 +71,7 @@ module Make (M : Signatures.SAType)
                 | `Nil -> Hashtbl.seeded_hash seed `Nil
             let equal xs xs' = xs == xs' || match xs, xs' with
                 | `Cons ( h, t ), `Cons ( h', t' ) -> R.equal h h' && equal t t'
-                | (`Cons _ | `Nil), (`Cons _ | `Nil) -> false
+                | _ -> false
         end)
 
         (** Value contained by self-adjusting lists for a specific type. *)
@@ -128,7 +126,7 @@ module Make (M : Signatures.SAType)
         (** Create memoizing constructor and updater that concatenate two self-adjusting lists. *)
         let memo_append =
             memo2 (module L) (module L) begin fun append xs ys -> match force xs with
-                | `Cons ( x, xs ) -> `Cons (x, append xs ys)
+                | `Cons ( x, xs ) -> `Cons ( x, append xs ys )
                 | `Nil -> force ys
             end
 
@@ -149,7 +147,7 @@ module Make (M : Signatures.SAType)
         (** Create memoizing constructor and updater that scan (fold over prefixes of) a self-adjusting list with an scanning function. *)
         let memo_scan (type a) (type b) (module L : Signatures.SAListType.S with type sa = sa and type data = a and type t = b) f =
             memo2 (module L) (module R) begin fun scan xs acc -> match L.force xs with
-                | `Cons ( x, xs ) -> let acc = f x acc in `Cons (acc, scan xs acc)
+                | `Cons ( x, xs ) -> let acc = f x acc in `Cons ( acc, scan xs acc )
                 | `Nil -> `Nil
             end
 
