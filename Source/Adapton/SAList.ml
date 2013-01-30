@@ -162,8 +162,8 @@ module Make (M : Signatures.SAType)
                 ( split_left xs, split_right xs )
 
         (** Create memoizing constructor and updater to partition a self-adjusting list with a predicate and key. *)
-        let memo_partition_with_key pred =
-            PartitionType.memo2 (module R) (module L) begin fun partition k xs -> match force xs with
+        let memo_partition_with_key (type a) (module K : Hashtbl.SeededHashedType with type t = a) pred =
+            PartitionType.memo2 (module K) (module L) begin fun partition k xs -> match force xs with
                 | `Cons ( x, xs ) ->
                     let left, right = split_partition (partition k xs) in
                     if pred k x then
@@ -176,7 +176,7 @@ module Make (M : Signatures.SAType)
 
         (** Create memoizing constructor and updater to quicksort a self-adjusting list with a comparator. *)
         let memo_quicksort cmp =
-            let partition, _ = memo_partition_with_key (fun k x -> cmp x k < 0) in
+            let partition, _ = memo_partition_with_key (module R) (fun k x -> cmp x k < 0) in
             let quicksort, update_quicksort = memo2 (module L) (module L) begin fun quicksort xs rest -> match L.force xs with
                 | `Cons ( x, xs ) ->
                     let left, right = split_partition (partition x xs) in

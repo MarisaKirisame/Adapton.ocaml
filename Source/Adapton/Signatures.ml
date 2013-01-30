@@ -68,7 +68,9 @@ module rec SAListType : sig
             : (module SAListType.S with type sa = sa and type data = 'a and type t = 'b) -> ('a -> data -> data) -> ('b -> data -> t) * (t -> 'b -> data -> unit)
         module PartitionType : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = t * t and type t = (t * t) thunk
         val split_partition : PartitionType.t -> t * t
-        val memo_partition_with_key : (data -> data -> bool) -> (data -> t -> PartitionType.t) * (PartitionType.t -> data -> t -> unit)
+        val memo_partition_with_key
+            : (module Hashtbl.SeededHashedType with type t = 'a) -> ('a -> data -> bool)
+                -> ('a -> t -> PartitionType.t) * (PartitionType.t -> 'a -> t -> unit)
         val memo_quicksort : (data -> data -> int) -> (t -> t) * (t -> t -> unit)
     end
 end = SAListType
