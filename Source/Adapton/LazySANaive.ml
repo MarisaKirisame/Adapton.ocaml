@@ -43,7 +43,7 @@ module T = struct
     (** Return the value contained by a self-adjusting value, (re-)computing it if necessary. *)
     let force m =
         let value, receipt = match m.thunk with
-            | MemoValue ( repair, v, _, _, _, _ ) | Value ( repair, v, _, _, _ ) ->
+            | MemoValue ( repair, _, _, _, _, _ ) | Value ( repair, _, _, _, _ ) ->
                 (* compute the value if necessary *)
                 repair (Hashtbl.create 0) (fun _ -> ());
                 begin match m.thunk with
