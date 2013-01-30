@@ -126,13 +126,8 @@ module Make (R : Hashtbl.SeededHashedType)
         lazy_stack := List.tl !lazy_stack;
         let dependencies = List.rev !dependencies in
 
-        (* receipt/repair performs a truncated inorder traversal of the dependency graph *)
-        let rec receipt s k = repair s begin fun s -> k s begin match m.thunk with
-            | MemoValue ( _, value', _, _, _, _ ) | Value ( _, value', _, _, _ ) | Const ( value', _ ) -> R.equal value' value
-            | MemoThunk _ | Thunk _ -> false
-        end end
-
-        and repair s k =
+        (* repair/receipt performs a truncated inorder traversal of the dependency graph *)
+        let repair s k =
             if Hashtbl.mem s m.id then
                 k s
             else begin
@@ -150,6 +145,12 @@ module Make (R : Hashtbl.SeededHashedType)
                         k s
             end
         in
+
+        let receipt s k = repair s begin fun s -> k s begin match m.thunk with
+            | MemoValue ( _, value', _, _, _, _ ) | Value ( _, value', _, _, _ ) | Const ( value', _ ) -> R.equal value' value
+            | MemoThunk _ | Thunk _ -> false
+        end end in
+
         ( repair, value, receipt, dependencies )
     (**/**)
 
@@ -203,11 +204,10 @@ module Make (R : Hashtbl.SeededHashedType)
 
             (* memoizing constructor *)
             and memo x =
-                let rec evaluate () = make_memo_evaluate m x unmemo ()
                 (* create a strong reference to binding and hide it in the closure unmemo stored in m *)
-                and binding = ( x, m )
+                let rec binding = ( x, m )
                 and unmemo () = Memotable.remove memotable binding
-
+                and evaluate () = make_memo_evaluate m x unmemo ()
                 and m = { id=(!lazy_id_counter); thunk=MemoThunk ( evaluate, unmemo ) } in
                 incr lazy_id_counter;
                 snd (Memotable.merge memotable binding)
@@ -216,11 +216,10 @@ module Make (R : Hashtbl.SeededHashedType)
             (* memoizing updater *)
             let update_memo m x =
                 unmemo m;
-                let rec evaluate () = make_memo_evaluate m x unmemo ()
                 (* create a strong reference to binding and hide it in the closure unmemo stored in m *)
-                and binding = ( x, m )
+                let rec binding = ( x, m )
                 and unmemo () = Memotable.remove memotable binding in
-
+                let evaluate () = make_memo_evaluate m x unmemo () in
                 if Memotable.merge memotable binding == binding then
                     m.thunk <- MemoThunk ( evaluate, unmemo )
                 else
