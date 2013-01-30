@@ -7,117 +7,15 @@ let assert_list_equal = assert_equal ~printer:(list_printer pp_print_int ",")
 let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
     let module I = L.Make (Adapton.Types.Int) in
 
-    "Correctness" >::: [
-        "filter" >:: QC.forall (QC.triple (QC.list QC.int) QC.int QC.int) begin fun ( xs, x, p ) ->
-            let pred = (<) p in
-            let filter_pred, _ = I.memo_filter pred in
-
-            let ys = List.filter pred xs in
-            let zs = ys in
-
-            let xs' = I.of_list xs in
-            let ys' = filter_pred xs' in
-            let zs' = I.to_list ys' in
-
-            assert_list_equal ~msg:"initial" zs zs';
-
-            let xs = x::xs in
-            let ys = List.filter pred xs in
-            let zs = ys in
-
-            let ys' = try
-                I.push x xs';
-                I.refresh ();
-                ys'
-            with Adapton.Exceptions.NonSelfAdjustingValue ->
-                let xs' = I.of_list xs in
-                let ys' = filter_pred xs' in
-                ys'
-            in
-            let zs' = I.to_list ys' in
-
-            assert_list_equal ~msg:"update" zs zs';
-        end;
-
-        "append" >:: QC.forall (QC.pair (QC.list QC.int) QC.int) begin fun ( xs, x ) ->
-            let append, _ = I.memo_append in
-            let ys = List.append xs xs in
-            let zs = ys in
-
-            let xs' = I.of_list xs in
-            let ys' = append xs' xs' in
-            let zs' = I.to_list ys' in
-
-            assert_list_equal ~msg:"initial" zs zs';
-
-            let xs = x::xs in
-            let ys = List.append xs xs in
-            let zs = ys in
-
-            let ys' = try
-                I.push x xs';
-                I.refresh ();
-                ys'
-            with Adapton.Exceptions.NonSelfAdjustingValue ->
-                let xs' = I.of_list xs in
-                let ys' = append xs' xs' in
-                ys'
-            in
-            let zs' = I.to_list ys' in
-
-            assert_list_equal ~msg:"update" zs zs';
-        end;
-
-        "map" >:: QC.forall (QC.pair (QC.list QC.int) QC.int) begin fun ( xs, x ) ->
-            let fn = succ in
-            let map_fn, _ = I.memo_map (module I) fn in
-
-            let ys = List.map fn xs in
-            let zs = ys in
-
-            let xs' = I.of_list xs in
-            let ys' = map_fn xs' in
-            let zs' = I.to_list ys' in
-
-            assert_list_equal ~msg:"initial" zs zs';
-
-            let xs = x::xs in
-            let ys = List.map fn xs in
-            let zs = ys in
-
-            let ys' = try
-                I.push x xs';
-                I.refresh ();
-                ys'
-            with Adapton.Exceptions.NonSelfAdjustingValue ->
-                let xs' = I.of_list xs in
-                let ys' = map_fn xs' in
-                ys'
-            in
-            let zs' = I.to_list ys' in
-
-            assert_list_equal ~msg:"update" zs zs';
-        end;
-
-        "quicksort" >:: QC.forall (QC.pair (QC.list QC.int) (QC.list (QC.list (QC.triple QC.bool QC.int QC.int))))
-                ~incl:
-                    [ ( [ 8; 0; -7; 3; -2; 7; -1 ],
-                        [ [ ( true, -3, -4 ); ( false, -8, 6 ); ( true, 5, 8 ); ( true, 0, 6 ); ( true, -5, -2 ) ];
-                            [ ( false, -4, -9 ) ];
-                            [ ( false, -1, -7 ); ( false, -7, 5 ); ( true, -2, -3 ); ( true, -5, -6 ); ( false, -8, -7 ) ];
-                            [ ( false, -9, -2 ); ( true, -8, 6 ); ( true, -7, -4 ); ( false, -1, -6 ); ( true, -4, 0 ); ( true, 1, 6 ) ];
-                            [ ( true, -9, -5 ); ( true, 5, 5 ); ( false, 1, 1 ); ( true, 2, -9 ); ( false, 8, -8 ); ( false, 6, -4 ); ( false, 5, 6 ); ( true, -6, -6 ) ];
-                            [ ( false, -2, -3 ); ( true, 7, 4 ); ( false, -9, -5 ) ] ] ) ]
-                begin fun ( xs, kss ) ->
-            Gc.compact (); (* try to make GC effects consistent across tests *)
-            let quicksort, _ = I.memo_quicksort compare in
-
+    let test_salist_op ?(count=25) ?incl op sa_op =
+        Gc.compact (); (* try to make GC effects consistent across tests *)
+        QC.forall ~count ?incl (QC.pair (QC.list QC.int) (QC.list (QC.list (QC.triple QC.bool QC.int QC.int)))) begin fun ( xs, kss ) ->
             let n = List.length xs in
-            let ys = List.sort compare xs in
+            let ys = op xs in
             let zs = ys in
 
             let xs' = I.of_list xs in
-            let ys' = quicksort xs' in
+            let ys' = sa_op xs' in
             let zs' = I.to_list ys' in
 
             assert_list_equal ~msg:"initial" zs zs';
@@ -142,7 +40,7 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                             in
                             ( delete k [] xs, pred n )
                 end ( xs, n ) ks in
-                let ys = List.sort compare xs in
+                let ys = op xs in
                 let zs = ys in
 
                 let xs', ys' = try
@@ -173,7 +71,7 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                     ( xs', ys' )
                 with Adapton.Exceptions.NonSelfAdjustingValue ->
                     let xs' = I.of_list xs in
-                    let ys' = quicksort xs' in
+                    let ys' = sa_op xs' in
                     ( xs', ys' )
                 in
                 let zs' = I.to_list ys' in
@@ -181,85 +79,56 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                 assert_list_equal ~msg:"update" zs zs';
                 ( xs, xs', n' )
             end ( xs, xs', n ) kss end
+        end ()
+    in
+
+    "Correctness" >::: [
+        "filter" >:: QC.forall QC.int begin fun p ->
+            let pred = (<) p in
+            let filter_pred, _ = I.memo_filter pred in
+            test_salist_op (List.filter pred) filter_pred
         end;
 
-        "filter map" >:: QC.forall (QC.triple (QC.list QC.int) QC.int QC.int) begin fun ( ws, w, p ) ->
+        "append" >:: begin fun () ->
+            let append, _ = I.memo_append in
+            test_salist_op (fun xs -> List.append xs xs) (fun xs' -> append xs' xs')
+        end;
+
+        "map" >:: begin fun () ->
+            let fn = succ in
+            let map_fn, _ = I.memo_map (module I) fn in
+            test_salist_op (List.map fn) map_fn
+        end;
+
+        "quicksort" >:: begin fun () ->
+            let quicksort, _ = I.memo_quicksort compare in
+            test_salist_op
+                ~incl:
+                    [ ( [ 8; 0; -7; 3; -2; 7; -1 ],
+                        [ [ ( true, -3, -4 ); ( false, -8, 6 ); ( true, 5, 8 ); ( true, 0, 6 ); ( true, -5, -2 ) ];
+                            [ ( false, -4, -9 ) ];
+                            [ ( false, -1, -7 ); ( false, -7, 5 ); ( true, -2, -3 ); ( true, -5, -6 ); ( false, -8, -7 ) ];
+                            [ ( false, -9, -2 ); ( true, -8, 6 ); ( true, -7, -4 ); ( false, -1, -6 ); ( true, -4, 0 ); ( true, 1, 6 ) ];
+                            [ ( true, -9, -5 ); ( true, 5, 5 ); ( false, 1, 1 ); ( true, 2, -9 ); ( false, 8, -8 ); ( false, 6, -4 ); ( false, 5, 6 ); ( true, -6, -6 ) ];
+                            [ ( false, -2, -3 ); ( true, 7, 4 ); ( false, -9, -5 ) ] ] ) ]
+                (List.sort compare) quicksort
+        end;
+
+        "filter map" >:: QC.forall QC.int begin fun p ->
             let pred = (<) p in
             let filter_pred, _ = I.memo_filter pred in
             let fn = succ in
             let map_fn, _ = I.memo_map (module I) fn in
-
-            let xs = List.filter pred ws in
-            let ys = List.map fn xs in
-            let zs = ys in
-
-            let ws' = I.of_list ws in
-            let xs' = filter_pred ws' in
-            let ys' = map_fn xs' in
-            let zs' = I.to_list ys' in
-
-            assert_list_equal ~msg:"initial" zs zs';
-
-            let ws = w::ws in
-            let xs = List.filter pred ws in
-            let ys = List.map fn xs in
-            let zs = ys in
-
-            let ys' = try
-                I.push w ws';
-                I.refresh ();
-                ys'
-            with Adapton.Exceptions.NonSelfAdjustingValue ->
-                let ws' = I.of_list ws in
-                let xs' = filter_pred ws' in
-                let ys' = map_fn xs' in
-                ys'
-            in
-            let zs' = I.to_list ys' in
-
-            assert_list_equal ~msg:"update" zs zs';
+            test_salist_op (fun xs -> List.map fn (List.filter pred xs)) (fun xs' -> map_fn (filter_pred xs'))
         end;
 
-        "filter map append" >:: QC.forall (QC.triple (QC.list QC.int) QC.int QC.int) begin fun ( vs, v, p ) ->
+        "filter map append" >:: QC.forall QC.int begin fun p ->
             let pred = (<) p in
             let filter_pred, _ = I.memo_filter pred in
             let fn = succ in
             let map_fn, _ = I.memo_map (module I) fn in
             let append, _ = I.memo_append in
-
-            let ws = List.filter pred vs in
-            let xs = List.map fn ws in
-            let ys = List.append xs xs in
-            let zs = ys in
-
-            let vs' = I.of_list vs in
-            let ws' = filter_pred vs' in
-            let xs' = map_fn ws' in
-            let ys' = append xs' xs' in
-            let zs' = I.to_list ys' in
-
-            assert_list_equal ~msg:"initial" zs zs';
-
-            let vs = v::vs in
-            let ws = List.filter pred vs in
-            let xs = List.map fn ws in
-            let ys = List.append xs xs in
-            let zs = ys in
-
-            let ys' = try
-                I.push v vs';
-                I.refresh ();
-                ys'
-            with Adapton.Exceptions.NonSelfAdjustingValue ->
-                let vs' = I.of_list vs in
-                let ws' = filter_pred vs' in
-                let xs' = map_fn ws' in
-                let ys' = append xs' xs' in
-                ys'
-            in
-            let zs' = I.to_list ys' in
-
-            assert_list_equal ~msg:"update" zs zs';
+            test_salist_op (fun xs -> let ys = List.map fn (List.filter pred xs) in List.append ys ys) (fun xs' -> let ys' = map_fn (filter_pred xs') in append ys' ys')
         end;
 
         "memo" >:: QC.forall (QC.pair (QC.list QC.int) QC.int) ~where:(fun ( xs, _ ) -> xs <> []) begin fun ( xs, x ) ->
