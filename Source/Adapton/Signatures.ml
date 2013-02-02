@@ -81,6 +81,7 @@ module rec SAListType : sig
             : (module Hashtbl.SeededHashedType with type t = 'a) -> ('a -> data -> bool)
                 -> ('a -> t -> PartitionType.t) * (PartitionType.t -> 'a -> t -> unit)
         val memo_quicksort : (data -> data -> int) -> (t -> t) * (t -> t -> unit)
+        val memo_mergesort : (data -> data -> int) -> (t -> t) * (t -> t -> unit)
     end
 end = SAListType
 

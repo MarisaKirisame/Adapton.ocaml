@@ -233,5 +233,29 @@ module Make (M : Signatures.SAType)
             let quicksort xs = quicksort xs (const `Nil) in
             let update_quicksort m xs = update_quicksort m xs (const `Nil) in
             ( quicksort, update_quicksort )
+
+        (**/**) (* internal type of mergesort *)
+        module RunType = MakeBasic (L)
+        (**/**)
+
+        (** Create memoizing constructor and updater to mergesort a self-adjusting list with a comparator. *)
+        let memo_mergesort cmp =
+            let lift, _ = RunType.memo_map (module L) (fun x -> const (`Cons ( x, const `Nil ))) in
+            let merge, _ = memo2 (module L) (module L) begin fun merge xs ys -> match force xs, force ys with
+                | `Cons ( x', xs' ), `Cons ( y', ys' ) ->
+                    if cmp x' y' < 0 then
+                        `Cons ( x', merge xs' ys )
+                    else
+                        `Cons ( y', merge xs ys' )
+                | xs'', `Nil ->
+                    xs''
+                | `Nil, ys'' ->
+                    ys''
+            end in
+            let mergesort, _ = RunType.memo_tfold merge in
+            memo (module L) begin fun _ xs -> match force xs with
+                | `Cons _ -> force (RunType.SAData.force (mergesort (lift xs)))
+                | `Nil -> `Nil
+            end
     end
 end

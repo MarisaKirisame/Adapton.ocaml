@@ -120,6 +120,11 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                 (List.sort compare) quicksort
         end;
 
+        "mergesort" >:: begin fun () ->
+            let mergesort, _ = I.memo_mergesort compare in
+            test_salist_op (List.sort compare) mergesort
+        end;
+
         "filter map" >:: QC.forall QC.int begin fun p ->
             let pred = (<) p in
             let filter_pred, _ = I.memo_filter pred in
