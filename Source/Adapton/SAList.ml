@@ -237,12 +237,20 @@ module Make (M : Signatures.SAType)
                     ( const `Nil, const `Nil )
             end
 
+        (**/**) (* internal type of quicksort *)
+        module BoolRType = MakeBasic (Types.Tuple2 (Types.Bool) (R))
+        (**/**)
+
         (** Create memoizing constructor and updater to quicksort a self-adjusting list with a comparator. *)
         let memo_quicksort cmp =
-            let partition, _ = memo_partition_with_key (module R) (fun k x -> cmp x k < 0) in
+            let lt, _ = BoolRType.memo_map_with_key (module R) (module L) (fun k x -> ( cmp x k < 0, x )) in
+            let filter_left, _ = memo_filter_map (module BoolRType) (fun ( b, x ) -> if b then Some x else None) in
+            let filter_right, _ = memo_filter_map (module BoolRType) (fun ( b, x ) -> if b then None else Some x) in
             let quicksort, update_quicksort = memo2 (module L) (module L) begin fun quicksort xs rest -> match L.force xs with
                 | `Cons ( x, xs ) ->
-                    let left, right = split_partition (partition x xs) in
+                    let xs = lt x xs in
+                    let left = filter_left xs in
+                    let right = filter_right xs in
                     L.force (quicksort left (const (`Cons ( x, quicksort right rest ))))
                 | `Nil ->
                     L.force rest
