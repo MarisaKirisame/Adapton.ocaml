@@ -143,10 +143,27 @@ module Make (M : Signatures.SAType)
                 | `Nil -> `Nil
             end
 
+        (** Create memoizing constructor and updater that simultaneously filter and map a self-adjusting list with a predicate/mapping function. *)
+        let memo_filter_map (type a) (type b) (module L : Signatures.SAListType.BasicS with type sa = sa and type data = a and type t = b) f =
+            memo (module L) begin fun filter xs -> match L.force xs with
+                | `Cons ( x, xs ) -> (match f x with Some y -> `Cons ( y, filter xs ) | None -> force (filter xs))
+                | `Nil -> `Nil
+            end
+
         (** Create memoizing constructor and updater that map a self-adjusting list with a mapping function. *)
         let memo_map (type a) (type b) (module L : Signatures.SAListType.BasicS with type sa = sa and type data = a and type t = b) f =
             memo (module L) begin fun map xs -> match L.force xs with
                 | `Cons ( x, xs ) -> `Cons ( f x, map xs )
+                | `Nil -> `Nil
+            end
+
+        (** Create memoizing constructor and updater that map a self-adjusting list with a mapping function and key. *)
+        let memo_map_with_key
+                (type a) (module K : Hashtbl.SeededHashedType with type t = a)
+                (type b) (type c) (module L : Signatures.SAListType.BasicS with type sa = sa and type data = b and type t = c)
+                f =
+            memo2 (module K) (module L) begin fun map k xs -> match L.force xs with
+                | `Cons ( x, xs ) -> `Cons ( f k x, map k xs )
                 | `Nil -> `Nil
             end
 

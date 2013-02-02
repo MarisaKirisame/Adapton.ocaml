@@ -63,9 +63,16 @@ module rec SAListType : sig
         val pop : t -> data
         val memo_append : (t -> t -> t) * (t -> t -> t -> unit)
         val memo_filter : (data -> bool) -> (t -> t) * (t -> t -> unit)
+        val memo_filter_map
+            : (module SAListType.BasicS with type sa = sa and type data = 'a and type t = 'b)
+                -> ('a -> data option) -> ('b -> t) * (t -> 'b -> unit)
         val memo_map
             : (module SAListType.BasicS with type sa = sa and type data = 'a and type t = 'b)
                 -> ('a -> data) -> ('b -> t) * (t -> 'b -> unit)
+        val memo_map_with_key
+            : (module Hashtbl.SeededHashedType with type t = 'a)
+                -> (module SAListType.BasicS with type sa = sa and type data = 'b and type t = 'c)
+                -> ('a -> 'b -> data) -> ('a -> 'c -> t) * (t -> 'a -> 'c -> unit)
         val memo_scan
             : (module SAListType.BasicS with type sa = sa and type data = 'a and type t = 'b)
                 -> ('a -> data -> data) -> ('b -> data -> t) * (t -> 'b -> data -> unit)
