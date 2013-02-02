@@ -17,12 +17,17 @@ let list_filter_task (type a) (module L : Adapton.Signatures.SAListType.S with t
 let list_map_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
     fst (L.memo_map (module L) (fun x -> x *. 3. +. x *. 7. +. x *. 9.))
 
+let list_tfold_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
+    let tfold = fst (L.memo_tfold (+.)) in
+    (fun xs -> L.const (`Cons ( L.SAData.force (tfold xs), L.const `Nil )))
+
 let list_quicksort_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
     fst (L.memo_quicksort Pervasives.compare)
 
 let tasks = [
     ( "filter", list_filter_task );
     ( "map", list_map_task );
+    ( "tfold", list_tfold_task );
     ( "quicksort", list_quicksort_task );
 ]
 

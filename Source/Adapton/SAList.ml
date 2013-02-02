@@ -77,6 +77,9 @@ module Make (M : Signatures.SAType)
                 | _ -> false
         end)
 
+        (** Self-adjusting values for a specific type, return by certain list operations. *)
+        module SAData = M.Make (R)
+
         (** Value contained by self-adjusting lists for a specific type. *)
         type data = R.t
 
@@ -153,6 +156,38 @@ module Make (M : Signatures.SAType)
                 | `Cons ( x, xs ) -> let acc = f x acc in `Cons ( acc, scan xs acc )
                 | `Nil -> `Nil
             end
+
+        (** Create memoizing constructor and updater that tree-folds a self-adjusting list with an associative fold function. *)
+        let memo_tfold f =
+            let fold_pairs, _ = L.memo2 (module Types.Int) (module L) begin fun fold_pairs seed xs -> match L.force xs with
+                | `Cons ( x', xs' ) as xs'' ->
+                    if L.hash seed xs mod 2 == 0 then
+                        `Cons ( x', fold_pairs seed xs' )
+                    else begin match L.force xs' with
+                        | `Cons ( y', ys' ) ->
+                            `Cons ( f x' y', fold_pairs seed ys' )
+                        | `Nil ->
+                            xs''
+                    end
+                | `Nil ->
+                    `Nil
+            end in
+            let tfold, update_tfold = SAData.memo2 (module Types.Seeds) (module L) begin fun tfold seeds xs -> match L.force xs with
+                | `Cons ( x', xs' ) ->
+                    begin match L.force xs' with
+                        | `Cons _ ->
+                            let seed, seeds = Types.Seeds.pop seeds in
+                            force (tfold seeds (fold_pairs seed xs))
+                        | `Nil ->
+                            x'
+                    end
+                | `Nil ->
+                    failwith "tfold"
+            end in
+            let seeds = Types.Seeds.make () in
+            let tfold xs = tfold seeds xs in
+            let update_tfold m xs = update_tfold m seeds xs in
+            ( tfold, update_tfold )
     end
 
 

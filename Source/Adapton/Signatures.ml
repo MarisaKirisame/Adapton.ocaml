@@ -42,6 +42,7 @@ module rec SAListType : sig
         type sa
         type 'a thunk
         type data
+        module SAData : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = data and type t = data thunk
         type t
         type t' = [ `Cons of data * t | `Nil ]
         val hash : int -> t -> int
@@ -68,6 +69,7 @@ module rec SAListType : sig
         val memo_scan
             : (module SAListType.BasicS with type sa = sa and type data = 'a and type t = 'b)
                 -> ('a -> data -> data) -> ('b -> data -> t) * (t -> 'b -> data -> unit)
+        val memo_tfold : (data -> data -> data) -> (t -> SAData.t) * (SAData.t -> t -> unit)
     end
 
     (** Module type for self-adjusting lists for a specific type. *)

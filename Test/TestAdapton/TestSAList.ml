@@ -7,18 +7,16 @@ let assert_list_equal = assert_equal ~printer:(list_printer pp_print_int ",")
 let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
     let module I = L.Make (Adapton.Types.Int) in
 
-    let test_salist_op ?(count=25) ?incl op sa_op =
+    let test_salist_op_with_test ?(count=25) ?incl op sa_op ~test =
         Gc.compact (); (* try to make GC effects consistent across tests *)
         QC.forall ~count ?incl (QC.pair (QC.list QC.int) (QC.list (QC.list (QC.triple QC.bool QC.int QC.int)))) begin fun ( xs, kss ) ->
             let n = List.length xs in
             let ys = op xs in
-            let zs = ys in
 
             let xs' = I.of_list xs in
             let ys' = sa_op xs' in
-            let zs' = I.to_list ys' in
 
-            assert_list_equal ~msg:"initial" zs zs';
+            test ~msg:"initial" ys ys';
 
             ignore begin List.fold_left begin fun ( xs, xs', n ) ks ->
                 let xs, n' = List.fold_left begin fun ( xs, n ) ( i, k, x ) ->
@@ -41,7 +39,6 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                             ( delete k [] xs, pred n )
                 end ( xs, n ) ks in
                 let ys = op xs in
-                let zs = ys in
 
                 let xs', ys' = try
                     ignore begin List.fold_left begin fun n ( i, k, x ) ->
@@ -74,13 +71,14 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
                     let ys' = sa_op xs' in
                     ( xs', ys' )
                 in
-                let zs' = I.to_list ys' in
 
-                assert_list_equal ~msg:"update" zs zs';
+                test ~msg:"update" ys ys';
                 ( xs, xs', n' )
             end ( xs, xs', n ) kss end
         end ()
     in
+
+    let test_salist_op = test_salist_op_with_test ~test:(fun ~msg expected actual -> assert_list_equal ~msg expected (I.to_list actual)) in
 
     "Correctness" >::: [
         "filter" >:: QC.forall QC.int begin fun p ->
@@ -98,6 +96,14 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             let fn = succ in
             let map_fn, _ = I.memo_map (module I) fn in
             test_salist_op (List.map fn) map_fn
+        end;
+
+        "tfold" >:: begin fun () ->
+            let fn = (+) in
+            let tfold_fn, _ = I.memo_tfold fn in
+            test_salist_op_with_test
+                ~test:(fun ~msg expected actual -> assert_int_equal ~msg expected (I.SAData.force actual))
+                (List.fold_left fn 0) (fun xs' -> tfold_fn (I.const (`Cons ( 0, xs' )))) (* prepend 0 to avoid empty lists *)
         end;
 
         "quicksort" >:: begin fun () ->
