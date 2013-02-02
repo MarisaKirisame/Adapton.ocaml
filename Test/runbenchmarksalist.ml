@@ -24,11 +24,15 @@ let list_tfold_task (type a) (module L : Adapton.Signatures.SAListType.S with ty
 let list_quicksort_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
     fst (L.memo_quicksort Pervasives.compare)
 
+let list_mergesort_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
+    fst (L.memo_mergesort Pervasives.compare)
+
 let tasks = [
     ( "filter", list_filter_task );
     ( "map", list_map_task );
     ( "tfold", list_tfold_task );
     ( "quicksort", list_quicksort_task );
+    ( "mergesort", list_mergesort_task );
 ]
 
 let opt_salist = ref (fst (List.hd Adapton.All.salist_list))
