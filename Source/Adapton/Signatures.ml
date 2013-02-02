@@ -37,8 +37,8 @@ end
 
 (** Output module types of modules for self-adjusting lists. *)
 module rec SAListType : sig
-    (** Module type for self-adjusting lists for a specific type. *)
-    module type S = sig
+    (** Module type for self-adjusting lists for a specific type containing basic types and operations. *)
+    module type BasicS = sig
         type sa
         type 'a thunk
         type data
@@ -63,9 +63,16 @@ module rec SAListType : sig
         val memo_append : (t -> t -> t) * (t -> t -> t -> unit)
         val memo_filter : (data -> bool) -> (t -> t) * (t -> t -> unit)
         val memo_map
-            : (module SAListType.S with type sa = sa and type data = 'a and type t = 'b) -> ('a -> data) -> ('b -> t) * (t -> 'b -> unit)
+            : (module SAListType.BasicS with type sa = sa and type data = 'a and type t = 'b)
+                -> ('a -> data) -> ('b -> t) * (t -> 'b -> unit)
         val memo_scan
-            : (module SAListType.S with type sa = sa and type data = 'a and type t = 'b) -> ('a -> data -> data) -> ('b -> data -> t) * (t -> 'b -> data -> unit)
+            : (module SAListType.BasicS with type sa = sa and type data = 'a and type t = 'b)
+                -> ('a -> data -> data) -> ('b -> data -> t) * (t -> 'b -> data -> unit)
+    end
+
+    (** Module type for self-adjusting lists for a specific type. *)
+    module type S = sig
+        include BasicS
         module PartitionType : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = t * t and type t = (t * t) thunk
         val split_partition : PartitionType.t -> t * t
         val memo_partition_with_key
@@ -89,7 +96,10 @@ module type SAListType = sig
     val take : 'a salist -> int -> 'a list
     val hd : 'a salist -> 'a
     val tl : 'a salist -> 'a salist
+    module type BasicS = SAListType.BasicS
     module type S = SAListType.S
+    module MakeBasic (R : Hashtbl.SeededHashedType)
+        : BasicS with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t salist and type t' = R.t salist'
     module Make (R : Hashtbl.SeededHashedType)
         : S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t salist and type t' = R.t salist'
 end

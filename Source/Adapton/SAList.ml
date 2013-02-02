@@ -58,12 +58,15 @@ module Make (M : Signatures.SAType)
     end
     include T
 
+    (** Output module types of {!SAList.MakeBasic}. *)
+    module type BasicS = Signatures.SAListType.BasicS
+
+    (** Output module types of {!SAList.Make}. *)
     module type S = Signatures.SAListType.S
 
-    (** Functor to make various list constructors, updaters, and combinators for self-adjusting lists of a specific type. *)
-    module Make (R : Hashtbl.SeededHashedType)
-            : Signatures.SAListType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t salist and type t' = R.t salist' = struct
-
+    (** Helper functor to make basic list constructors, updaters, and combinators for self-adjusting lists of a specific type. *)
+    module MakeBasic (R : Hashtbl.SeededHashedType)
+            : BasicS with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t salist and type t' = R.t salist' = struct
         module L = M.Make (struct
             type t = R.t salist'
             let hash seed = function
@@ -138,18 +141,26 @@ module Make (M : Signatures.SAType)
             end
 
         (** Create memoizing constructor and updater that map a self-adjusting list with a mapping function. *)
-        let memo_map (type a) (type b) (module L : Signatures.SAListType.S with type sa = sa and type data = a and type t = b) f =
+        let memo_map (type a) (type b) (module L : Signatures.SAListType.BasicS with type sa = sa and type data = a and type t = b) f =
             memo (module L) begin fun map xs -> match L.force xs with
                 | `Cons ( x, xs ) -> `Cons ( f x, map xs )
                 | `Nil -> `Nil
             end
 
         (** Create memoizing constructor and updater that scan (fold over prefixes of) a self-adjusting list with an scanning function. *)
-        let memo_scan (type a) (type b) (module L : Signatures.SAListType.S with type sa = sa and type data = a and type t = b) f =
+        let memo_scan (type a) (type b) (module L : Signatures.SAListType.BasicS with type sa = sa and type data = a and type t = b) f =
             memo2 (module L) (module R) begin fun scan xs acc -> match L.force xs with
                 | `Cons ( x, xs ) -> let acc = f x acc in `Cons ( acc, scan xs acc )
                 | `Nil -> `Nil
             end
+    end
+
+
+    (** Functor to make various list constructors, updaters, and combinators for self-adjusting lists of a specific type. *)
+    module Make (R : Hashtbl.SeededHashedType)
+            : S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t salist and type t' = R.t salist' = struct
+        module L = MakeBasic (R)
+        include L
 
         (** Output type of memo_partition (a lazy pair of lists). *)
         module PartitionType = M.Make (Types.Tuple2 (L) (L))
