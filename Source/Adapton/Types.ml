@@ -1,4 +1,4 @@
-(** Convenience modules for built-in types. *)
+(** Convenience modules for built-in and other useful types. *)
 
 module Int = struct
     type t = int
@@ -74,4 +74,19 @@ module Tuple4 (A : Hashtbl.SeededHashedType) (B : Hashtbl.SeededHashedType) (C :
     type t = A.t * B.t * C.t * D.t
     let hash seed ( a, b, c, d ) = D.hash (C.hash (B.hash (A.hash seed a) b) c) d
     let equal ( a, b, c, d as x ) ( a', b', c', d' as x' ) = x == x' || A.equal a a' && B.equal b b' && C.equal c c' && D.equal d d'
+end
+
+(** Random number stream. *)
+module Seeds = struct
+    type t = Seeds of int * t Lazy.t
+    let make ?seeds:seeds_opt () =
+        let rng = match seeds_opt with
+            | Some seeds -> Random.State.make seeds
+            | None -> Random.State.make_self_init ()
+        in
+        let rec seeds () = Seeds ( Random.State.bits rng, Lazy.from_fun seeds ) in
+        seeds ()
+    let pop ( Seeds ( s, lazy seeds ) ) = ( s, seeds )
+    let hash seed ( Seeds ( s, _ ) ) = Hashtbl.seeded_hash seed s
+    let equal = (==)
 end
