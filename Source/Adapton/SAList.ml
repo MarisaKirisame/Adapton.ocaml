@@ -214,29 +214,6 @@ module Make (M : Signatures.SAType)
         module L = MakeBasic (R)
         include L
 
-        (** Output type of memo_partition (a lazy pair of lists). *)
-        module PartitionType = M.Make (Types.Tuple2 (L) (L))
-
-        (** Helper function to split the output of memo_partition. *)
-        let split_partition =
-            let split_left, _ = L.memo (module PartitionType) (fun split xs -> L.force (fst (PartitionType.force xs))) in
-            let split_right, _ = L.memo (module PartitionType) (fun split xs -> L.force (snd (PartitionType.force xs))) in
-            fun xs ->
-                ( split_left xs, split_right xs )
-
-        (** Create memoizing constructor and updater to partition a self-adjusting list with a predicate and key. *)
-        let memo_partition_with_key (type a) (module K : Hashtbl.SeededHashedType with type t = a) pred =
-            PartitionType.memo2 (module K) (module L) begin fun partition k xs -> match force xs with
-                | `Cons ( x, xs ) ->
-                    let left, right = split_partition (partition k xs) in
-                    if pred k x then
-                        ( const (`Cons ( x, left )), right )
-                    else
-                        ( left, const (`Cons ( x, right )) )
-                | `Nil ->
-                    ( const `Nil, const `Nil )
-            end
-
         (**/**) (* internal type of quicksort *)
         module BoolRType = MakeBasic (Types.Tuple2 (Types.Bool) (R))
         (**/**)

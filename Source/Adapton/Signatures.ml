@@ -82,11 +82,6 @@ module rec SAListType : sig
     (** Module type for self-adjusting lists for a specific type. *)
     module type S = sig
         include BasicS
-        module PartitionType : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = t * t and type t = (t * t) thunk
-        val split_partition : PartitionType.t -> t * t
-        val memo_partition_with_key
-            : (module Hashtbl.SeededHashedType with type t = 'a) -> ('a -> data -> bool)
-                -> ('a -> t -> PartitionType.t) * (PartitionType.t -> 'a -> t -> unit)
         val memo_quicksort : (data -> data -> int) -> (t -> t) * (t -> t -> unit)
         val memo_mergesort : (data -> data -> int) -> (t -> t) * (t -> t -> unit)
     end
