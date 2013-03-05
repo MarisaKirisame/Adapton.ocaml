@@ -4,7 +4,7 @@ open Format
 let assert_int_equal = assert_equal ~printer:pp_print_int
 let assert_list_equal = assert_equal ~printer:(list_printer pp_print_int ",")
 
-let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
+let make_regression_testsuite name (module L : Adapton.Signatures.SAListType) =
     let module I = L.Make (Adapton.Types.Int) in
 
     let test_salist_op_with_test ?(count=25) ?incl op sa_op ~test =
@@ -142,7 +142,9 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
             test_salist_op (fun xs -> let ys = List.map fn (List.filter pred xs) in List.append ys ys) (fun xs' -> let ys' = map_fn (filter_pred xs') in append ys' ys')
         end;
 
-        "memo" >:: QC.forall (QC.pair (QC.list QC.int) QC.int) ~where:(fun ( xs, _ ) -> xs <> []) begin fun ( xs, x ) ->
+        "lazy memo" >:: QC.forall (QC.pair (QC.list QC.int) QC.int) ~where:(fun ( xs, _ ) -> xs <> []) begin fun ( xs, x ) ->
+            if name = "SAList (EagerSATotalOrder)" then
+                skip "not lazy";
             try
                 Gc.compact (); (* try to avoid GC messing up with memoization *)
                 let update_count = ref 0 in
@@ -203,7 +205,7 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAListType) =
 
 let make_testsuite ( name, salist ) =
     name >::: [
-        make_regression_testsuite salist
+        make_regression_testsuite name salist
     ]
 
 

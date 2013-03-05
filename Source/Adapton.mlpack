@@ -1,5 +1,6 @@
 Adapton/All
 Adapton/Default
+Adapton/EagerSATotalOrder
 Adapton/Exceptions
 Adapton/LazySABidi
 Adapton/LazySABidiObject

@@ -15,9 +15,11 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAType) =
 
                 let w = I.const 1 in
                 I.update_thunk x (fun () -> I.force w);
+                I.refresh ();
                 assert_int_equal ~msg:"update x to thunk" 1 (I.force x);
 
                 I.update_const w 2;
+                I.refresh ();
                 assert_int_equal ~msg:"update w to const" 2 (I.force y);
             with Adapton.Exceptions.NonSelfAdjustingValue ->
                 ()
@@ -30,13 +32,16 @@ let make_regression_testsuite (module L : Adapton.Signatures.SAType) =
                 assert_int_equal ~msg:"initial" 1 (I.force y);
 
                 I.update_const x 2;
+                I.refresh ();
                 assert_int_equal ~msg:"update x to const" 2 (I.force y);
 
                 let w = I.const 2 in
                 I.update_thunk x (fun () -> I.force w);
+                I.refresh ();
                 assert_int_equal ~msg:"update x to thunk" 2 (I.force x);
 
                 I.update_const w 3;
+                I.refresh ();
                 assert_int_equal ~msg:"update w to const" 3 (I.force y);
             with Adapton.Exceptions.NonSelfAdjustingValue ->
                 ()
