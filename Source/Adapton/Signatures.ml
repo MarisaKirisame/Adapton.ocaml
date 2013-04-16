@@ -10,6 +10,8 @@ module rec SAType : sig
         type 'a thunk
         type data
         type t
+        val is_self_adjusting : bool
+        val is_lazy : bool
         val hash : int -> t -> int
         val equal : t -> t -> bool
         val force : t -> data
@@ -26,6 +28,8 @@ end = SAType
 module type SAType = sig
     type sa
     type 'a thunk
+    val is_self_adjusting : bool
+    val is_lazy : bool
     val hash : int -> 'a thunk -> int
     val equal : 'a thunk -> 'a thunk -> bool
     val force : 'a thunk -> 'a
@@ -45,6 +49,8 @@ module rec SAListType : sig
         module SAData : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = data and type t = data thunk
         type t
         type t' = [ `Cons of data * t | `Nil ]
+        val is_self_adjusting : bool
+        val is_lazy : bool
         val hash : int -> t -> int
         val equal : t -> t -> bool
         val force : t -> t'
@@ -93,6 +99,8 @@ module type SAListType = sig
     type 'a thunk
     type 'a salist
     type 'a salist' = [ `Cons of 'a * 'a salist | `Nil ]
+    val is_self_adjusting : bool
+    val is_lazy : bool
     val hash : int -> 'a salist -> int
     val equal : 'a salist -> 'a salist -> bool
     val force : 'a salist -> 'a salist'

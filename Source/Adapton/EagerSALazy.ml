@@ -14,6 +14,12 @@ module T = struct
     (** Eager self-adjusting values containing ['a]. *)
     type 'a thunk = 'a LazySABidi.thunk
 
+    (** This module implements self-adjusting values. *)
+    let is_self_adjusting = true
+
+    (** This module implements eager values. *)
+    let is_lazy = false
+
     (** Compute the hash value of a self-adjusting value. *)
     let hash = LazySABidi.hash
 

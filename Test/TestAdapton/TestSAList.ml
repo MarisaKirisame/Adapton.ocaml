@@ -40,7 +40,7 @@ let make_regression_testsuite name (module L : Adapton.Signatures.SAListType) =
                 end ( xs, n ) ks in
                 let ys = op xs in
 
-                let xs', ys' = try
+                let xs', ys' = if L.is_self_adjusting then begin
                     ignore begin List.fold_left begin fun n ( i, k, x ) ->
                         if n = 0 then begin
                             I.push x xs';
@@ -66,11 +66,11 @@ let make_regression_testsuite name (module L : Adapton.Signatures.SAListType) =
                     end n ks end;
                     I.refresh ();
                     ( xs', ys' )
-                with Adapton.Exceptions.NonSelfAdjustingValue ->
+                end else begin
                     let xs' = I.of_list xs in
                     let ys' = sa_op xs' in
                     ( xs', ys' )
-                in
+                end in
 
                 test ~msg:"update" ys ys';
                 ( xs, xs', n' )
@@ -143,62 +143,59 @@ let make_regression_testsuite name (module L : Adapton.Signatures.SAListType) =
         end;
 
         "lazy memo" >:: QC.forall (QC.pair (QC.list QC.int) QC.int) ~where:(fun ( xs, _ ) -> xs <> []) begin fun ( xs, x ) ->
-            if name = "SAList (EagerSATotalOrder)" || name = "SAList (EagerSALazy)" then
+            if not L.is_lazy then
                 skip "not lazy";
-            try
-                Gc.compact (); (* try to avoid GC messing up with memoization *)
-                let update_count = ref 0 in
-                let fn s = incr update_count; succ s in
-                let map_fn, _ = I.memo_map (module I) fn in
-                let n = List.length xs in
-                let xs = I.of_list xs in
-                I.refresh (); (* to detect if non-self-adjusting *)
-                let ys = map_fn xs in
-                assert_int_equal ~msg:"initial" 0 !update_count;
-                I.refresh ();
-                ignore (I.to_list ys);
-                assert_int_equal ~msg:"force" n !update_count;
-                I.push x xs;
-                ignore (I.to_list ys);
-                assert_int_equal ~msg:"push and force" (n + 2) !update_count; (* the first and second elements *)
-                ignore (I.pop xs);
-                ignore (I.to_list ys);
-                assert_int_equal ~msg:"pop and force" (n + 3) !update_count; (* the first element *)
-            with Adapton.Exceptions.NonSelfAdjustingValue ->
-                skip "not self-adjusting"
+            if not L.is_self_adjusting then
+                skip "not self-adjusting";
+            Gc.compact (); (* try to avoid GC messing up with memoization *)
+            let update_count = ref 0 in
+            let fn s = incr update_count; succ s in
+            let map_fn, _ = I.memo_map (module I) fn in
+            let n = List.length xs in
+            let xs = I.of_list xs in
+            let ys = map_fn xs in
+            assert_int_equal ~msg:"initial" 0 !update_count;
+            I.refresh ();
+            ignore (I.to_list ys);
+            assert_int_equal ~msg:"force" n !update_count;
+            I.push x xs;
+            ignore (I.to_list ys);
+            assert_int_equal ~msg:"push and force" (n + 2) !update_count; (* the first and second elements *)
+            ignore (I.pop xs);
+            ignore (I.to_list ys);
+            assert_int_equal ~msg:"pop and force" (n + 3) !update_count; (* the first element *)
         end;
 
         "gc" >:: QC.forall (QC.list QC.int) begin fun xs ->
-            try
-                Gc.compact (); (* try to avoid GC messing up with GC counts *)
-                let gc_count = ref 0 in
-                let rec finalise xs =
-                    Gc.finalise (fun _ -> incr gc_count) xs;
-                    match I.force xs with `Cons (_, xs) -> finalise xs | `Nil -> ()
-                in
-                let map_succ, _ = I.memo_map (module I) succ in
-                let n = List.length xs in
-                let xs = I.of_list xs in
-                let ys = map_succ xs in
-                I.refresh ();
-                finalise ys;
-                assert_int_equal ~msg:"initial" 0 !gc_count;
-                Gc.compact ();
-                assert_int_equal ~msg:"compact nothing" 0 !gc_count;
-                I.update_const xs `Nil;
-                assert_int_equal ~msg:"update" 0 !gc_count;
-                Gc.compact ();
-                assert_int_equal ~msg:"compact nothing again" 0 !gc_count;
-                Gc.compact ();
-                I.refresh ();
-                ignore (I.to_list ys);
-                (* GC shouldn't be triggered yet in OCaml's default GC policies *)
-                assert_int_equal ~msg:"before compact yet again" 0 !gc_count;
-                Gc.compact ();
-                (* GC should collect all of ys that obsolete after update (clear the memoization tables) *)
-                assert_int_equal ~msg:"compact ys" n !gc_count;
-            with Adapton.Exceptions.NonSelfAdjustingValue ->
-                skip "not self-adjusting"
+            if not L.is_self_adjusting then
+                skip "not self-adjusting";
+            Gc.compact (); (* try to avoid GC messing up with GC counts *)
+            let gc_count = ref 0 in
+            let rec finalise xs =
+                Gc.finalise (fun _ -> incr gc_count) xs;
+                match I.force xs with `Cons (_, xs) -> finalise xs | `Nil -> ()
+            in
+            let map_succ, _ = I.memo_map (module I) succ in
+            let n = List.length xs in
+            let xs = I.of_list xs in
+            let ys = map_succ xs in
+            I.refresh ();
+            finalise ys;
+            assert_int_equal ~msg:"initial" 0 !gc_count;
+            Gc.compact ();
+            assert_int_equal ~msg:"compact nothing" 0 !gc_count;
+            I.update_const xs `Nil;
+            assert_int_equal ~msg:"update" 0 !gc_count;
+            Gc.compact ();
+            assert_int_equal ~msg:"compact nothing again" 0 !gc_count;
+            Gc.compact ();
+            I.refresh ();
+            ignore (I.to_list ys);
+            (* GC shouldn't be triggered yet in OCaml's default GC policies *)
+            assert_int_equal ~msg:"before compact yet again" 0 !gc_count;
+            Gc.compact ();
+            (* GC should collect all of ys that obsolete after update (clear the memoization tables) *)
+            assert_int_equal ~msg:"compact ys" n !gc_count;
         end;
     ]
 

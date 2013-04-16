@@ -31,6 +31,13 @@ module T = struct
     (**/**)
 
 
+    (** This module implements self-adjusting values. *)
+    let is_self_adjusting = true
+
+    (** This module implements lazy values. *)
+    let is_lazy = true
+
+
     (**/**) (* change-propagation state *)
     let lazy_stack = ref []
     (**/**)

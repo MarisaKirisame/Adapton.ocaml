@@ -11,6 +11,12 @@ module T = struct
         thunk : 'a Lazy.t;
     }
 
+    (** This module implements non-self-adjusting values. *)
+    let is_self_adjusting = false
+
+    (** This module implements lazy values. *)
+    let is_lazy = true
+
     (**/**) (* internal state *)
     let lazy_id_counter = ref 0
     (**/**)

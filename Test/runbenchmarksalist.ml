@@ -86,7 +86,7 @@ let _ =
         end in
         let setup_top_words = get_top_words () in
 
-        try
+        if SAList.is_self_adjusting then begin
             let rec do_edits past n update_time update_words take_time take_words =
                 if n == 0 then
                     ( update_time, update_words, take_time, take_words )
@@ -147,13 +147,14 @@ let _ =
                 (word_size *. edit_top_words);
             Printf.eprintf "%32s %24s %4d %10d %20d ... done (%9.2fs) %9.3gs edit %9.3gs\n%!"
                 !opt_salist !opt_task !opt_take_count !opt_input_size !opt_random_seed (get_time () -. start_time) setup_time (update_time +. take_time)
-        with Adapton.Exceptions.NonSelfAdjustingValue ->
+        end else begin
             Printf.printf
                 ("{ \"setup\": { \"time\": %.17g, \"heap\": %.17g, \"max-heap\": %.17g }, "
                     ^^ "\"units\": { \"time\": \"seconds\", \"heap\": \"bytes\", \"max-heap\": \"bytes\" } }\n%!")
                 setup_time (word_size *. setup_words) (word_size *. setup_top_words);
             Printf.eprintf "%32s %24s %4d %10d %20d ... done (%9.2fs) %9.3gs\n%!"
                 !opt_salist !opt_task !opt_take_count !opt_input_size !opt_random_seed (get_time () -. start_time) setup_time
+        end
 
     with e ->
         let err = Printexc.to_string e in

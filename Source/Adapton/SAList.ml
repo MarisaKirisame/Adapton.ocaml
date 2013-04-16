@@ -18,6 +18,12 @@ module Make (M : Signatures.SAType)
         (** Self-adjusting values from the given module used to create this module for self-adjusting lists. *)
         type 'a thunk = 'a M.thunk
 
+        (** True if this module implements self-adjusting lists. *)
+        let is_self_adjusting = M.is_self_adjusting
+
+        (** True if this module implements lazy lists. *)
+        let is_lazy = M.is_lazy
+
         (** Compute the hash value of a self-adjusting list. *)
         let hash = M.hash
 

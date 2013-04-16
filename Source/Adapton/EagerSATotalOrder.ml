@@ -318,6 +318,13 @@ module T = struct
     include TT
 
 
+    (** This module implements self-adjusting values. *)
+    let is_self_adjusting = true
+
+    (** This module implements eager values. *)
+    let is_lazy = false
+
+
     (**/**) (* internal state and helper functions *)
 
     (* priority queue adapted from http://caml.inria.fr/pub/docs/manual-ocaml/manual004.html *)
