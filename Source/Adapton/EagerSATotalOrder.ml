@@ -1,9 +1,17 @@
-(** Eager variant of self-adjusting values based on a total-order maintenance data structure. *)
+(** Eager variant of self-adjusting values based on a total-order maintenance data structure.
+
+    Implementation based on:
+        Umut Acar, Guy Blelloch, Matthias Blume, Robert Harper, and Kanat Tangwongsan. "A Library for Self-Adjusting
+        Computation". Electron. Notes Theor. Comput. Sci. 148, 2 (March 2006), 127-154.
+        http://dx.doi.org/10.1016/j.entcs.2005.11.043
+    supporting memoization and change propagation, but not adaptive memoization.
+ *)
 
 (**/**) (* total-order maintenance data structure based on:
-    Dietz, Paul and Sleator, Daniel. "Two algorithms for maintaining order in a list." Proceedings of the
-        Nineteenth Annual ACM Symposium on Theory of Computing. ACM, 1987.
-    Bender, Michael, et al. "Two simplified algorithms for maintaining order in a list." Algorithms - ESA 2002.
+    Dietz, Paul and Sleator, Daniel. "Two algorithms for maintaining order in a list." In Proceedings of the
+        Nineteenth Annual ACM Symposium on Theory of Computing (STOC '87). http://dx.doi.org/10.1145/28395.28434
+    Bender, Michael, et al. "Two simplified algorithms for maintaining order in a list." In Proceedings of the 10th
+        Annual European Symposium on Algorithms (ESA '02). http://dx.doi.org/10.1007/3-540-45749-6_17
 and implementation based on https://github.com/matthewhammer/ceal/blob/4b933a8/src/lib/runtime/totalorder.c
 *)
 module TotalOrder : sig
