@@ -6,6 +6,7 @@ let sa_list = [
     ( "LazySABidiObject", (module LazySABidiObject : Signatures.SAType) );
     ( "LazySANaive", (module LazySANaive : Signatures.SAType) );
     ( "LazySAObject", (module LazySAObject : Signatures.SAType) );
+    ( "EagerSALazy", (module EagerSALazy : Signatures.SAType) );
     ( "EagerSATotalOrder", (module EagerSATotalOrder : Signatures.SAType) );
     ( "NonSAEager", (module NonSAEager : Signatures.SAType) );
     ( "NonSALazy", (module NonSALazy : Signatures.SAType) );

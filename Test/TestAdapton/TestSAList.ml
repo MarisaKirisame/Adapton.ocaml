@@ -143,7 +143,7 @@ let make_regression_testsuite name (module L : Adapton.Signatures.SAListType) =
         end;
 
         "lazy memo" >:: QC.forall (QC.pair (QC.list QC.int) QC.int) ~where:(fun ( xs, _ ) -> xs <> []) begin fun ( xs, x ) ->
-            if name = "SAList (EagerSATotalOrder)" then
+            if name = "SAList (EagerSATotalOrder)" || name = "SAList (EagerSALazy)" then
                 skip "not lazy";
             try
                 Gc.compact (); (* try to avoid GC messing up with memoization *)
