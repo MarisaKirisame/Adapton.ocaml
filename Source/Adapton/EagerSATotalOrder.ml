@@ -399,16 +399,13 @@ module T = struct
         set_eager_now timestamp;
         timestamp
 
-    let dequeue () =
-        let rec dequeue queue =
-            let meta, queue = PriorityQueue.extract queue in
-            if TotalOrder.is_valid meta.start_timestamp then begin
-                eager_queue := queue;
-                meta
-            end else
-                dequeue queue
-        in
-        dequeue !eager_queue
+    let rec dequeue () =
+        let meta, queue = PriorityQueue.extract !eager_queue in
+        eager_queue := queue;
+        if TotalOrder.is_valid meta.start_timestamp then begin
+            meta
+        end else
+            dequeue ()
 
     let enqueue meta = if TotalOrder.is_valid meta.start_timestamp then
         eager_queue := PriorityQueue.insert !eager_queue meta
