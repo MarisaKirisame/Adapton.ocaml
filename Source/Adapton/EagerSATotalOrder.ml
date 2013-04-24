@@ -15,18 +15,8 @@
 and implementation based on https://github.com/matthewhammer/ceal/blob/4b933a8/src/lib/runtime/totalorder.c
 *)
 module TotalOrder : sig
-    type parent = private {
-        mutable parent_label : int;
-        mutable parent_prev : parent option;
-        mutable parent_next : parent option;
-        mutable front : t;
-        mutable back : t;
-    } and t = private {
-        mutable label : int;
-        mutable parent : parent;
-        mutable next : t option;
-        mutable prev : t option;
-    }
+    type parent
+    type t
     val create : unit -> t
     val is_valid : t -> bool
     val remove : t -> unit
