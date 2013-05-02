@@ -331,7 +331,7 @@ module T = struct
 
     (**/**) (* internal state and helper functions *)
 
-    (* priority queue adapted from http://caml.inria.fr/pub/docs/manual-ocaml/manual004.html *)
+    (* priority set based on simple binary tree: usually, the size is quite small, but duplicate insertion occur frequently *)
     module PriorityQueue = struct
         type queue = Empty | Node of meta * queue * queue
 
@@ -340,32 +340,24 @@ module T = struct
         let rec insert queue meta = match queue with
             | Empty ->
                 Node ( meta, Empty, Empty )
-            | Node ( meta', left, right ) as node ->
+            | Node ( meta', left, right ) ->
                 if meta == meta' then
-                    node
+                    queue
                 else if TotalOrder.compare meta.start_timestamp meta'.start_timestamp <= 0 then
-                    Node ( meta, insert left meta', right )
-                else
                     Node ( meta', insert left meta, right )
+                else
+                    Node ( meta', left, insert right meta )
 
         exception Queue_is_empty
 
-        let rec remove_top = function
+        let rec extract = function
+            | Node ( meta, (Node _ as left), right ) ->
+                let meta', left = extract left in
+                ( meta', Node ( meta, left, right ) )
+            | Node ( meta, Empty, right ) ->
+                ( meta, right )
             | Empty ->
                 raise Queue_is_empty
-            | Node ( _, left, Empty ) ->
-                left
-            | Node ( _, Empty, right ) ->
-                right
-            | Node ( _, (Node ( meta, _, _ ) as left), (Node ( meta', _, _ ) as right) ) ->
-                if TotalOrder.compare meta.start_timestamp meta'.start_timestamp <= 0 then
-                    Node ( meta, remove_top left, right )
-                else
-                    Node ( meta', left, remove_top right )
-
-        let extract = function
-            | Empty -> raise Queue_is_empty
-            | Node ( meta, _, _ ) as queue -> ( meta, remove_top queue )
     end
 
     let eager_id_counter = ref 0
