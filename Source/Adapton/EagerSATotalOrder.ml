@@ -33,8 +33,8 @@ end = struct
     (** Top layer bidirectional linked-list of the total-order data structure that provides coarse-grained ordering. *)
     type parent = {
         mutable parent_label : int;
-        mutable parent_prev : parent option;
-        mutable parent_next : parent option;
+        mutable parent_prev : parent;
+        mutable parent_next : parent;
         mutable front : t;
         mutable back : t;
     }
@@ -42,9 +42,24 @@ end = struct
     and t = {
         mutable label : int;
         mutable parent : parent;
-        mutable next : t option;
-        mutable prev : t option;
+        mutable next : t;
+        mutable prev : t;
     }
+
+    (**/**) (* sentinel values *)
+    let rec null_parent = {
+        parent_label=(-1);
+        parent_next=null_parent;
+        parent_prev=null_parent;
+        front=null;
+        back=null;
+    } and null = {
+        label=(-1);
+        parent=null_parent;
+        prev=null;
+        next=null;
+    }
+    (**/**)
 
     (** Create a new total order and return its initial element. *)
     let create () =
@@ -52,13 +67,13 @@ end = struct
             label=0;
             parent={
                 parent_label=0;
-                parent_next=None;
-                parent_prev=None;
+                parent_next=null_parent;
+                parent_prev=null_parent;
                 front=ts;
                 back=ts;
             };
-            prev=None;
-            next=None;
+            prev=null;
+            next=null;
         } in
         ts
 
@@ -73,30 +88,31 @@ end = struct
     (** Remove an element from a total-order. *)
     let remove ts = if is_valid ts then begin
         ts.label <- neg ts.label;
-        match ts.prev, ts.next with
-            | (Some ts as prev), (Some ts' as next) ->
-                ts'.prev <- prev;
-                ts.next <- next
-            | Some ts, None ->
-                ts.parent.back <- ts;
-                ts.next <- None
-            | None, Some ts ->
-                ts.parent.front <- ts;
-                ts.prev <- None
-            | None, None ->
+        if ts.prev != null then
+            if ts.next != null then begin
+                ts.next.prev <- ts.prev;
+                ts.prev.next <- ts.next
+            end else begin
+                ts.parent.back <- ts.prev;
+                ts.prev.next <- null
+            end
+        else
+            if ts.next != null then begin
+                ts.parent.front <- ts.next;
+                ts.next.prev <- null
+            end else begin
                 let parent = ts.parent in
                 parent.parent_label <- neg parent.parent_label;
-                begin match parent.parent_prev, parent.parent_next with
-                    | (Some parent as prev), (Some parent' as next) ->
-                        parent'.parent_prev <- prev;
-                        parent.parent_next <- next
-                    | Some parent, None ->
-                        parent.parent_next <- None
-                    | None, Some parent ->
-                        parent.parent_prev <- None
-                    | None, None ->
-                        ()
-                end
+                if parent.parent_prev != null_parent then
+                    if parent.parent_next != null_parent then begin
+                        parent.parent_next.parent_prev <- parent.parent_prev;
+                        parent.parent_prev.parent_next <- parent.parent_next
+                    end else
+                        parent.parent_prev.parent_next <- null_parent
+                else
+                    if parent.parent_next != null_parent then
+                        parent.parent_next.parent_prev <- null_parent
+            end
     end
 
     (** Compare two total-order elements. *)
@@ -110,18 +126,17 @@ end = struct
             failwith "add_next"
         else
             let parent = ts.parent in
-            let ts' = match ts.next with
-                | Some ts'' as next ->
-                    let ts' = { label=(ts.label + ts''.label) lsr 1; parent; prev=ts''.prev; next } in
-                    let ts'opt = Some ts' in
-                    ts''.prev <- ts'opt;
-                    ts.next <- ts'opt;
-                    ts'
-                | None ->
-                    let ts' = { label=(ts.label + max_label) lsr 1; parent; prev=Some ts; next=None } in
-                    ts.next <- Some ts';
-                    ts'
-            in
+            let ts' = if ts.next != null then begin
+                let next = ts.next in
+                let ts' = { label=(ts.label + next.label) lsr 1; parent; prev=ts; next } in
+                next.prev <- ts';
+                ts.next <- ts';
+                ts'
+            end else begin
+                let ts' = { label=(ts.label + max_label) lsr 1; parent; prev=ts; next=null } in
+                ts.next <- ts';
+                ts'
+            end in
 
             if ts.label == ts'.label then begin
                 (* redistribute all elements under a parent such that they are spaced by [gap_size],
@@ -130,66 +145,66 @@ end = struct
                     if label < end_label then begin
                         next.label <- label;
                         next.parent <- parent;
-                        match next.next with
-                            | Some ts'' -> rebalance (label + gap_size) parent next ts''
-                            | None -> parent.back <- next
+                        if next.next != null then
+                            rebalance (label + gap_size) parent next next.next
+                        else
+                            parent.back <- next
                     end else begin
                         (* add a new parent *)
                         parent.back <- prev;
-                        prev.next <- None;
-                        next.prev <- None;
-                        let parent' = match parent.parent_next with
-                            | Some parent'' as parent_next->
-                                let parent' = {
-                                    parent_label=(parent.parent_label + parent''.parent_label) lsr 1;
-                                    parent_prev=parent''.parent_prev;
-                                    parent_next;
-                                    front=next;
-                                    back=next;
-                                } in
-                                let parent'opt = Some parent' in
-                                parent''.parent_prev <- parent'opt;
-                                parent.parent_next <- parent'opt;
-                                parent'
-                            | None ->
-                                let parent' = {
-                                    parent_label=(parent.parent_label + max_label) lsr 1;
-                                    parent_prev=Some parent;
-                                    parent_next=None;
-                                    front=next;
-                                    back=next;
-                                } in
-                                parent.parent_next <- Some parent';
-                                parent'
-                        in
+                        prev.next <- null;
+                        next.prev <- null;
+                        let parent' = if parent.parent_next != null_parent then begin
+                            let parent_next = parent.parent_next in
+                            let parent' = {
+                                parent_label=(parent.parent_label + parent_next.parent_label) lsr 1;
+                                parent_prev=parent_next.parent_prev;
+                                parent_next;
+                                front=next;
+                                back=next;
+                            } in
+                            parent_next.parent_prev <- parent';
+                            parent.parent_next <- parent';
+                            parent'
+                        end else begin
+                            let parent' = {
+                                parent_label=(parent.parent_label + max_label) lsr 1;
+                                parent_prev=parent;
+                                parent_next=null_parent;
+                                front=next;
+                                back=next;
+                            } in
+                            parent.parent_next <- parent';
+                            parent'
+                        end in
 
                         if parent.parent_label == parent'.parent_label then begin
                             (* identify a region around the parent that satisfies the rebalancing threshold *)
                             let rec expand lower upper count mask tau =
                                 let lo_label = lower.parent_label land (lnot mask) in
                                 let hi_label = lower.parent_label lor mask in
-                                let rec expand_lower lower count = match lower.parent_prev with
-                                    | Some lower' ->
-                                        if lower'.parent_label >= lo_label then
-                                            expand_lower lower' (count + 1)
-                                        else
-                                            ( lower, count )
-                                    | None ->
-                                        if lower.parent_label != lo_label then
-                                            lower.parent_label <- lo_label;
+                                let rec expand_lower lower count = if lower.parent_prev != null_parent then
+                                    let lower' = lower.parent_prev in
+                                    if lower'.parent_label >= lo_label then
+                                        expand_lower lower' (count + 1)
+                                    else
                                         ( lower, count )
-                                in
-                                let rec expand_upper upper count = match upper.parent_next with
-                                    | Some upper' ->
-                                        if upper'.parent_label <= hi_label then
-                                            expand_upper upper' (count + 1)
-                                        else
-                                            ( upper, count )
-                                    | None ->
-                                        if upper.parent_label != hi_label then
-                                            upper.parent_label <- hi_label;
+                                else begin
+                                    if lower.parent_label != lo_label then
+                                        lower.parent_label <- lo_label;
+                                    ( lower, count )
+                                end in
+                                let rec expand_upper upper count = if upper.parent_next != null_parent then
+                                    let upper' = upper.parent_next in
+                                    if upper'.parent_label <= hi_label then
+                                        expand_upper upper' (count + 1)
+                                    else
                                         ( upper, count )
-                                in
+                                else begin
+                                    if upper.parent_label != hi_label then
+                                        upper.parent_label <- hi_label;
+                                    ( upper, count )
+                                end in
                                 let lower, count = expand_lower lower count in
                                 let upper, count = expand_upper upper count in
                                 if tau < float_of_int count /. float_of_int (mask + 1) then
@@ -202,10 +217,8 @@ end = struct
                             (* evenly redistribute the parents in the region *)
                             let rec rebalance parent label =
                                 parent.parent_label <- label;
-                                if parent != upper then
-                                    match parent.parent_next with
-                                        | Some parent' -> rebalance parent' (label + delta)
-                                        | None -> ()
+                                if parent != upper && parent.parent_next != null_parent then
+                                    rebalance parent.parent_next (label + delta)
                             in
                             rebalance lower label
                         end;
@@ -222,64 +235,57 @@ end = struct
         if compare ts ts' > 0 then
             failwith "splice"
         else begin
-            if ts.parent != ts'.parent then match ts.parent.parent_next with
-                | Some parent ->
-                    (* invalidate all parents between ts and ts' *)
-                    let rec invalidate_next parent = match parent.parent_next with
-                        | Some parent' when parent' == ts'.parent ->
-                            parent
-                        | Some parent' ->
-                            parent'.parent_label <- neg parent'.parent_label;
-                            invalidate_next parent'
-                        | _ ->
-                            let x = failwith "splice" in x
-                    in
-                    let parent' = invalidate_next ts.parent in
-                    ts'.parent.parent_prev <- parent.parent_prev;
-                    ts.parent.parent_next <- parent'.parent_next;
-                    ts'.parent.front <- ts';
-                    ts.parent.back <- ts;
+            if ts.parent != ts'.parent then begin
+                if ts.parent.parent_next == null_parent then failwith "splice";
 
-                    (* invalidate all elements before ts' under the same parent *)
-                    let rec invalidate_prev ts = match ts.prev with
-                        | Some ts ->
-                            ts.label <- neg ts.label;
-                            invalidate_prev ts
-                        | None ->
-                            ()
-                    in
-                    invalidate_prev ts';
-                    ts'.prev <- None;
+                (* invalidate all parents between ts and ts' *)
+                let rec invalidate_next parent =
+                    if parent.parent_next == ts'.parent then
+                        ()
+                    else if parent.parent_next != null_parent then begin
+                        parent.parent_next.parent_label <- neg parent.parent_next.parent_label;
+                        invalidate_next parent.parent_next
+                    end else
+                        failwith "splice"
+                in
+                invalidate_next ts.parent;
+                ts'.parent.parent_prev <- ts.parent;
+                ts.parent.parent_next <- ts'.parent;
+                ts'.parent.front <- ts';
+                ts.parent.back <- ts;
 
-                    (* invalidate all elements after ts under the same parent *)
-                    let rec invalidate_next ts = match ts.next with
-                        | Some ts ->
-                            ts.label <- neg ts.label;
-                            invalidate_next ts
-                        | None ->
-                            ()
-                    in
-                    invalidate_next ts;
-                    ts.next <- None
-                | None ->
-                    failwith "splice"
-            else if ts != ts' then match ts.next with
-                | Some ts'' ->
-                    (* invalidate all elements between ts and ts' *)
-                    let rec invalidate_next ts = match ts.next with
-                        | Some ts'' when ts'' == ts' ->
-                            ts
-                        | Some ts'' ->
-                            ts''.label <- neg ts''.label;
-                            invalidate_next ts''
-                        | _ ->
-                            failwith "splice"
-                    in
-                    let ts''' = invalidate_next ts in
-                    ts'.prev <- ts''.prev;
-                    ts.next <- ts'''.next
-                | None ->
-                    failwith "splice"
+                (* invalidate all elements before ts' under the same parent *)
+                let rec invalidate_prev ts = if ts.prev != null then begin
+                    ts.prev.label <- neg ts.prev.label;
+                    invalidate_prev ts.prev
+                end in
+                invalidate_prev ts';
+                ts'.prev <- null;
+
+                (* invalidate all elements after ts under the same parent *)
+                let rec invalidate_next ts = if ts.next != null then begin
+                    ts.next.label <- neg ts.next.label;
+                    invalidate_next ts.next
+                end in
+                invalidate_next ts;
+                ts.next <- null
+            end else if ts != ts' then begin
+                if ts.next == null then failwith "splice";
+
+                (* invalidate all elements between ts and ts' *)
+                let rec invalidate_next ts =
+                    if ts.next == ts' then
+                        ()
+                    else if ts.next != null then begin
+                        ts.next.label <- neg ts.next.label;
+                        invalidate_next ts.next
+                    end else
+                        failwith "splice"
+                in
+                invalidate_next ts;
+                ts'.prev <- ts;
+                ts.next <- ts'
+            end
         end
 end
 (**/**)
