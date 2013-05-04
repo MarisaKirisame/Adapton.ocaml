@@ -58,6 +58,8 @@ if __name__ == "__main__":
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-B", "--benchmark", metavar="DIRECTORY",
         help="run benchmark and store results in %(metavar)s (default: \"%(const)s\")", nargs="?", const="Results/SAList")
+    group.add_argument("-L", "--label", metavar="LABEL",
+        help="optionally append %(metavar)s to result directory")
     group.add_argument("-R", "--resummarize", metavar="DIRECTORY",
         help="resummarize benchmark data in %(metavar)s(s) (default: \"Results/SAList/latest\")", nargs="*")
     parser.add_argument("-P", "--processes", metavar="N", help="run %(metavar)s benchmarks in parallel", default=physical_cpu_count(), type=int)
@@ -90,6 +92,8 @@ if __name__ == "__main__":
         folders = args.resummarize
     else:
         results_dir = time.strftime("%Y-%m-%d-%H-%M-%S")
+        if args.label:
+            results_dir += " " + args.label.strip()
         folder = os.path.join(args.benchmark, results_dir)
         os.makedirs(folder)
         latest = os.path.join(args.benchmark, "latest")
@@ -135,7 +139,10 @@ if __name__ == "__main__":
     with open(os.path.join(folder, "summary.html"), "w") as htmlfile:
         print>>htmlfile, "<!doctype html>"
         print>>htmlfile, "<meta charset=utf-8>"
+        print>>htmlfile, "<head>"
+        print>>htmlfile, "<title>%s</title>" % ( results_dir, )
         print>>htmlfile, "<style>figure.inline-figure { display: inline-block; margin: 0; }</style>"
+        print>>htmlfile, "</head>"
 
         styles = defaultdict(( { "color": color, "linestyle": linestyle, "marker": marker, "markersize": markersize }
             for color, ( linestyle, ( marker, markersize ) ) in izip(
