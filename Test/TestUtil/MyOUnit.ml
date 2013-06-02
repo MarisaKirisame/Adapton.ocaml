@@ -224,6 +224,9 @@ let rec list_equal eq x y = match x, y with
 let list_printer printer sep ff list =
     ignore (List.fold_left (fun b x -> Format.fprintf ff "%(%)@[%a@]" b printer x; sep) "" list)
 
+let array_printer printer sep ff arr =
+    ignore (Array.fold_left (fun b x -> Format.fprintf ff "%(%)@[%a@]" b printer x; sep) "" arr)
+
 
 (*
  * QuickCheck
@@ -268,6 +271,14 @@ module QC = struct
             let rec make n acc = if n > 0 then make (pred n) (gx#generate rng size::acc) else acc in
             make (Random.State.int rng size) []
         method print ff = Format.fprintf ff "[@[%a@]@,]" (list_printer gx#print sep)
+    end
+    let array ?(sep=format_of_string ";@ ") gx = object
+        method generate rng size = Array.init (Random.State.int rng size) (fun k -> gx#generate rng size)
+        method print ff = Format.fprintf ff "[|@[%a@]@,|]" (array_printer gx#print sep)
+    end
+    let option gx = object
+        method generate rng size = if Random.State.bool rng then Some (gx#generate rng size) else None
+        method print ff = option_printer gx#print ff
     end
 
     (* test predicate *)
