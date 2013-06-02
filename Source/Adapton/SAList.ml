@@ -10,7 +10,7 @@ module Make (M : Signatures.SAType)
     (** Constructor tags for self-adjusting lists containing ['a]. *)
     and 'a salist' = [ `Cons of 'a * 'a salist | `Nil ]
 
-    (** Types and operations common to lazy self-adjusting lists containing any type. *)
+    (** Types and operations common to self-adjusting lists containing any type. *)
     module T = struct
         (** Abstract type identifying the given module for self-adjusting values used to create this module for self-adjusting lists. *)
         type sa = M.sa
