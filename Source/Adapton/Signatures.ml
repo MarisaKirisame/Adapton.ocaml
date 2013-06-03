@@ -116,3 +116,39 @@ module type SAListType = sig
     module Make (R : Hashtbl.SeededHashedType)
         : S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t salist and type t' = R.t salist'
 end
+
+(** {2 Self-adjusting array mapped tries} *)
+
+(** Module type for self-adjusting lists. *)
+module rec SAArrayMappedTrieType : sig
+    module type S = sig
+        type sa
+        type 'a thunk
+        type data
+        type t
+        val is_self_adjusting : bool
+        val is_lazy : bool
+        val hash : int -> t -> int
+        val equal : t -> t -> bool
+        val refresh : unit -> unit
+        val get : t -> int -> data option
+        val empty : t
+        val memo_add : (t -> int -> data -> t) * (t -> t -> int -> data -> unit)
+    end
+end = SAArrayMappedTrieType
+
+(** Module type for self-adjusting lists. *)
+module type SAArrayMappedTrieType = sig
+    type sa
+    type 'a thunk
+    type 'a saamt
+    val is_self_adjusting : bool
+    val is_lazy : bool
+    val hash : int -> 'a saamt -> int
+    val equal : 'a saamt -> 'a saamt -> bool
+    val refresh : unit -> unit
+    val get : 'a saamt -> int -> 'a option
+    module type S = SAArrayMappedTrieType.S
+    module Make (R : Hashtbl.SeededHashedType)
+        : S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t saamt
+end

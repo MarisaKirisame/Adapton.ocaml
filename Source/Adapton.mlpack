@@ -11,6 +11,7 @@ Adapton/LazySparseArray
 Adapton/MemoN
 Adapton/NonSAEager
 Adapton/NonSALazy
+Adapton/SAArrayMappedTrie
 Adapton/SAList
 Adapton/Signatures
 Adapton/Types

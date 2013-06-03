@@ -16,3 +16,8 @@ let sa_list = [
 let salist_list = List.map begin fun ( name, sa ) ->
     ( "SAList (" ^ name ^ ")", (module SAList.Make ((val sa : Signatures.SAType)) : Signatures.SAListType)  )
 end sa_list
+
+(** List of all names and modules for self-adjusting array mapped trie. *)
+let saamt_list = List.map begin fun ( name, sa ) ->
+    ( "SAArrayMappedTrie (" ^ name ^ ")", (module SAArrayMappedTrie.Make ((val sa : Signatures.SAType)) : Signatures.SAArrayMappedTrieType)  )
+end sa_list
