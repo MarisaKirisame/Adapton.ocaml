@@ -297,7 +297,7 @@ if __name__ == "__main__":
                                 sizes, values = zip(*sizes.iteritems())
                                 print>>sys.stderr, "            %50s ... %s" \
                                     % ( "%s (%s)" % ( module, timing ), " ".join( format(value, "9.3g") for value in values ) )
-                                ax.plot(sizes, values, label="%s (%s)" % ( module, timing ), markeredgecolor="none", **styles[module, timing])
+                                ax.plot(sizes, values, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none", **styles[module, timing])
 
                         try:
                             ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
@@ -338,7 +338,7 @@ if __name__ == "__main__":
                         sizes, overheads = zip(*( ( size, value / table["time"]["from-scratch"][baseline][size] ) \
                             for size, value in table["time"]["from-scratch"][module].iteritems() ))
                         print>>sys.stderr, "            %32s ... %s" % ( module, " ".join( format(overhead, "9.3g") for overhead in overheads ) )
-                        ax.plot(sizes, overheads, label=module, markeredgecolor="none", **styles[module, "from-scratch"])
+                        ax.plot(sizes, overheads, clip_on=False, label=module, markeredgecolor="none", **styles[module, "from-scratch"])
 
                     try:
                         ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
@@ -379,7 +379,7 @@ if __name__ == "__main__":
                         sizes, speedups = zip(*( ( size, table["time"]["from-scratch"][baseline][size] / value ) \
                             for size, value in table["time"]["propagate"][module].iteritems() ))
                         print>>sys.stderr, "            %32s ... %s" % ( module, " ".join( format(speedup, "9.3g") for speedup in speedups ) )
-                        ax.plot(sizes, speedups, label=module, markeredgecolor="none", **styles[module, "propagate"])
+                        ax.plot(sizes, speedups, clip_on=False, label=module, markeredgecolor="none", **styles[module, "propagate"])
 
                     try:
                         ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
@@ -421,7 +421,7 @@ if __name__ == "__main__":
                         sizes, values = zip(*table["time"][timing][module].iteritems())
                         print>>sys.stderr, "            %24s ... %s" \
                             % ( timing, " ".join( format(value, "9.3g") for value in values ) )
-                        ax.plot(sizes, values, label="%s" % ( timing, ), markeredgecolor="none", **styles[module, timing])
+                        ax.plot(sizes, values, clip_on=False, label="%s" % ( timing, ), markeredgecolor="none", **styles[module, timing])
 
                     try:
                         ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
