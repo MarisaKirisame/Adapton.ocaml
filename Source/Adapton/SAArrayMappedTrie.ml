@@ -28,7 +28,7 @@ module Make (M : Signatures.SAType)
 
     (** Constructor tags for self-adjusting array mapped tries containing ['a]. *)
     and 'a saamt' =
-        | Branches of 'a saamt LazySparseArray.t
+        | Branches of 'a saamt' LazySparseArray.t
         | Leaves of 'a LazySparseArray.t
         | Empty
 
@@ -60,7 +60,7 @@ module Make (M : Signatures.SAType)
             if k < 0 || k >= size then invalid_arg "index out of bounds";
             let rec get xs s =
                 let k = k lsr s land mask in
-                match M.force xs with
+                match xs with
                     | Branches xs ->
                         begin match LazySparseArray.get xs k with
                             | Some xs -> get xs (s - bits)
@@ -71,7 +71,7 @@ module Make (M : Signatures.SAType)
                     | Empty ->
                         None
             in
-            get xs keybits'
+            get (M.force xs) keybits'
     end
     include T
 
@@ -106,16 +106,16 @@ module Make (M : Signatures.SAType)
 
         (** Create memoizing constructor and updater that adds a binding to an self-adjusting array mapped trie. *)
         let memo_add =
-            let add, update_add = A.memo4 (module A) (module Types.Int) (module Types.Int) (module R) begin fun add xs s k v ->
-                (* if along k, initialize the next branch/leaf node, else lookup the subtrie under the prior AMT *)
-                if s > 0 then
-                    Branches begin LazySparseArray.make begin fun d ->
-                        if k lsr s land mask == d then
-                            Some (add xs (s - bits) k v)
-                        else
-                            (* perform a partial key lookup for the corresponding subtrie under the prior AMT *)
-                            let rec subtrie xs s' =
-                                match M.force xs with
+            let add, update_add = A.memo3 (module A) (module Types.Int) (module R) begin fun _ xs k v ->
+                let rec add xs s k v =
+                    (* if along k, initialize the next branch/leaf node, else lookup the subtrie under the prior AMT *)
+                    if s > 0 then
+                        Branches begin LazySparseArray.make begin fun d ->
+                            if k lsr s land mask == d then
+                                Some (add xs (s - bits) k v)
+                            else
+                                (* perform a partial key lookup for the corresponding subtrie under the prior AMT *)
+                                let rec subtrie xs s' = match xs with
                                     | Branches xs ->
                                         if s' == s then
                                             LazySparseArray.get xs d
@@ -131,24 +131,26 @@ module Make (M : Signatures.SAType)
                                         None
                                     | Leaves _ ->
                                         assert false
-                            in
-                            subtrie xs keybits'
-                    end end
-                else
-                    Leaves begin LazySparseArray.make begin fun d ->
-                        if k land mask == d then
-                            Some v
-                        else
-                            get xs (k land mask' lor d)
-                    end end
+                                in
+                                subtrie (M.force xs) keybits'
+                        end end
+                    else
+                        Leaves begin LazySparseArray.make begin fun d ->
+                            if k land mask == d then
+                                Some v
+                            else
+                                get xs (k land mask' lor d)
+                        end end
+                in
+                add xs keybits' k v
             end in
             let add xs k v =
                 if k < 0 || k >= size then invalid_arg "index out of bounds";
-                add xs keybits' k v
+                add xs k v
             in
             let update_add m xs k v =
                 if k < 0 || k >= size then invalid_arg "index out of bounds";
-                update_add m xs keybits' k v
+                update_add m xs k v
             in
             ( add, update_add )
     end
