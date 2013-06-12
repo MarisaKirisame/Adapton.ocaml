@@ -84,7 +84,7 @@ module Make (M : Signatures.SAType)
         module A = M.Make (struct
             type t = R.t saamt'
             let hash seed = function
-                | Branches xs -> LazySparseArray.hash (Hashtbl.seeded_hash seed `Leaves) xs
+                | Branches xs -> LazySparseArray.hash (Hashtbl.seeded_hash seed `Branches) xs
                 | Leaves xs -> LazySparseArray.hash (Hashtbl.seeded_hash seed `Leaves) xs
                 | Empty -> Hashtbl.seeded_hash seed `Empty
             let equal xs xs' = xs == xs' || match xs, xs' with
