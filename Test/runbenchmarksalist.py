@@ -139,10 +139,30 @@ if __name__ == "__main__":
     files = sorted(set(chain.from_iterable( ( file for file in os.listdir(path) if file.endswith(".json.gz") ) for path in folders )))
 
 
+    import math
+    from decimal import Decimal
     from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
     from matplotlib.figure import Figure
-    from matplotlib.ticker import FormatStrFormatter
+    from matplotlib.ticker import Formatter
     from scipy import stats
+
+    class EngFormatter(Formatter):
+        def __init__(self, places=3):
+            self.places = places
+
+        def __call__(self, num, pos=None):
+            num = Decimal(str(num))
+
+            if num != 0:
+                exp = Decimal(math.floor(abs(num).log10() / 3) * 3)
+            else:
+                exp = Decimal(0)
+
+            mantissa = num / ( 10 ** exp )
+            result = "%.*g" % ( self.places, mantissa )
+            if exp != 0:
+                result += "e%+d" % ( exp, )
+            return result
 
     styles = defaultdict(( { "color": color, "linestyle": linestyle, "marker": marker, "markersize": markersize }
         for color, ( linestyle, ( marker, markersize ) ) in izip(
@@ -259,7 +279,7 @@ if __name__ == "__main__":
                         ax.set_xlabel("input size", fontsize=8)
                         ax.set_ylabel("%s (%s)" % ( measurement, units[measurement] ), fontsize=8)
                         for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
-                            axis.set_major_formatter(FormatStrFormatter("%.3g"))
+                            axis.set_major_formatter(EngFormatter())
                             axis.set_ticks_position("none")
                         if hasattr(ax, "tick_params"):
                             ax.tick_params(labelsize=7)
@@ -301,7 +321,7 @@ if __name__ == "__main__":
                     ax.set_title("Overhead: X (from-scratch) / %s (from-scratch)" % ( baseline, ), fontsize=8)
                     ax.set_xlabel("input size", fontsize=8)
                     for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
-                        axis.set_major_formatter(FormatStrFormatter("%.3g"))
+                        axis.set_major_formatter(EngFormatter())
                         axis.set_ticks_position("none")
                     if hasattr(ax, "tick_params"):
                         ax.tick_params(labelsize=7)
@@ -342,7 +362,7 @@ if __name__ == "__main__":
                     ax.set_title("Speed-up: %s (from-scratch) / X (propagate)" % ( baseline, ), fontsize=8)
                     ax.set_xlabel("input size", fontsize=8)
                     for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
-                        axis.set_major_formatter(FormatStrFormatter("%.3g"))
+                        axis.set_major_formatter(EngFormatter())
                         axis.set_ticks_position("none")
                     if hasattr(ax, "tick_params"):
                         ax.tick_params(labelsize=7)
@@ -385,7 +405,7 @@ if __name__ == "__main__":
                     ax.set_xlabel("input size", fontsize=8)
                     ax.set_ylabel("time (%s)" % ( units["time"], ), fontsize=8)
                     for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
-                        axis.set_major_formatter(FormatStrFormatter("%.3g"))
+                        axis.set_major_formatter(EngFormatter())
                         axis.set_ticks_position("none")
                     if hasattr(ax, "tick_params"):
                         ax.tick_params(labelsize=7)
