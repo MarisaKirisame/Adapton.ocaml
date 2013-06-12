@@ -13,7 +13,7 @@ def driver(( module, task, size, take, edit, seed )):
     results = OrderedDict(( ( "module", module ), ( "task", task ), ( "size", size ), ( "take", take ), ( "edit", edit ), ( "seed", seed ) ))
     try:
         native = subprocess.Popen(
-            [ runbenchmarkadapton_native, "-m", str(module), "-t", str(task), "-I", str(size), "-T", str(take), "-E", str(edit), "-S", str(seed) ],
+            [ runbenchmarkadapton_native, "-m", "SAList (%s)" % ( module, ), "-t", str(task), "-I", str(size), "-T", str(take), "-E", str(edit), "-S", str(seed) ],
             stdout=subprocess.PIPE,
             env={ "BENCHMARK_SALIST_ENV": " " * rng.randrange(4096) })
         results.update(json.load(native.stdout, object_pairs_hook=OrderedDict))
@@ -47,11 +47,12 @@ def physical_cpu_count():
 
 
 if __name__ == "__main__":
-    import argparse, errno, gzip, multiprocessing, pprint, urllib
+    import argparse, errno, gzip, multiprocessing, pprint, re, urllib
 
+    salist_re = re.compile(r"SAList \(([^)]+)\)")
     config = json.loads(subprocess.check_output([ runbenchmarkadapton_native, "-c" ]))
-    config["baselines"] = [ str(config["modules"][-1]) ]
-    config["modules"] = map(str, config["modules"])
+    config["modules"] = map(lambda m: salist_re.sub(r"\1", str(m)), config["modules"])
+    config["baselines"] = [ config["modules"][-1] ]
     config["tasks"] = map(str, config["tasks"])
 
     parser = argparse.ArgumentParser()
