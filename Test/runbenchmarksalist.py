@@ -269,8 +269,8 @@ if __name__ == "__main__":
             for measurement, measurement_table in table.iteritems():
                 for yadjust, timings in scalings[measurement]:
                     print>>sys.stderr, "        Plotting %s (%.2fx of %s)" % ( measurement, yadjust, timings )
-                    svgfilename = "%s-%s-%s-%s.svg" % ( label, measurement, yadjust, "-".join(timings) )
-                    with open(os.path.join(summary, svgfilename), "w") as svgfile:
+                    pdffilename = "%s-%s-%s-%s.pdf" % ( label, measurement, yadjust, "-".join(timings) )
+                    with open(os.path.join(summary, pdffilename), "w") as pdffile:
                         fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                         ax = fig.add_subplot(1, 1, 1,
                             xlim=( 0, 1.01 * max( xmax[measurement][timing] for timing in timings ) ),
@@ -307,14 +307,14 @@ if __name__ == "__main__":
                         if hasattr(fig, "tight_layout"):
                             fig.tight_layout(pad=0.5)
 
-                        fig.savefig(svgfile, format="svg")
+                        fig.savefig(pdffile, format="pdf")
                         print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
-                            % ( os.path.join(label, urllib.pathname2url(svgfilename)), )
+                            % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
 
 
             for baseline in args.baselines:
-                svgfilename = "%s-overhead.svg" % ( label, )
-                with open(os.path.join(summary, svgfilename), "w") as svgfile:
+                pdffilename = "%s-overhead.pdf" % ( label, )
+                with open(os.path.join(summary, pdffilename), "w") as pdffile:
                     fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                     ax = fig.add_subplot(1, 1, 1,
                         xlim=( 0, 1.01 * xmax["time"]["propagate"] ))
@@ -348,14 +348,14 @@ if __name__ == "__main__":
                     if hasattr(fig, "tight_layout"):
                         fig.tight_layout(pad=0.5)
 
-                    fig.savefig(svgfile, format="svg")
+                    fig.savefig(pdffile, format="pdf")
                     print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
-                        % ( os.path.join(label, urllib.pathname2url(svgfilename)), )
+                        % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
 
 
             for baseline in args.baselines:
-                svgfilename = "%s-%s-speedup.svg" % ( label, baseline, )
-                with open(os.path.join(summary, svgfilename), "w") as svgfile:
+                pdffilename = "%s-%s-speedup.pdf" % ( label, baseline, )
+                with open(os.path.join(summary, pdffilename), "w") as pdffile:
                     fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                     ax = fig.add_subplot(1, 1, 1,
                         xlim=( 0, 1.01 * xmax["time"]["propagate"] ))
@@ -389,15 +389,15 @@ if __name__ == "__main__":
                     if hasattr(fig, "tight_layout"):
                         fig.tight_layout(pad=0.5)
 
-                    fig.savefig(svgfile, format="svg")
+                    fig.savefig(pdffile, format="pdf")
                     print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
-                        % ( os.path.join(label, urllib.pathname2url(svgfilename)), )
+                        % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
 
 
             for module in editables:
                 print>>sys.stderr, "        Plotting %s details ..." % ( module, )
-                svgfilename = "%s-%s-details.svg" % ( label, module )
-                with open(os.path.join(summary, svgfilename), "w") as svgfile:
+                pdffilename = "%s-%s-details.pdf" % ( label, module )
+                with open(os.path.join(summary, pdffilename), "w") as pdffile:
                     fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                     ax = fig.add_subplot(1, 1, 1,
                         xlim=( 0, 1.01 * xmax["time"]["propagate"] ))
@@ -431,6 +431,6 @@ if __name__ == "__main__":
                     if hasattr(fig, "tight_layout"):
                         fig.tight_layout(pad=0.5)
 
-                    fig.savefig(svgfile, format="svg")
+                    fig.savefig(pdffile, format="pdf")
                     print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
-                        % ( os.path.join(label, urllib.pathname2url(svgfilename)), )
+                        % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
