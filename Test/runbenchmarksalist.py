@@ -134,8 +134,27 @@ if __name__ == "__main__":
                     with gzip.open(os.path.join(folder, "%s-%02d-%04d.json.gz" % ( task, take, len(results) )), "w") as jsonfile:
                         json.dump(results, jsonfile, indent=4, separators=( ",", ":" ))
 
+
     print>>sys.stderr, "Generating summary in %s ..." % ( folder, )
     files = sorted(set(chain.from_iterable( ( file for file in os.listdir(path) if file.endswith(".json.gz") ) for path in folders )))
+
+
+    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+    from matplotlib.figure import Figure
+    from matplotlib.ticker import FormatStrFormatter
+    from scipy import stats
+
+    styles = defaultdict(( { "color": color, "linestyle": linestyle, "marker": marker, "markersize": markersize }
+        for color, ( linestyle, ( marker, markersize ) ) in izip(
+            cycle(( "black", "darkblue", "darkred", "darkgreen", "darkcyan", "dimgray" )),
+            cycle(product(( "-", "--", "-." ), ( ( ".", 8 ), ( "^", 6 ), ( "s", 4 ), ( "*", 7 ), ( "D", 4 ) ))) )).next)
+
+    scalings = {
+        "time": ( ( 1.01, ( "from-scratch", "propagate" ) ), (  1.01, ( "propagate", ) ) ),
+        "heap": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
+        "max-heap": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
+    }
+
 
     with open(os.path.join(folder, "summary.html"), "w") as htmlfile:
         print>>htmlfile, "<!doctype html>"
@@ -144,11 +163,6 @@ if __name__ == "__main__":
         print>>htmlfile, "<title>%s</title>" % ( results_dir, )
         print>>htmlfile, "<style>figure.inline-figure { display: inline-block; margin: 0; }</style>"
         print>>htmlfile, "</head>"
-
-        styles = defaultdict(( { "color": color, "linestyle": linestyle, "marker": marker, "markersize": markersize }
-            for color, ( linestyle, ( marker, markersize ) ) in izip(
-                cycle(( "black", "darkblue", "darkred", "darkgreen", "darkcyan", "dimgray" )),
-                cycle(product(( "-", "--", "-." ), ( ( ".", 8 ), ( "^", 6 ), ( "s", 4 ), ( "*", 7 ), ( "D", 4 ) ))) )).next)
 
         for file in files:
             print>>sys.stderr, "    Summarizing %s ..." % ( file, )
@@ -216,11 +230,6 @@ if __name__ == "__main__":
                             if "error" in record:
                                 pprint.pprint(dict(record))
 
-            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-            from matplotlib.figure import Figure
-            from matplotlib.ticker import FormatStrFormatter
-            from scipy import stats
-
             xmax = {}
             ymax = {}
             for measurement, measurement_table in table.iteritems():
@@ -236,12 +245,6 @@ if __name__ == "__main__":
                         module_table[module] = OrderedDict(sorted(sizes.iteritems()))
                     measurement_table[timing] = OrderedDict(
                         sorted(module_table.iteritems(), key=lambda ( module, sizes ): max(sizes.itervalues()), reverse=True))
-
-            scalings = {
-                "time": ( ( 1.01, ( "from-scratch", "propagate" ) ), (  1.01, ( "propagate", ) ) ),
-                "heap": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
-                "max-heap": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
-            }
 
             for measurement, measurement_table in table.iteritems():
                 for yadjust, timings in scalings[measurement]:
