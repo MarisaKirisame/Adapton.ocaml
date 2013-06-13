@@ -309,7 +309,7 @@ if __name__ == "__main__":
 
 
             for baseline in args.baselines:
-                pdffilename = "%s-overhead.pdf" % ( label, )
+                pdffilename = "%s-%s-overhead.pdf" % ( label, baseline, )
                 with open(os.path.join(summary, pdffilename), "w") as pdffile:
                     fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                     ax = fig.add_subplot(1, 1, 1,
