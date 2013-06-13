@@ -37,7 +37,7 @@ end = struct
     let end_label = max_label - gap_size
 
     (** Top layer bidirectional linked-list of the total-order data structure that provides coarse-grained ordering. *)
-    type parent = {
+    type parent = { (* 5 words *)
         mutable parent_label : int;
         mutable parent_prev : parent;
         mutable parent_next : parent;
@@ -45,7 +45,7 @@ end = struct
         mutable back : t;
     }
     (** Bottom layer bidirectional linked-list of the total-order data structure that provides fine-grained ordering. *)
-    and t = {
+    and t = { (* 5 words (not including parent and closure of invalidator) *)
         mutable label : int;
         mutable parent : parent;
         mutable next : t;
@@ -305,12 +305,12 @@ module T = struct
 
     module rec TT : sig
         (** Eager self-adjusting values containing ['a]. *)
-        type 'a thunk = {
+        type 'a thunk = { (* 2 + 17 = 19 words *)
             mutable value : 'a;
             meta : meta;
         }
         (**/**) (* auxiliary types *)
-        and meta = {
+        and meta = { (* 7 + 5 + 5 = 17 words (not including closures of evaluate and unmemo as well as Dependents.t) *)
             id : int;
             mutable evaluate : unit -> unit;
             mutable unmemo : unit -> unit;
