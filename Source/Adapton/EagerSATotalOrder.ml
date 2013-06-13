@@ -7,6 +7,12 @@
     supporting memoization and change propagation, but not adaptive memoization.
  *)
 
+
+(**/**) (* helper functions *)
+let nop () = ()
+(**/**)
+
+
 (**/**) (* total-order maintenance data structure based on:
     Dietz, Paul and Sleator, Daniel. "Two algorithms for maintaining order in a list." In Proceedings of the
         Nineteenth Annual ACM Symposium on Theory of Computing (STOC '87). http://dx.doi.org/10.1145/28395.28434
@@ -23,6 +29,7 @@ module TotalOrder : sig
     val compare : t -> t -> int
     val add_next : t -> t
     val splice : t -> t -> unit
+    val set_invalidator : t -> (unit -> unit) -> unit
 end = struct
     let threshold = 1.4 (* rebalancing region threshold (inverse density) *)
     let label_bits = Sys.word_size - 2 (* use only the positive range *)
@@ -44,6 +51,7 @@ end = struct
         mutable parent : parent;
         mutable next : t;
         mutable prev : t;
+        mutable invalidator : unit -> unit;
     }
 
     (**/**) (* sentinel values *)
@@ -58,6 +66,7 @@ end = struct
         parent=null_parent;
         prev=null;
         next=null;
+        invalidator=nop;
     }
     (**/**)
 
@@ -74,6 +83,7 @@ end = struct
             };
             prev=null;
             next=null;
+            invalidator=nop;
         } in
         ts
 
@@ -128,12 +138,12 @@ end = struct
             let parent = ts.parent in
             let ts' = if ts.next != null then begin
                 let next = ts.next in
-                let ts' = { label=(ts.label + next.label) lsr 1; parent; prev=ts; next } in
+                let ts' = { label=(ts.label + next.label) lsr 1; parent; prev=ts; next; invalidator=nop } in
                 next.prev <- ts';
                 ts.next <- ts';
                 ts'
             end else begin
-                let ts' = { label=(ts.label + max_label) lsr 1; parent; prev=ts; next=null } in
+                let ts' = { label=(ts.label + max_label) lsr 1; parent; prev=ts; next=null; invalidator=nop } in
                 ts.next <- ts';
                 ts'
             end in
@@ -244,6 +254,12 @@ end = struct
                         ()
                     else if parent.parent_next != null_parent then begin
                         parent.parent_next.parent_label <- neg parent.parent_next.parent_label;
+                        let rec invalidate_ts ts = if ts != null then begin
+                            ts.invalidator ();
+                            ts.invalidator <- nop;
+                            invalidate_ts ts.next
+                        end in
+                        invalidate_ts parent.parent_next.front;
                         invalidate_next parent.parent_next
                     end else
                         failwith "splice"
@@ -257,6 +273,8 @@ end = struct
                 (* invalidate all elements before ts' under the same parent *)
                 let rec invalidate_prev ts = if ts.prev != null then begin
                     ts.prev.label <- neg ts.prev.label;
+                    ts.prev.invalidator ();
+                    ts.prev.invalidator <- nop;
                     invalidate_prev ts.prev
                 end in
                 invalidate_prev ts';
@@ -265,6 +283,8 @@ end = struct
                 (* invalidate all elements after ts under the same parent *)
                 let rec invalidate_next ts = if ts.next != null then begin
                     ts.next.label <- neg ts.next.label;
+                    ts.next.invalidator ();
+                    ts.next.invalidator <- nop;
                     invalidate_next ts.next
                 end in
                 invalidate_next ts;
@@ -278,6 +298,8 @@ end = struct
                         ()
                     else if ts.next != null then begin
                         ts.next.label <- neg ts.next.label;
+                        ts.next.invalidator ();
+                        ts.next.invalidator <- nop;
                         invalidate_next ts.next
                     end else
                         failwith "splice"
@@ -287,6 +309,10 @@ end = struct
                 ts.next <- ts'
             end
         end
+
+    (** Set an invalidator function to the given total-order element. *)
+    let set_invalidator ts invalidator =
+        ts.invalidator <- invalidator
 end
 (**/**)
 
@@ -452,7 +478,12 @@ module Make (R : Hashtbl.SeededHashedType)
     type t = R.t thunk
 
     (**/**) (* helper functions *)
-    let nop () = ()
+    let invalidator meta () =
+        (* help GC mark phase by cutting the object graph *)
+        meta.evaluate <- nop;
+        meta.unmemo <- nop;
+        meta.dependencies <- [];
+        Dependents.clear meta.dependents
     (**/**)
 
     (** Create an eager self-adjusting value from a constant value. *)
@@ -472,6 +503,8 @@ module Make (R : Hashtbl.SeededHashedType)
             };
         } in
         Gc.finalise finalise m.meta;
+        if !eager_stack != [] then
+            TotalOrder.set_invalidator start_timestamp (invalidator m.meta);
         incr eager_id_counter;
         m
 
@@ -519,6 +552,7 @@ module Make (R : Hashtbl.SeededHashedType)
             dependents=Dependents.create 0;
         } in
         Gc.finalise finalise meta;
+        TotalOrder.set_invalidator meta.start_timestamp (invalidator meta);
         incr eager_id_counter;
         let m = { value=evaluate_meta meta f; meta } in
         meta.end_timestamp <- add_timestamp ();
