@@ -92,6 +92,26 @@ end = struct
     (**/**) (* helper functions *)
     let neg = (lor) min_int
     let pos = (land) (lnot min_int)
+    let invalidate ts =
+        ts.label <- neg ts.label;
+        ts.invalidator ();
+        (* help GC mark phase by cutting the object graph *)
+        ts.invalidator <- nop;
+        ts.prev <- null;
+        ts.next <- null
+    let invalidate_parent parent =
+        parent.parent_label <- neg parent.parent_label;
+        let rec invalidate_ts ts = if ts != null then begin
+            let next = ts.next in
+            invalidate ts;
+            invalidate_ts next
+        end in
+        invalidate_ts parent.front;
+        (* help GC mark phase by cutting the object graph *)
+        parent.parent_prev <- null_parent;
+        parent.parent_next <- null_parent;
+        parent.front <- null;
+        parent.back <- null
     (**/**)
 
     (** Compare two total-order elements. *)
@@ -219,61 +239,53 @@ end = struct
 
                 (* invalidate all parents between ts and ts' *)
                 let rec invalidate_next parent =
-                    if parent.parent_next == ts'.parent then
+                    if parent == ts'.parent then
                         ()
-                    else if parent.parent_next != null_parent then begin
-                        parent.parent_next.parent_label <- neg parent.parent_next.parent_label;
-                        let rec invalidate_ts ts = if ts != null then begin
-                            ts.invalidator ();
-                            ts.invalidator <- nop;
-                            invalidate_ts ts.next
-                        end in
-                        invalidate_ts parent.parent_next.front;
-                        invalidate_next parent.parent_next
+                    else if parent != null_parent then begin
+                        let next = parent.parent_next in
+                        invalidate_parent parent;
+                        invalidate_next next
                     end else
                         failwith "splice"
                 in
-                invalidate_next ts.parent;
+                invalidate_next ts.parent.parent_next;
                 ts'.parent.parent_prev <- ts.parent;
                 ts.parent.parent_next <- ts'.parent;
                 ts'.parent.front <- ts';
                 ts.parent.back <- ts;
 
                 (* invalidate all elements before ts' under the same parent *)
-                let rec invalidate_prev ts = if ts.prev != null then begin
-                    ts.prev.label <- neg ts.prev.label;
-                    ts.prev.invalidator ();
-                    ts.prev.invalidator <- nop;
-                    invalidate_prev ts.prev
+                let rec invalidate_prev ts = if ts != null then begin
+                    let prev = ts.prev in
+                    invalidate ts;
+                    invalidate_prev prev
                 end in
-                invalidate_prev ts';
+                invalidate_prev ts'.prev;
                 ts'.prev <- null;
 
                 (* invalidate all elements after ts under the same parent *)
-                let rec invalidate_next ts = if ts.next != null then begin
-                    ts.next.label <- neg ts.next.label;
-                    ts.next.invalidator ();
-                    ts.next.invalidator <- nop;
-                    invalidate_next ts.next
+                let rec invalidate_next ts = if ts != null then begin
+                    let next = ts.next in
+                    invalidate ts;
+                    invalidate_next next
                 end in
-                invalidate_next ts;
+                invalidate_next ts.next;
                 ts.next <- null
             end else if ts != ts' then begin
                 if ts.next == null then failwith "splice";
 
                 (* invalidate all elements between ts and ts' *)
                 let rec invalidate_next ts =
-                    if ts.next == ts' then
+                    if ts == ts' then
                         ()
-                    else if ts.next != null then begin
-                        ts.next.label <- neg ts.next.label;
-                        ts.next.invalidator ();
-                        ts.next.invalidator <- nop;
-                        invalidate_next ts.next
+                    else if ts != null then begin
+                        let next = ts.next in
+                        invalidate ts;
+                        invalidate_next next
                     end else
                         failwith "splice"
                 in
-                invalidate_next ts;
+                invalidate_next ts.next;
                 ts'.prev <- ts;
                 ts.next <- ts'
             end
