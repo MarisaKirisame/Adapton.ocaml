@@ -321,7 +321,7 @@ module T = struct
         }
         (**/**)
     end = TT
-    and Dependents : Weak.S with type data = TT.meta = Weak.Make (struct
+    and Dependents : WeakSet.S with type data = TT.meta = WeakSet.Make (struct
         type t = TT.meta
         let hash d = Hashtbl.hash d.TT.id
         let equal = (==)

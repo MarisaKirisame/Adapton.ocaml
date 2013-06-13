@@ -22,7 +22,7 @@ module T = struct
             dependent : dependent;
         }
     end = TT
-    and Dependents : Weak.S with type data = TT.dependency = Weak.Make (struct
+    and Dependents : WeakSet.S with type data = TT.dependency = WeakSet.Make (struct
         type t = TT.dependency
         let hash d = Hashtbl.hash d.TT.dependent
         let equal d d' = d.TT.dependent == d'.TT.dependent
