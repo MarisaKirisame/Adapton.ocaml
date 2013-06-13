@@ -172,7 +172,9 @@ if __name__ == "__main__":
     scalings = {
         "time": ( ( 1.01, ( "from-scratch", "propagate" ) ), (  1.01, ( "propagate", ) ) ),
         "heap": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
+        "stack": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
         "max-heap": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
+        "max-stack": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
     }
 
 
@@ -211,21 +213,14 @@ if __name__ == "__main__":
                 else:
                     print>>sys.stderr, " done"
 
-            table = {
-                "time": {},
-                "heap": {},
-                "max-heap": {},
-            }
+            table = OrderedDict( ( key, {} ) for key in ( "time", "heap", "stack", "max-heap", "max-stack" ) )
             units = {}
             editables = set()
             for record in results:
                 try:
-                    table["time"].setdefault("from-scratch", {}).setdefault(record["module"], {}) \
-                        .setdefault(record["size"], []).append(record["setup"]["time"])
-                    table["heap"].setdefault("from-scratch", {}).setdefault(record["module"], {}) \
-                        .setdefault(record["size"], []).append(record["setup"]["heap"])
-                    table["max-heap"].setdefault("from-scratch", {}).setdefault(record["module"], {}) \
-                        .setdefault(record["size"], []).append(record["setup"]["max-heap"])
+                    for key in table.iterkeys():
+                        table[key].setdefault("from-scratch", {}).setdefault(record["module"], {}) \
+                            .setdefault(record["size"], []).append(record["setup"][key])
                     if units and units != record["units"]:
                         raise ValueError("inconsistent units in results:\nexpected: %s\ngot: %s" % ( pprint.pformat(units), pprint.pformat(record["units"]) ))
                     units.update(record["units"])
@@ -237,14 +232,15 @@ if __name__ == "__main__":
                     if "edits" in record:
                         editables.add(record["module"])
                         try:
-                            table["time"].setdefault("propagate", {}).setdefault(record["module"], {}) \
-                                .setdefault(record["size"], []).append(record["edits"]["update-time"] + record["edits"]["take-time"])
-                            table["heap"].setdefault("propagate", {}).setdefault(record["module"], {}) \
-                                .setdefault(record["size"], []).append(record["edits"]["update-heap"] + record["edits"]["take-heap"])
-                            table["max-heap"].setdefault("propagate", {}).setdefault(record["module"], {}) \
-                                .setdefault(record["size"], []).append(record["edits"]["max-heap"])
-                            table["time"].setdefault("update", {}).setdefault(record["module"], {}) \
-                                .setdefault(record["size"], []).append(record["edits"]["update-time"])
+                            for key in table.iterkeys():
+                                if key.startswith("max-"):
+                                    table[key].setdefault("propagate", {}).setdefault(record["module"], {}) \
+                                        .setdefault(record["size"], []).append(record["edits"][key])
+                                else:
+                                    table[key].setdefault("propagate", {}).setdefault(record["module"], {}) \
+                                        .setdefault(record["size"], []).append(record["edits"]["update-" + key] + record["edits"]["take-" + key])
+                                    table[key].setdefault("update", {}).setdefault(record["module"], {}) \
+                                        .setdefault(record["size"], []).append(record["edits"]["update-" + key])
                         except Exception:
                             traceback.print_exc()
                             if "error" in record:
