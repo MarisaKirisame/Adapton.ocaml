@@ -91,6 +91,7 @@ if __name__ == "__main__":
     if args.resummarize is not None:
         folder = sorted(set(args.resummarize))[-1]
         folders = args.resummarize
+        results_dir = os.path.basename(folder)
     else:
         results_dir = time.strftime("%Y-%m-%d-%H-%M-%S")
         if args.label:
