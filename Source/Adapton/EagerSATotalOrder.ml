@@ -25,7 +25,6 @@ module TotalOrder : sig
     type t
     val create : unit -> t
     val is_valid : t -> bool
-    val remove : t -> unit
     val compare : t -> t -> int
     val add_next : t -> t
     val splice : t -> t -> unit
@@ -94,36 +93,6 @@ end = struct
     let neg = (lor) min_int
     let pos = (land) (lnot min_int)
     (**/**)
-
-    (** Remove an element from a total-order. *)
-    let remove ts = if is_valid ts then begin
-        ts.label <- neg ts.label;
-        if ts.prev != null then
-            if ts.next != null then begin
-                ts.next.prev <- ts.prev;
-                ts.prev.next <- ts.next
-            end else begin
-                ts.parent.back <- ts.prev;
-                ts.prev.next <- null
-            end
-        else
-            if ts.next != null then begin
-                ts.parent.front <- ts.next;
-                ts.next.prev <- null
-            end else begin
-                let parent = ts.parent in
-                parent.parent_label <- neg parent.parent_label;
-                if parent.parent_prev != null_parent then
-                    if parent.parent_next != null_parent then begin
-                        parent.parent_next.parent_prev <- parent.parent_prev;
-                        parent.parent_prev.parent_next <- parent.parent_next
-                    end else
-                        parent.parent_prev.parent_next <- null_parent
-                else
-                    if parent.parent_next != null_parent then
-                        parent.parent_next.parent_prev <- null_parent
-            end
-    end
 
     (** Compare two total-order elements. *)
     let compare ts ts' =
@@ -392,20 +361,8 @@ module T = struct
     let eager_start = TotalOrder.create ()
     let eager_now = ref eager_start
     let eager_finger = ref eager_start
-    let eager_remove = ref []
-
-    let finalise meta =
-        eager_remove := meta.start_timestamp::meta.end_timestamp::!eager_remove
-
-    let flush_remove () =
-        if !eager_remove != [] then begin
-            let remove = !eager_remove in
-            eager_remove := [];
-            List.iter TotalOrder.remove remove
-        end
 
     let set_eager_now timestamp =
-        flush_remove ();
         eager_now := timestamp
 
     let add_timestamp () =
@@ -502,7 +459,6 @@ module Make (R : Hashtbl.SeededHashedType)
                 dependents=Dependents.create 0;
             };
         } in
-        Gc.finalise finalise m.meta;
         if !eager_stack != [] then
             TotalOrder.set_invalidator start_timestamp (invalidator m.meta);
         incr eager_id_counter;
@@ -551,7 +507,6 @@ module Make (R : Hashtbl.SeededHashedType)
             dependencies=[];
             dependents=Dependents.create 0;
         } in
-        Gc.finalise finalise meta;
         TotalOrder.set_invalidator meta.start_timestamp (invalidator meta);
         incr eager_id_counter;
         let m = { value=evaluate_meta meta f; meta } in
