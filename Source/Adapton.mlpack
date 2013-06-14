@@ -15,4 +15,5 @@ Adapton/SAArrayMappedTrie
 Adapton/SAList
 Adapton/Signatures
 Adapton/Types
+Adapton/WeakDyn
 Adapton/WeakSet

@@ -303,30 +303,22 @@ module T = struct
     (** Abstract type identifying this module for self-adjusting values. *)
     type sa
 
-    module rec TT : sig
-        (** Eager self-adjusting values containing ['a]. *)
-        type 'a thunk = { (* 2 + 17 = 19 words *)
-            mutable value : 'a;
-            meta : meta;
-        }
-        (**/**) (* auxiliary types *)
-        and meta = { (* 7 + 5 + 5 = 17 words (not including closures of evaluate and unmemo as well as Dependents.t) *)
-            id : int;
-            mutable evaluate : unit -> unit;
-            mutable unmemo : unit -> unit;
-            start_timestamp : TotalOrder.t;
-            mutable end_timestamp : TotalOrder.t;
-            mutable dependencies : meta list;
-            dependents : Dependents.t;
-        }
-        (**/**)
-    end = TT
-    and Dependents : WeakSet.S with type data = TT.meta = WeakSet.Make (struct
-        type t = TT.meta
-        let hash d = Hashtbl.hash d.TT.id
-        let equal = (==)
-    end)
-    include TT
+    (** Eager self-adjusting values containing ['a]. *)
+    type 'a thunk = { (* 2 + 17 = 19 words *)
+        mutable value : 'a;
+        meta : meta;
+    }
+    (**/**) (* auxiliary types *)
+    and meta = { (* 7 + 5 + 5 = 17 words (not including closures of evaluate and unmemo as well as WeakDyn.t) *)
+        id : int;
+        mutable evaluate : unit -> unit;
+        mutable unmemo : unit -> unit;
+        start_timestamp : TotalOrder.t;
+        mutable end_timestamp : TotalOrder.t;
+        mutable dependencies : meta list;
+        dependents : meta WeakDyn.t; (* doesn't have to be a set since it is cleared and dependents are immediately re-evaluated and re-added if updated *)
+    }
+    (**/**)
 
 
     (** This module implements self-adjusting values. *)
@@ -394,8 +386,8 @@ module T = struct
         eager_queue := PriorityQueue.insert !eager_queue meta
 
     let enqueue_dependents dependents =
-        eager_queue := Dependents.fold (fun d q -> if TotalOrder.is_valid d.start_timestamp then PriorityQueue.insert q d else q) dependents !eager_queue;
-        Dependents.clear dependents
+        eager_queue := WeakDyn.fold (fun d q -> if TotalOrder.is_valid d.start_timestamp then PriorityQueue.insert q d else q) dependents !eager_queue;
+        WeakDyn.clear dependents
     (**/**)
 
     (** Compute the hash value of a self-adjusting value. *)
@@ -425,7 +417,7 @@ module T = struct
         (* add dependency to caller *)
         begin match !eager_stack with
             | dependent::_ ->
-                ignore (Dependents.merge m.meta.dependents dependent);
+                WeakDyn.add m.meta.dependents dependent;
                 dependent.dependencies <- m.meta::dependent.dependencies
             | [] ->
                 ()
@@ -452,7 +444,7 @@ module Make (R : Hashtbl.SeededHashedType)
         meta.evaluate <- nop;
         meta.unmemo <- nop;
         meta.dependencies <- [];
-        Dependents.clear meta.dependents
+        WeakDyn.clear meta.dependents
     (**/**)
 
     (** Create an eager self-adjusting value from a constant value. *)
@@ -468,7 +460,7 @@ module Make (R : Hashtbl.SeededHashedType)
                 start_timestamp;
                 end_timestamp;
                 dependencies=[];
-                dependents=Dependents.create 0;
+                dependents=WeakDyn.create 0;
             };
         } in
         if !eager_stack != [] then
@@ -517,7 +509,7 @@ module Make (R : Hashtbl.SeededHashedType)
             start_timestamp=add_timestamp ();
             end_timestamp=eager_start;
             dependencies=[];
-            dependents=Dependents.create 0;
+            dependents=WeakDyn.create 0;
         } in
         TotalOrder.set_invalidator meta.start_timestamp (invalidator meta);
         incr eager_id_counter;
