@@ -176,7 +176,7 @@ include T
 
 
 (** Functor to make a constructor, a mutator, and a memoizing constructor for lazy self-adjusting values of a specific type. *)
-module Make (R : Hashtbl.SeededHashedType)
+module Make (R : Signatures.EqualsType)
         : Signatures.SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk = struct
     include T
 

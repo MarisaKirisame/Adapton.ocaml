@@ -1,5 +1,12 @@
 (** Module types for {i Adapton}. *)
 
+(** {2 Equals-comparable values *)
+
+module type EqualsType = sig
+    type t
+    val equal : t -> t -> bool
+end
+
 (** {2 Self-adjusting values} *)
 
 (** Output module types of modules for self-adjusting values. *)
@@ -34,7 +41,7 @@ module type SAType = sig
     val equal : 'a thunk -> 'a thunk -> bool
     val force : 'a thunk -> 'a
     val refresh : unit -> unit
-    module Make (R : Hashtbl.SeededHashedType) : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk
+    module Make (R : EqualsType) : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk
 end
 
 (** {2 Self-adjusting lists} *)
