@@ -73,13 +73,17 @@ if __name__ == "__main__":
     parser.add_argument("-I", "--input-sizes", metavar="SIZE",
         help="run benchmarks with input list size (default: 100000 10000 1000 100 50000 5000 500 50 200000 20000 2000 200 20)",
         nargs="+", default=( 100000, 10000, 1000, 100, 50000, 5000, 500, 50, 20000, 2000, 200, 20 ), type=int)
-    parser.add_argument("-T", "--take-count", metavar="TAKE", help="take only the first %(metavar)s elements of each output list default (1 10 5 2)",
-        nargs="+", default=( 1, 10, 5, 2 ), type=int)
+    parser.add_argument("-T", "--take-counts", metavar="TAKE", help="take only the first %(metavar)s elements of each output list (default: 1)",
+        nargs="+", default=( 1, ), type=int)
     parser.add_argument("-E", "--edit-count", metavar="COUNT", help="average self-adjusting benchmarks over %(metavar)s list edits ",
         default=250, type=int)
     parser.add_argument("-S", "--random-seeds", metavar="SEED", help="run benchmark for seeds (default: 5 random seeds)",
         nargs="+", default=random.sample(xrange(sys.maxint >> 1), 5), type=int)
     args = parser.parse_args()
+    if len(args.input_sizes) > 1 and len(args.take_counts) > 1:
+        parser.error("either -I/--input-sizes or -T/--take-counts must be given only one value")
+    elif len(args.input_sizes) == 1 and len(args.take_counts) == 1:
+        parser.error("-I/--input-sizes and -T/--take-counts must not both be given only one value")
     if args.benchmark is None and args.resummarize is None:
         args.benchmark = "Results/SAList"
     elif args.resummarize == []:
@@ -114,26 +118,42 @@ if __name__ == "__main__":
 
         pool = multiprocessing.Pool(processes=args.processes, maxtasksperchild=1)
 
-        for take in args.take_count:
-            for task in args.tasks:
-                results = []
-                try:
-                    # don't use pool.apply_async, it's triggers http://bugs.python.org/issue10332
-                    for result in pool.imap_unordered(driver, ( ( module, task, size, take, args.edit_count, seed )
-                            for size in args.input_sizes
-                            for seed in args.random_seeds
-                            for module in random.sample(args.modules, len(args.modules)) )):
-                        # don't use extend, so that if an exception or interrupt occurs, we still have some results
-                        results.append(result)
-                except Exception:
-                    traceback.print_exc()
-                except KeyboardInterrupt:
-                    pool.terminate()
-                    pool.join()
-                    sys.exit()
-                finally:
-                    with gzip.open(os.path.join(folder, "%s-%02d-%04d.json.gz" % ( task, take, len(results) )), "w") as jsonfile:
-                        json.dump(results, jsonfile, indent=4, separators=( ",", ":" ))
+        for task in args.tasks:
+            results = []
+            try:
+                # don't use pool.apply_async, it's triggers http://bugs.python.org/issue10332
+                for result in pool.imap_unordered(driver, ( ( module, task, size, take, args.edit_count, seed )
+                        for take in args.take_counts
+                        for size in args.input_sizes
+                        for seed in args.random_seeds
+                        for module in random.sample(args.modules, len(args.modules)) )):
+                    # don't use extend, so that if an exception or interrupt occurs, we still have some results
+                    results.append(result)
+            except Exception:
+                traceback.print_exc()
+            except KeyboardInterrupt:
+                pool.terminate()
+                pool.join()
+                sys.exit()
+            finally:
+                if len(args.input_sizes) > 1:
+                    assert len(args.take_counts) == 1
+                    results = OrderedDict((
+                        ( "label", "take count = %d" % args.take_counts[0] ),
+                        ( "x-axis", "size" ),
+                        ( "x-label", "input size" ),
+                        ( "data", results )
+                    ))
+                else:
+                    assert len(args.input_sizes) == 1 and len(args.take_counts) > 1
+                    results = OrderedDict((
+                        ( "label", "input size = %d" % args.input_sizes[0] ),
+                        ( "x-axis", "take" ),
+                        ( "x-label", "take count" ),
+                        ( "data", results )
+                    ))
+                with gzip.open(os.path.join(folder, "%s-%04d.json.gz" % ( task, len(results) )), "w") as jsonfile:
+                    json.dump(results, jsonfile, indent=4, separators=( ",", ":" ))
 
 
     print>>sys.stderr, "Generating summary in %s ..." % ( folder, )
@@ -213,12 +233,22 @@ if __name__ == "__main__":
                     if e.errno != errno.EEXIST:
                         raise
 
-                results = []
+                results = None
                 for path in folders:
                     filepath = os.path.join(path, file)
                     print>>txtfile, "        Loading %s ..." % ( filepath, ),
                     try:
-                        results.extend(json.load(gzip.open(filepath), object_pairs_hook=OrderedDict))
+                        more_results = json.load(gzip.open(filepath), object_pairs_hook=OrderedDict)
+                        if not results:
+                            results = more_results
+                        else:
+                            if more_results["label"] != results["label"]:
+                                raise ValueError("inconsistent label in results:\nexpected: %s\ngot: %s" % ( results["label"], more_results["label"] ))
+                            if more_results["x-axis"] != results["x-axis"]:
+                                raise ValueError("inconsistent x-axis in results:\nexpected: %s\ngot: %s" % ( results["x-axis"], more_results["x-axis"] ))
+                            if more_results["x-label"] != results["x-label"]:
+                                raise ValueError("inconsistent x-label in results:\nexpected: %s\ngot: %s" % ( results["x-label"], more_results["x-label"] ))
+                            results.extend(json.load(gzip.open(filepath), object_pairs_hook=OrderedDict))
                     except IOError as e:
                         if e.errno != errno.ENOENT:
                             raise
@@ -231,11 +261,11 @@ if __name__ == "__main__":
                 table = OrderedDict( ( key, {} ) for key in ( "time", "heap", "stack", "max-heap", "max-stack" ) )
                 units = {}
                 editables = set()
-                for record in results:
+                for record in results["data"]:
                     try:
                         for key in table.iterkeys():
                             table[key].setdefault("from-scratch", {}).setdefault(record["module"], {}) \
-                                .setdefault(record["size"], []).append(record["setup"][key])
+                                .setdefault(record[results["x-axis"]], []).append(record["setup"][key])
                         if units and units != record["units"]:
                             raise ValueError("inconsistent units in results:\nexpected: %s\ngot: %s" % ( pprint.pformat(units), pprint.pformat(record["units"]) ))
                         units.update(record["units"])
@@ -250,12 +280,12 @@ if __name__ == "__main__":
                                 for key in table.iterkeys():
                                     if key.startswith("max-"):
                                         table[key].setdefault("propagate", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record["size"], []).append(record["edits"][key])
+                                            .setdefault(record[results["x-axis"]], []).append(record["edits"][key])
                                     else:
                                         table[key].setdefault("propagate", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record["size"], []).append(record["edits"]["update-" + key] + record["edits"]["take-" + key])
+                                            .setdefault(record[results["x-axis"]], []).append(record["edits"]["update-" + key] + record["edits"]["take-" + key])
                                         table[key].setdefault("update", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record["size"], []).append(record["edits"]["update-" + key])
+                                            .setdefault(record[results["x-axis"]], []).append(record["edits"]["update-" + key])
                             except Exception:
                                 traceback.print_exc()
                                 if "error" in record:
@@ -267,15 +297,15 @@ if __name__ == "__main__":
                     xmax[measurement] = {}
                     ymax[measurement] = {}
                     for timing, module_table in measurement_table.iteritems():
-                        for module, sizes in module_table.iteritems():
-                            for size, values in sizes.iteritems():
-                                avg = stats.tmean(values)
-                                sizes[size] = avg
-                                xmax[measurement][timing] = max(xmax[measurement].get(timing, 0), size)
+                        for module, xvalues in module_table.iteritems():
+                            for xvalue, yvalues in xvalues.iteritems():
+                                avg = stats.tmean(yvalues)
+                                xvalues[xvalue] = avg
+                                xmax[measurement][timing] = max(xmax[measurement].get(timing, 0), xvalue)
                                 ymax[measurement][timing] = max(ymax[measurement].get(timing, 0), avg)
-                            module_table[module] = OrderedDict(sorted(sizes.iteritems()))
+                            module_table[module] = OrderedDict(sorted(xvalues.iteritems()))
                         measurement_table[timing] = OrderedDict(
-                            sorted(module_table.iteritems(), key=lambda ( module, sizes ): max(sizes.itervalues()), reverse=True))
+                            sorted(module_table.iteritems(), key=lambda ( module, xvalues ): max(xvalues.itervalues()), reverse=True))
 
                 for measurement, measurement_table in table.iteritems():
                     for yadjust, timings in scalings[measurement]:
@@ -287,7 +317,8 @@ if __name__ == "__main__":
                                 xlim=( 0, 1.01 * max( xmax[measurement][timing] for timing in timings ) ),
                                 ylim=( 0, yadjust * max( ymax[measurement][timing] for timing in timings ) ))
 
-                            ax.set_xlabel("input size", fontsize=8)
+                            ax.set_title(results["label"], fontsize=8)
+                            ax.set_xlabel(results["x-label"], fontsize=8)
                             ax.set_ylabel("%s (%s)" % ( measurement, units[measurement] ), fontsize=8)
                             for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
                                 axis.set_major_formatter(EngFormatter())
@@ -304,11 +335,12 @@ if __name__ == "__main__":
 
                             for timing in ( "from-scratch", "propagate" ):
                                 module_table = measurement_table[timing]
-                                for module, sizes in module_table.iteritems():
-                                    sizes, values = zip(*sizes.iteritems())
+                                for module, xvalues in module_table.iteritems():
+                                    xvalues, yvalues = zip(*xvalues.iteritems())
                                     print>>txtfile, "            %50s ... %s" \
-                                        % ( "%s (%s)" % ( module, timing ), " ".join( format(value, "9.3g") for value in values ) )
-                                    ax.plot(sizes, values, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none", **styles[module, timing])
+                                        % ( "%s (%s)" % ( module, timing ), " ".join( format(yvalue, "9.3g") for yvalue in yvalues ) )
+                                    ax.plot(xvalues, yvalues, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none",
+                                        **styles[module, timing])
 
                             try:
                                 ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
@@ -329,8 +361,9 @@ if __name__ == "__main__":
                         fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                         ax = fig.add_subplot(1, 1, 1,
                             xlim=( 0, 1.01 * xmax["time"]["propagate"] ))
-                        ax.set_title("Overhead: X (from-scratch) / %s (from-scratch)" % ( baseline, ), fontsize=8)
-                        ax.set_xlabel("input size", fontsize=8)
+                        ax.set_title(results["label"], fontsize=8)
+                        ax.set_xlabel(results["x-label"], fontsize=8)
+                        ax.set_ylabel("time overhead\nX (from-scratch) / %s (from-scratch)" % ( baseline, ), fontsize=8, multialignment="center")
                         for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
                             axis.set_major_formatter(EngFormatter())
                             axis.set_ticks_position("none")
@@ -346,10 +379,10 @@ if __name__ == "__main__":
 
                         print>>txtfile, "        Plotting overhead using baseline %s ..." % ( baseline, )
                         for module in editables:
-                            sizes, overheads = zip(*( ( size, value / table["time"]["from-scratch"][baseline][size] ) \
-                                for size, value in table["time"]["from-scratch"][module].iteritems() ))
+                            xvalues, overheads = zip(*( ( xvalue, yvalue / table["time"]["from-scratch"][baseline][xvalue] ) \
+                                for xvalue, yvalue in table["time"]["from-scratch"][module].iteritems() ))
                             print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(overhead, "9.3g") for overhead in overheads ) )
-                            ax.plot(sizes, overheads, clip_on=False, label=module, markeredgecolor="none", **styles[module, "from-scratch"])
+                            ax.plot(xvalues, overheads, clip_on=False, label=module, markeredgecolor="none", **styles[module, "from-scratch"])
 
                         try:
                             ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
@@ -370,8 +403,9 @@ if __name__ == "__main__":
                         fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                         ax = fig.add_subplot(1, 1, 1,
                             xlim=( 0, 1.01 * xmax["time"]["propagate"] ))
-                        ax.set_title("Speed-up: %s (from-scratch) / X (propagate)" % ( baseline, ), fontsize=8)
-                        ax.set_xlabel("input size", fontsize=8)
+                        ax.set_title(results["label"], fontsize=8)
+                        ax.set_xlabel(results["x-label"], fontsize=8)
+                        ax.set_ylabel("time speed-up\n%s (from-scratch) / X (propagate)" % ( baseline, ), fontsize=8, multialignment="center")
                         for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
                             axis.set_major_formatter(EngFormatter())
                             axis.set_ticks_position("none")
@@ -387,10 +421,10 @@ if __name__ == "__main__":
 
                         print>>txtfile, "        Plotting speed-up using baseline %s ..." % ( baseline, )
                         for module in editables:
-                            sizes, speedups = zip(*( ( size, table["time"]["from-scratch"][baseline][size] / value ) \
-                                for size, value in table["time"]["propagate"][module].iteritems() ))
+                            xvalues, speedups = zip(*( ( xvalue, table["time"]["from-scratch"][baseline][xvalue] / yvalue ) \
+                                for xvalue, yvalue in table["time"]["propagate"][module].iteritems() ))
                             print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(speedup, "9.3g") for speedup in speedups ) )
-                            ax.plot(sizes, speedups, clip_on=False, label=module, markeredgecolor="none", **styles[module, "propagate"])
+                            ax.plot(xvalues, speedups, clip_on=False, label=module, markeredgecolor="none", **styles[module, "propagate"])
 
                         try:
                             ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
@@ -412,8 +446,8 @@ if __name__ == "__main__":
                         fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                         ax = fig.add_subplot(1, 1, 1,
                             xlim=( 0, 1.01 * xmax["time"]["propagate"] ))
-                        ax.set_title("%s details" % ( module, ), fontsize=8)
-                        ax.set_xlabel("input size", fontsize=8)
+                        ax.set_title("%s details; %s" % ( module, results["label"] ), fontsize=8)
+                        ax.set_xlabel(results["x-label"], fontsize=8)
                         ax.set_ylabel("time (%s)" % ( units["time"], ), fontsize=8)
                         for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
                             axis.set_major_formatter(EngFormatter())
@@ -429,10 +463,10 @@ if __name__ == "__main__":
                         ax.grid(linewidth=0.5, linestyle=":", color="silver")
 
                         for timing in ( "propagate", "update" ):
-                            sizes, values = zip(*table["time"][timing][module].iteritems())
+                            xvalues, yvalues = zip(*table["time"][timing][module].iteritems())
                             print>>txtfile, "            %24s ... %s" \
-                                % ( timing, " ".join( format(value, "9.3g") for value in values ) )
-                            ax.plot(sizes, values, clip_on=False, label="%s" % ( timing, ), markeredgecolor="none", **styles[module, timing])
+                                % ( timing, " ".join( format(yvalue, "9.3g") for yvalue in yvalues ) )
+                            ax.plot(xvalues, yvalues, clip_on=False, label="%s" % ( timing, ), markeredgecolor="none", **styles[module, timing])
 
                         try:
                             ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
