@@ -7,15 +7,17 @@ from itertools import chain, imap, izip, product, cycle
 runbenchmarkadapton_native = "%s%s%s" % ( os.path.splitext(__file__)[0], os.path.extsep, "native" )
 
 
-def driver(( module, task, size, take, edit, seed )):
+def driver(( module, task, size, take, edit, monotonic, seed )):
     driver_start_time = time.time()
     rng = random.Random(seed)
-    results = OrderedDict(( ( "module", module ), ( "task", task ), ( "size", size ), ( "take", take ), ( "edit", edit ), ( "seed", seed ) ))
+    results = OrderedDict((
+        ( "module", module ), ( "task", task ), ( "size", size ), ( "take", take ), ( "edit", edit ), ( "monotonic", monotonic ), ( "seed", seed ) ))
     try:
-        native = subprocess.Popen(
-            [ runbenchmarkadapton_native, "-m", "SAList (%s)" % ( module, ), "-t", str(task), "-I", str(size), "-T", str(take), "-E", str(edit), "-S", str(seed) ],
-            stdout=subprocess.PIPE,
-            env={ "BENCHMARK_SALIST_ENV": " " * rng.randrange(4096) })
+        cmd = [ runbenchmarkadapton_native, "-m", "SAList (%s)" % ( module, ), "-t", str(task), "-I", str(size), "-T", str(take), "-E", str(edit) ]
+        if monotonic:
+            cmd.append("-M")
+        cmd.extend(( "-S", str(seed) ))
+        native = subprocess.Popen(cmd, stdout=subprocess.PIPE, env={ "BENCHMARK_SALIST_ENV": " " * rng.randrange(4096) })
         results.update(json.load(native.stdout, object_pairs_hook=OrderedDict))
         return results
 
@@ -77,6 +79,7 @@ if __name__ == "__main__":
         nargs="+", default=( 1, ), type=int)
     parser.add_argument("-E", "--edit-count", metavar="COUNT", help="average self-adjusting benchmarks over %(metavar)s list edits ",
         default=250, type=int)
+    parser.add_argument("-M", "--monotonic", help="make monotonic list edits ", action="store_true")
     parser.add_argument("-S", "--random-seeds", metavar="SEED", help="run benchmark for seeds (default: 5 random seeds)",
         nargs="+", default=random.sample(xrange(sys.maxint >> 1), 5), type=int)
     args = parser.parse_args()
@@ -98,6 +101,8 @@ if __name__ == "__main__":
         results_dir = os.path.basename(folder)
     else:
         results_dir = time.strftime("%Y-%m-%d-%H-%M-%S")
+        if args.monotonic:
+            results_dir += " monotonic"
         if args.label:
             results_dir += " " + args.label.strip()
         folder = os.path.join(args.benchmark, results_dir)
@@ -122,7 +127,7 @@ if __name__ == "__main__":
             results = []
             try:
                 # don't use pool.apply_async, it's triggers http://bugs.python.org/issue10332
-                for result in pool.imap_unordered(driver, ( ( module, task, size, take, args.edit_count, seed )
+                for result in pool.imap_unordered(driver, ( ( module, task, size, take, args.edit_count, args.monotonic, seed )
                         for take in args.take_counts
                         for size in args.input_sizes
                         for seed in args.random_seeds

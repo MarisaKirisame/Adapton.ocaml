@@ -49,6 +49,7 @@ let opt_edit_count = ref 1
 let opt_input_size = ref 1
 let opt_take_count = ref 1
 let opt_random_seed = ref 1
+let opt_monotonic = ref false
 
 let show_config () =
     let list_printer ff list =
@@ -68,6 +69,7 @@ let _ =
         ( "-T", Arg.Set_int opt_take_count, "count take count" );
         ( "-E", Arg.Set_int opt_edit_count, "count edit count" );
         ( "-S", Arg.Set_int opt_random_seed, "seed random seed" );
+        ( "-M", Arg.Set opt_monotonic, "monotonic edits" );
     ]) (fun s -> raise (Arg.Bad ("extraneous argument " ^ s))) (Sys.argv.(0) ^ " [options]");
 
     let rng = Random.State.make [| !opt_random_seed |] in
@@ -85,6 +87,7 @@ let _ =
         !xs
     end in
     let xs = !xs in
+    let last = ref 0 in
 
     Printf.eprintf "%32s %24s %8d %8d %20d\n%!" !opt_salist !opt_task !opt_take_count !opt_input_size !opt_random_seed;
     try
@@ -113,49 +116,90 @@ let _ =
                             now
                         end
                     in
-                    let edit = Random.State.int rng !opt_input_size in
-                    let zs = xss.(edit) in
 
-                    let ( z', zs' ), delete_update_time, delete_update_heap, delete_update_stack = measure begin fun () ->
-                        match SAFloatList.force zs with
-                            | `Cons ( z', zs' ) ->
-                                SAFloatList.update_const zs (SAFloatList.force zs');
-                                ( z', zs' )
-                            | `Nil ->
-                                failwith "delete"
-                    end in
+                    let update_time', update_heap', update_stack', take_time', take_heap', take_stack' = if !opt_monotonic then
+                        (* delete then re-insert *)
+                        let edit = Random.State.int rng !opt_input_size in
+                        let zs = xss.(edit) in
 
-                    let _, delete_take_time, delete_take_heap, delete_take_stack = measure begin fun () ->
-                        SAFloatList.refresh ();
-                        ignore (SAFloatList.take ys !opt_take_count)
-                    end in
+                        let ( z', zs' ), delete_update_time, delete_update_heap, delete_update_stack = measure begin fun () ->
+                            match SAFloatList.force zs with
+                                | `Cons ( z', zs' ) ->
+                                    SAFloatList.update_const zs (SAFloatList.force zs');
+                                    ( z', zs' )
+                                | `Nil ->
+                                    failwith "delete"
+                        end in
 
-                    let (), insert_update_time, insert_update_heap, insert_update_stack = measure begin fun () ->
-                        SAFloatList.update_const zs (`Cons ( z', zs' ))
-                    end in
-                    let _, insert_take_time, insert_take_heap, insert_take_stack = measure begin fun () ->
-                        SAFloatList.refresh ();
-                        ignore (SAFloatList.take ys !opt_take_count)
-                    end in
+                        let (), delete_take_time, delete_take_heap, delete_take_stack = measure begin fun () ->
+                            SAFloatList.refresh ();
+                            ignore (SAFloatList.take ys !opt_take_count)
+                        end in
+
+                        let (), insert_update_time, insert_update_heap, insert_update_stack = measure begin fun () ->
+                            SAFloatList.update_const zs (`Cons ( z', zs' ))
+                        end in
+
+                        let (), insert_take_time, insert_take_heap, insert_take_stack = measure begin fun () ->
+                            SAFloatList.refresh ();
+                            ignore (SAFloatList.take ys !opt_take_count)
+                        end in
+
+                        ( (delete_update_time +. insert_update_time) /. 2.,
+                            (delete_update_heap +. insert_update_heap) /. 2.,
+                            (delete_update_stack +. insert_update_stack) /. 2.,
+                            (delete_take_time +. insert_take_time) /. 2.,
+                            (delete_take_heap +. insert_take_heap) /. 2.,
+                            (delete_take_stack +. insert_take_stack) /. 2. )
+                    else
+                        (* split into two and swap *)
+                        let edit = 1 + Random.State.int rng (!opt_input_size - 2) in
+                        let edit = if edit = !last then edit + 1 else edit in
+                        let zs = xss.(edit) in
+
+                        let (), update_time, update_heap, update_stack = measure begin fun () ->
+                            match SAFloatList.force xs with
+                                | `Cons _ as xs' ->
+                                    begin match SAFloatList.force xss.(!last) with
+                                        | `Cons _ as last' ->
+                                            begin match SAFloatList.force zs with
+                                                | `Cons _ as zs' ->
+                                                    SAFloatList.update_const xs zs';
+                                                    SAFloatList.update_const xss.(!last) xs';
+                                                    SAFloatList.update_const zs last';
+                                                    last := edit;
+                                                | `Nil ->
+                                                    failwith "swap"
+                                            end
+                                        | `Nil ->
+                                            failwith "swap"
+                                    end
+                                | `Nil ->
+                                    failwith "swap"
+                        end in
+
+                        let (), take_time, take_heap, take_stack = measure begin fun () ->
+                            SAFloatList.refresh ();
+                            ignore (SAFloatList.take ys !opt_take_count)
+                        end in
+
+                        ( update_time, update_heap, update_stack, take_time, take_heap, take_stack )
+                    in
 
                     do_edits past (pred n)
-                        (update_time +. delete_update_time +. insert_update_time)
-                        (update_heap +. delete_update_heap +. insert_update_heap)
-                        (update_stack +. delete_update_stack +. insert_update_stack)
-                        (take_time +. delete_take_time +. insert_take_time)
-                        (take_heap +. delete_take_heap +. insert_take_heap)
-                        (take_stack +. delete_take_stack +. insert_take_stack)
+                        (update_time +. update_time') (update_heap +. update_heap') (update_stack +. update_stack')
+                        (take_time +. take_time') (take_heap +. take_heap') (take_stack +. take_stack')
                 end
             in
             let update_time, update_heap, update_stack, take_time, take_heap, take_stack = do_edits 0. !opt_edit_count 0. 0. 0. 0. 0. 0. in
             let edit_top_heap = get_top_heap () in
             let edit_top_stack = get_top_stack () in
-            let update_time = update_time /. float_of_int !opt_edit_count /. 2. in
-            let update_heap = update_heap /. float_of_int !opt_edit_count /. 2. in
-            let update_stack = update_stack /. float_of_int !opt_edit_count /. 2. in
-            let take_time = take_time /. float_of_int !opt_edit_count /. 2. in
-            let take_heap = take_heap /. float_of_int !opt_edit_count /. 2. in
-            let take_stack = take_stack /. float_of_int !opt_edit_count /. 2. in
+            let update_time = update_time /. float_of_int !opt_edit_count in
+            let update_heap = update_heap /. float_of_int !opt_edit_count in
+            let update_stack = update_stack /. float_of_int !opt_edit_count in
+            let take_time = take_time /. float_of_int !opt_edit_count in
+            let take_heap = take_heap /. float_of_int !opt_edit_count in
+            let take_stack = take_stack /. float_of_int !opt_edit_count in
             Printf.printf
                 ("{ \"setup\": { \"time\": %.17g, \"heap\": %.17g, \"stack\": %.17g, \"max-heap\": %.17g, \"max-stack\": %.17g }, "
                     ^^ "\"edits\": { \"update-time\": %.17g, \"update-heap\": %.17g, \"update-stack\": %.17g, "
