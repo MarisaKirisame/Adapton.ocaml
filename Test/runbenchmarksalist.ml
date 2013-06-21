@@ -51,6 +51,8 @@ let opt_take_count = ref 1
 let opt_random_seed = ref 1
 let opt_monotonic = ref false
 
+let header ff = Printf.fprintf ff "%32s %24s %8d %8d %20d" !opt_salist !opt_task !opt_take_count !opt_input_size !opt_random_seed
+
 let show_config () =
     let list_printer ff list =
         ignore (List.fold_left (fun b x -> Printf.fprintf ff "%(%)%S" b x; ", ") "" list)
@@ -89,7 +91,7 @@ let _ =
     let xs = !xs in
     let last = ref 0 in
 
-    Printf.eprintf "%32s %24s %8d %8d %20d\n%!" !opt_salist !opt_task !opt_take_count !opt_input_size !opt_random_seed;
+    Printf.eprintf "%t\n%!" header;
     try
         let ys, setup_time, setup_heap, setup_stack = measure begin fun () ->
             let ys = task xs in
@@ -109,8 +111,8 @@ let _ =
                         if now -. past < 20. then
                             past
                         else begin
-                            Printf.eprintf "%32s %24s %8d %8d %20d edit %10d %9.2fMB %9.2fMB\n%!"
-                                !opt_salist !opt_task !opt_take_count !opt_input_size !opt_random_seed n
+                            Printf.eprintf "%t edit %10d %9.2fMB %9.2fMB\n%!"
+                                header n
                                 (word_size *. get_top_heap () /. 1024. /. 1024.)
                                 (word_size *. get_top_stack () /. 1024. /. 1024.);
                             now
@@ -209,20 +211,17 @@ let _ =
                 update_time (word_size *. update_heap) (word_size *. update_stack)
                 take_time (word_size *. take_heap) (word_size *. take_stack)
                 (word_size *. edit_top_heap) (word_size *. edit_top_stack);
-            Printf.eprintf "%32s %24s %8d %8d %20d ... done (%9.2fs) %9.3gs edit %9.3gs\n%!"
-                !opt_salist !opt_task !opt_take_count !opt_input_size !opt_random_seed (get_time () -. start_time) setup_time (update_time +. take_time)
+            Printf.eprintf "%t ... done (%9.2fs) %9.3gs edit %9.3gs\n%!" header (get_time () -. start_time) setup_time (update_time +. take_time)
         end else begin
             Printf.printf
                 ("{ \"setup\": { \"time\": %.17g, \"heap\": %.17g, \"stack\": %.17g, \"max-heap\": %.17g, \"max-stack\": %.17g }, "
                     ^^ "\"units\": { \"time\": \"seconds\", \"heap\": \"bytes\", \"stack\": \"bytes\", \"max-heap\": \"bytes\", \"max-stack\": \"bytes\" } }\n%!")
                 setup_time (word_size *. setup_heap) (word_size *. setup_stack) (word_size *. setup_top_heap) (word_size *. setup_top_stack);
-            Printf.eprintf "%32s %24s %8d %8d %20d ... done (%9.2fs) %9.3gs\n%!"
-                !opt_salist !opt_task !opt_take_count !opt_input_size !opt_random_seed (get_time () -. start_time) setup_time
+            Printf.eprintf "%t ... done (%9.2fs) %9.3gs\n%!" header (get_time () -. start_time) setup_time
         end
 
     with e ->
         let err = Printexc.to_string e in
         Printf.printf ("{ \"error\": %S }\n%!") err;
         Printf.eprintf "%s\n%!" err;
-        Printf.eprintf "%32s %24s %8d %8d %20d ... done (%9.2fs)\n%!"
-            !opt_salist !opt_task !opt_take_count !opt_input_size !opt_random_seed (get_time () -. start_time)
+        Printf.eprintf "%t ... done (%9.2fs)\n%!" header (get_time () -. start_time)
