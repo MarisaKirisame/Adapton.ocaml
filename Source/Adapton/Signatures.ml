@@ -53,7 +53,7 @@ module rec SAListType : sig
         type sa
         type 'a thunk
         type data
-        module SAData : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = data and type t = data thunk
+        module SAData : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = data
         type t
         type t' = [ `Cons of data * t | `Nil ]
         val is_self_adjusting : bool
