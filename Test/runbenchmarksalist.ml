@@ -20,10 +20,10 @@ let measure f =
     ( x, end_time, end_heap, end_stack )
 
 let list_filter_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
-    fst (L.memo_filter (fun x -> x < 0.5))
+    fst (L.memo_filter (fun x -> log (1. +. x) < log 1.5))
 
 let list_map_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
-    fst (L.memo_map (module L) (fun x -> x *. 3. +. x *. 7. +. x *. 9.))
+    fst (L.memo_map (module L) (fun x -> log (1. +. x) +. log 1.5))
 
 let list_sum_task (type a) (type b) (module L : Adapton.Signatures.SAListType.S with type t = a and type SAData.t = b and type data = float) =
     fst (L.memo_tfold (+.))
