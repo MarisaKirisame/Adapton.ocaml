@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import json, os, random, subprocess, sys, time, traceback
+import json, os, psutil, random, subprocess, sys, time, threading, traceback
 from collections import defaultdict, OrderedDict
 from itertools import chain, imap, izip, product, cycle
 
@@ -128,43 +128,62 @@ if __name__ == "__main__":
 
         pool = multiprocessing.Pool(processes=args.processes, maxtasksperchild=1)
 
-        for task in args.tasks:
-            results = []
-            try:
-                # don't use pool.apply_async, it's triggers http://bugs.python.org/issue10332
-                for result in pool.imap_unordered(driver, ( ( module, task, size, take, args.edit_count, args.monotonic, seed )
-                        for take in args.take_counts
-                        for size in args.input_sizes
-                        for seed in args.random_seeds
-                        for module in random.sample(args.modules, len(args.modules)) )):
-                    # don't use extend, so that if an exception or interrupt occurs, we still have some results
-                    results.append(result)
-            except Exception:
-                traceback.print_exc()
-            except KeyboardInterrupt:
-                pool.terminate()
-                pool.join()
-                sys.exit()
-            finally:
-                if len(args.input_sizes) > 1:
-                    assert len(args.take_counts) == 1
-                    results = OrderedDict((
-                        ( "label", "take count = %d" % args.take_counts[0] ),
-                        ( "x-axis", "size" ),
-                        ( "x-label", "input size" ),
-                        ( "data", results )
-                    ))
-                else:
-                    assert len(args.input_sizes) == 1 and len(args.take_counts) > 1
-                    results = OrderedDict((
-                        ( "label", "input size = %d" % args.input_sizes[0] ),
-                        ( "x-axis", "take" ),
-                        ( "x-label", "take count" ),
-                        ( "data", results )
-                    ))
-                with gzip.open(os.path.join(folder, "%s-%04d.json.gz" % ( task, len(results) )), "w") as jsonfile:
-                    json.dump(results, jsonfile, indent=4, separators=( ",", ":" ))
+        @apply
+        class heartbeat(object):
+            def __init__(self):
+                self.flags = []
+            def __enter__(self):
+                flag = threading.Event()
+                thread = threading.Thread(target=self.run, args=( flag, ))
+                thread.daemon = True
+                self.flags.append(flag)
+                thread.start()
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                self.flags.pop().set()
+            def run(self, flag):
+                while not flag.is_set():
+                    load = os.getloadavg()
+                    free = psutil.virtual_memory().available / 1024 / 1024
+                    print>>sys.stderr, "Load: %5.2f %5.2f %5.2f  Mem: %6dM free" % ( load[0], load[1], load[2], free )
+                    flag.wait(3)
 
+        with heartbeat:
+            for task in args.tasks:
+                results = []
+                try:
+                    # don't use pool.apply_async, it's triggers http://bugs.python.org/issue10332
+                    for result in pool.imap_unordered(driver, ( ( module, task, size, take, args.edit_count, args.monotonic, seed )
+                            for take in args.take_counts
+                            for size in args.input_sizes
+                            for seed in args.random_seeds
+                            for module in random.sample(args.modules, len(args.modules)) )):
+                        # don't use extend, so that if an exception or interrupt occurs, we still have some results
+                        results.append(result)
+                except Exception:
+                    traceback.print_exc()
+                except KeyboardInterrupt:
+                    pool.terminate()
+                    pool.join()
+                    sys.exit()
+                finally:
+                    if len(args.input_sizes) > 1:
+                        assert len(args.take_counts) == 1
+                        results = OrderedDict((
+                            ( "label", "take count = %d" % args.take_counts[0] ),
+                            ( "x-axis", "size" ),
+                            ( "x-label", "input size" ),
+                            ( "data", results )
+                        ))
+                    else:
+                        assert len(args.input_sizes) == 1 and len(args.take_counts) > 1
+                        results = OrderedDict((
+                            ( "label", "input size = %d" % args.input_sizes[0] ),
+                            ( "x-axis", "take" ),
+                            ( "x-label", "take count" ),
+                            ( "data", results )
+                        ))
+                    with gzip.open(os.path.join(folder, "%s-%04d.json.gz" % ( task, len(results) )), "w") as jsonfile:
+                        json.dump(results, jsonfile, indent=4, separators=( ",", ":" ))
 
     print>>sys.stderr, "Generating summary in %s ..." % ( folder, )
     files = sorted(set(chain.from_iterable( ( file for file in os.listdir(path) if file.endswith(".json.gz") ) for path in folders )))
