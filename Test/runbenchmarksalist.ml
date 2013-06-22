@@ -25,9 +25,8 @@ let list_filter_task (type a) (module L : Adapton.Signatures.SAListType.S with t
 let list_map_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
     fst (L.memo_map (module L) (fun x -> x *. 3. +. x *. 7. +. x *. 9.))
 
-let list_sum_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
-    let sum = fst (L.memo_tfold (+.)) in
-    (fun xs -> L.thunk (fun () -> `Cons ( L.SAData.force (sum xs), L.const `Nil )))
+let list_sum_task (type a) (type b) (module L : Adapton.Signatures.SAListType.S with type t = a and type SAData.t = b and type data = float) =
+    fst (L.memo_tfold (+.))
 
 let list_quicksort_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
     fst (L.memo_quicksort Pervasives.compare)
@@ -36,11 +35,11 @@ let list_mergesort_task (type a) (module L : Adapton.Signatures.SAListType.S wit
     fst (L.memo_mergesort Pervasives.compare)
 
 let tasks = [
-    ( "filter", list_filter_task );
-    ( "map", list_map_task );
-    ( "sum", list_sum_task );
-    ( "quicksort", list_quicksort_task );
-    ( "mergesort", list_mergesort_task );
+    ( "filter", `List list_filter_task );
+    ( "map", `List list_map_task );
+    ( "sum", `One list_sum_task );
+    ( "quicksort", `List list_quicksort_task );
+    ( "mergesort", `List list_mergesort_task );
 ]
 
 let opt_salist = ref (fst (List.hd Adapton.All.salist_list))
@@ -54,12 +53,15 @@ let opt_monotonic = ref false
 let header ff = Printf.fprintf ff "%32s %24s %8d %8d %20d" !opt_salist !opt_task !opt_take_count !opt_input_size !opt_random_seed
 
 let show_config () =
-    let list_printer ff list =
-        ignore (List.fold_left (fun b x -> Printf.fprintf ff "%(%)%S" b x; ", ") "" list)
+    let list_printer printer ff list =
+        ignore (List.fold_left (fun b x -> Printf.fprintf ff "%(%)%a" b printer x; ", ") "" list)
+    in
+    let task_printer ff task =
+        Printf.fprintf ff "{ \"name\": %S, \"take\": %S }" (fst task) (match snd task with `One _ -> "one" | `List _ -> "list")
     in
     Printf.printf "{ \"modules\": [ %a ], \"tasks\": [ %a ] }\n%!"
-        list_printer (fst (List.split Adapton.All.salist_list))
-        list_printer (fst (List.split tasks));
+        (list_printer (fun ff -> Printf.fprintf ff "%S")) (fst (List.split Adapton.All.salist_list))
+        (list_printer task_printer) tasks;
     exit 0
 
 let _ =
@@ -79,7 +81,16 @@ let _ =
     Gc.compact ();
     let module SAList = (val (List.assoc !opt_salist Adapton.All.salist_list)) in
     let module SAFloatList = SAList.Make (Adapton.Types.Float) in
-    let task = (List.assoc !opt_task tasks) (module SAFloatList) in
+    let task = match List.assoc !opt_task tasks with
+        | `One task ->
+            if !opt_take_count != 1 then begin
+                Printf.eprintf "Task %s only supports -T 1\n%!" !opt_task;
+                exit 1
+            end;
+            `One (task (module SAFloatList))
+        | `List task ->
+            `List (task (module SAFloatList))
+    in
 
     let start_time = get_time () in
 
@@ -93,10 +104,17 @@ let _ =
 
     Printf.eprintf "%t\n%!" header;
     try
-        let ys, setup_time, setup_heap, setup_stack = measure begin fun () ->
-            let ys = task xs in
-            ignore (SAFloatList.take ys !opt_take_count);
-            ys
+        let take, setup_time, setup_heap, setup_stack = measure begin fun () ->
+            let take = match task with
+                | `List task ->
+                    let ys = task xs in
+                    (fun () -> ignore (SAFloatList.take ys !opt_take_count))
+                | `One task ->
+                    let y = task xs in
+                    (fun () -> ignore (SAFloatList.SAData.force y))
+            in
+            take ();
+            take
         end in
         let setup_top_heap = get_top_heap () in
         let setup_top_stack = get_top_stack () in
@@ -135,7 +153,7 @@ let _ =
 
                         let (), delete_take_time, delete_take_heap, delete_take_stack = measure begin fun () ->
                             SAFloatList.refresh ();
-                            ignore (SAFloatList.take ys !opt_take_count)
+                            take ()
                         end in
 
                         let (), insert_update_time, insert_update_heap, insert_update_stack = measure begin fun () ->
@@ -144,7 +162,7 @@ let _ =
 
                         let (), insert_take_time, insert_take_heap, insert_take_stack = measure begin fun () ->
                             SAFloatList.refresh ();
-                            ignore (SAFloatList.take ys !opt_take_count)
+                            take ()
                         end in
 
                         ( (delete_update_time +. insert_update_time) /. 2.,
@@ -182,7 +200,7 @@ let _ =
 
                         let (), take_time, take_heap, take_stack = measure begin fun () ->
                             SAFloatList.refresh ();
-                            ignore (SAFloatList.take ys !opt_take_count)
+                            take ()
                         end in
 
                         ( update_time, update_heap, update_stack, take_time, take_heap, take_stack )

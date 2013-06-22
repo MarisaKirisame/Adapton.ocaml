@@ -55,7 +55,8 @@ if __name__ == "__main__":
     config = json.loads(subprocess.check_output([ runbenchmarkadapton_native, "-c" ]))
     config["modules"] = map(lambda m: salist_re.sub(r"\1", str(m)), config["modules"])
     config["baselines"] = [ config["modules"][-1] ]
-    config["tasks"] = map(str, config["tasks"])
+    config["takes"] = { str(m["name"]) : str(m["take"]) for m in config["tasks"] }
+    config["tasks"] = config["takes"].keys()
 
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
@@ -87,6 +88,10 @@ if __name__ == "__main__":
         parser.error("either -I/--input-sizes or -T/--take-counts must be given only one value")
     elif len(args.input_sizes) == 1 and len(args.take_counts) == 1:
         parser.error("-I/--input-sizes and -T/--take-counts must not both be given only one value")
+    if len(args.take_counts) > 1 or args.take_counts[0] != 1:
+        for task in args.tasks:
+            if config["takes"][task] == "one":
+                parser.error("-t/--tasks \"%s\" only supports -T/--take-counts 1" % ( task, ))
     if args.benchmark is None and args.resummarize is None:
         args.benchmark = "Results/SAList"
     elif args.resummarize == []:
