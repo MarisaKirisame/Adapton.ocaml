@@ -9,7 +9,7 @@ module T : sig
         mutable array : 'a array;
     }
     val size : int
-    val key_width : int
+    val key_bits : int
     val hash : int ->'a t -> int
     val equal : 'a t -> 'a t -> bool
     val make : (int -> 'a option) -> 'a t
@@ -27,8 +27,8 @@ end = struct
     (** Size of lazy sparse arrays. *)
     let size = if Sys.word_size == 32 then 16 else 32
 
-    (** Key-width of lazy sparse arrays. *)
-    let key_width = if size == 16 then 4 else 5
+    (** Key-width in bits of lazy sparse arrays. *)
+    let key_bits = if size == 16 then 4 else 5
 
     (**/**) (* helper functions/values *)
     let popcount16 =

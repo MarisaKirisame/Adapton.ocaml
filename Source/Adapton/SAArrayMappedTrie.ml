@@ -1,20 +1,20 @@
-(** Self-adjusting array mapped trie. *)
+(** Self-adjusting array mapped tries. *)
 
 (**/**) (* helper parameters *)
 let depth = 7
-let bits = LazySparseArray.key_width
+let bits = LazySparseArray.key_bits
 let width = 1 lsl bits
 let mask = width - 1
 let mask' = lnot mask
-let keybits' = bits * (depth - 1)
-let _ = assert (keybits' < Sys.word_size - 3)
+let key_bits' = bits * (depth - 1)
+let _ = assert (key_bits' < Sys.word_size - 3)
 (**/**)
 
 (** Key-width of self-adjusting array mapped tries. *)
-let key_width = bits * depth
+let key_bits = bits * depth
 
 (** Size of self-adjusting array mapped tries. *)
-let size = 1 lsl key_width
+let size = 1 lsl key_bits
 
 (** Functor to make self-adjusting array mapped tries, given a particular module for self-adjusting values. *)
 module Make (M : Signatures.SAType)
@@ -71,11 +71,11 @@ module Make (M : Signatures.SAType)
                     | Empty ->
                         None
             in
-            get (M.force xs) keybits'
+            get (M.force xs) key_bits'
     end
     include T
 
-    (** Output module types of {!SAList.Make}. *)
+    (** Output module types of {!SAArrayMappedTrie.Make}. *)
     module type S = Signatures.SAArrayMappedTrieType.S
 
     (** Helper functor to make a constructor for self-adjusting array mapped tries of a specific type. *)
@@ -132,7 +132,7 @@ module Make (M : Signatures.SAType)
                                     | Leaves _ ->
                                         assert false
                                 in
-                                subtrie (M.force xs) keybits'
+                                subtrie (M.force xs) key_bits'
                         end end
                     else
                         Leaves begin LazySparseArray.make begin fun d ->
@@ -142,7 +142,7 @@ module Make (M : Signatures.SAType)
                                 get xs (k land mask' lor d)
                         end end
                 in
-                add xs keybits' k v
+                add xs key_bits' k v
             end in
             let add xs k v =
                 if k < 0 || k >= size then invalid_arg "index out of bounds";
