@@ -107,12 +107,12 @@ module Make (M : Signatures.SAType)
         (** Create memoizing constructor and updater that adds a binding to an self-adjusting array mapped trie. *)
         let memo_add =
             let add, update_add = A.memo3 (module A) (module Types.Int) (module R) begin fun _ xs k v ->
-                let rec add xs s k v =
+                let rec add xs s =
                     (* if along k, initialize the next branch/leaf node, else lookup the subtrie under the prior AMT *)
                     if s > 0 then
                         Branches begin LazySparseArray.make begin fun d ->
                             if k lsr s land mask == d then
-                                Some (add xs (s - bits) k v)
+                                Some (add xs (s - bits))
                             else
                                 (* perform a partial key lookup for the corresponding subtrie under the prior AMT *)
                                 let rec subtrie xs s' = match xs with
@@ -142,7 +142,7 @@ module Make (M : Signatures.SAType)
                                 get xs (k land mask' lor d)
                         end end
                 in
-                add xs key_bits' k v
+                add xs key_bits'
             end in
             let add xs k v =
                 if k < 0 || k >= size then invalid_arg "index out of bounds";
