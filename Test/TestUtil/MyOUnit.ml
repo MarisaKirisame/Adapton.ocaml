@@ -282,6 +282,10 @@ module QC = struct
         method generate rng size = ( gx#generate rng size, gy#generate rng size, gz#generate rng size )
         method print ff ( x, y, z ) = Format.fprintf ff "(@[%a@],@ @[%a@],@ @[%a@]@,)" gx#print x gy#print y gz#print z
     end
+    let quad gw gx gy gz = object
+        method generate rng size = ( gw#generate rng size, gx#generate rng size, gy#generate rng size, gz#generate rng size )
+        method print ff ( w, x, y, z ) = Format.fprintf ff "(@[%a@],@ @[%a@],@ @[%a@],@ @[%a@]@,)" gw#print w gx#print x gy#print y gz#print z
+    end
     let list ?(sep=format_of_string ";@ ") gx = object
         method generate rng size =
             let rec make n acc = if n > 0 then make (pred n) (gx#generate rng size::acc) else acc in
