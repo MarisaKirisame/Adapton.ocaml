@@ -75,32 +75,32 @@ module rec SAListType : sig
         val of_list : data list -> t
         val push : data -> t -> unit
         val pop : t -> data
-        val memo_append : (t -> t -> t) * (t -> t -> t -> unit)
-        val memo_filter : (data -> bool) -> (t -> t) * (t -> t -> unit)
+        val memo_append : t -> t -> t
+        val memo_filter : (data -> bool) -> (t -> t)
         val memo_filter_with_key
             : (module Hashtbl.SeededHashedType with type t = 'a)
-                -> ('a -> data -> bool) -> ('a -> t -> t) * (t -> 'a -> t -> unit)
+                -> ('a -> data -> bool) -> ('a -> t -> t)
         val memo_filter_map
             : (module SAListType.BasicS with type sa = sa and type data = 'a and type t = 'b)
-                -> ('a -> data option) -> ('b -> t) * (t -> 'b -> unit)
+                -> ('a -> data option) -> ('b -> t)
         val memo_map
             : (module SAListType.BasicS with type sa = sa and type data = 'a and type t = 'b)
-                -> ('a -> data) -> ('b -> t) * (t -> 'b -> unit)
+                -> ('a -> data) -> ('b -> t)
         val memo_map_with_key
             : (module Hashtbl.SeededHashedType with type t = 'a)
                 -> (module SAListType.BasicS with type sa = sa and type data = 'b and type t = 'c)
-                -> ('a -> 'b -> data) -> ('a -> 'c -> t) * (t -> 'a -> 'c -> unit)
+                -> ('a -> 'b -> data) -> ('a -> 'c -> t)
         val memo_scan
             : (module SAListType.BasicS with type sa = sa and type data = 'a and type t = 'b)
-                -> ('a -> data -> data) -> ('b -> data -> t) * (t -> 'b -> data -> unit)
-        val memo_tfold : (data -> data -> data) -> (t -> SAData.t) * (SAData.t -> t -> unit)
+                -> ('a -> data -> data) -> ('b -> data -> t)
+        val memo_tfold : (data -> data -> data) -> (t -> SAData.t)
     end
 
     (** Module type for self-adjusting lists for a specific type. *)
     module type S = sig
         include BasicS
-        val memo_quicksort : (data -> data -> int) -> (t -> t) * (t -> t -> unit)
-        val memo_mergesort : (data -> data -> int) -> (t -> t) * (t -> t -> unit)
+        val memo_quicksort : (data -> data -> int) -> (t -> t)
+        val memo_mergesort : (data -> data -> int) -> (t -> t)
     end
 end = SAListType
 
@@ -144,7 +144,7 @@ module rec SAArrayMappedTrieType : sig
         val refresh : unit -> unit
         val get : t -> int -> data option
         val empty : t
-        val memo_add : (t -> int -> data -> t) * (t -> t -> int -> data -> unit)
+        val memo_add : t -> int -> data -> t
     end
 end = SAArrayMappedTrieType
 

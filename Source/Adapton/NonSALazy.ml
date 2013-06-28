@@ -36,7 +36,7 @@ end
 include T
 
 
-(** Functor to make constructors and updaters for lazy non-self-adjusting values of a specific type. *)
+(** Functor to make constructors for lazy non-self-adjusting values of a specific type. *)
 module Make (R : Signatures.EqualsType)
         : Signatures.SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk = struct
     include T
@@ -65,13 +65,12 @@ module Make (R : Signatures.EqualsType)
     (** Update a lazy non-self-adjusting value with a thunk (not supported by this module; raises {!NonSelfAdjustingValue}). *)
     let update_thunk _ _ = raise Exceptions.NonSelfAdjustingValue
 
-    (* create memoizing constructors and updaters *)
+    (* create memoizing constructors *)
     include MemoN.Make (struct
         type data = R.t
         type t = R.t thunk
 
-        (** Create non-memoizing constructor and updater for a lazy non-self-adjusting value
-            (updater not supported by this module; raises {!NonSelfAdjustingValue}). *)
+        (** Create non-memoizing constructor for a lazy non-self-adjusting value. *)
         let memo (type a) (module A : Hashtbl.SeededHashedType with type t = a) f =
             (* non-memoizing constructor *)
             let rec memo x =
@@ -79,9 +78,7 @@ module Make (R : Signatures.EqualsType)
                 incr lazy_id_counter;
                 m
             in
-            (* non-memoizing updater *)
-            let update_memo _ _ = raise Exceptions.NonSelfAdjustingValue in
-            ( memo, update_memo )
+            memo
     end)
 end
 

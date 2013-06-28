@@ -9,9 +9,8 @@ let make_correctness_testsuite (module A : Adapton.Signatures.SAArrayMappedTrieT
     "Correctness" >::: [
         "add" >:: QC.forall (QC.triple QC.float (QC.list (QC.pair QC.int QC.float)) (QC.list QC.int)) begin fun ( fseed, xs, ks ) ->
             let h x = abs (Hashtbl.seeded_hash (Hashtbl.hash fseed) x) in
-            let add, _ = F.memo_add in
             let ys = Hashtbl.create 0 in
-            let zs = List.fold_left (fun zs ( k, v ) -> let k = h k in Hashtbl.add ys k v; add zs k v) F.empty xs in
+            let zs = List.fold_left (fun zs ( k, v ) -> let k = h k in Hashtbl.add ys k v; F.memo_add zs k v) F.empty xs in
             List.iter begin fun k ->
                 let k = h k in
                 assert_float_option_equal (try Some (Hashtbl.find ys k) with Not_found -> None) (F.get zs k);

@@ -83,31 +83,31 @@ let make_regression_testsuite name (module L : Adapton.Signatures.SAListType) =
     "Correctness" >::: [
         "filter" >:: QC.forall QC.int begin fun p ->
             let pred = (<) p in
-            let filter_pred, _ = I.memo_filter pred in
+            let filter_pred = I.memo_filter pred in
             test_salist_op (List.filter pred) filter_pred
         end;
 
         "append" >:: begin fun () ->
-            let append, _ = I.memo_append in
+            let append = I.memo_append in
             test_salist_op (fun xs -> List.append xs xs) (fun xs' -> append xs' xs')
         end;
 
         "map" >:: begin fun () ->
             let fn = succ in
-            let map_fn, _ = I.memo_map (module I) fn in
+            let map_fn = I.memo_map (module I) fn in
             test_salist_op (List.map fn) map_fn
         end;
 
         "tfold" >:: begin fun () ->
             let fn = (+) in
-            let tfold_fn, _ = I.memo_tfold fn in
+            let tfold_fn = I.memo_tfold fn in
             test_salist_op_with_test
                 ~test:(fun ~msg expected actual -> assert_int_equal ~msg expected (I.SAData.force actual))
                 (List.fold_left fn 0) (fun xs' -> tfold_fn (I.const (`Cons ( 0, xs' )))) (* prepend 0 to avoid empty lists *)
         end;
 
         "quicksort" >:: begin fun () ->
-            let quicksort, _ = I.memo_quicksort compare in
+            let quicksort = I.memo_quicksort compare in
             test_salist_op
                 ~incl:
                     [ ( [ 8; 0; -7; 3; -2; 7; -1 ],
@@ -121,24 +121,24 @@ let make_regression_testsuite name (module L : Adapton.Signatures.SAListType) =
         end;
 
         "mergesort" >:: begin fun () ->
-            let mergesort, _ = I.memo_mergesort compare in
+            let mergesort = I.memo_mergesort compare in
             test_salist_op (List.sort compare) mergesort
         end;
 
         "filter map" >:: QC.forall QC.int begin fun p ->
             let pred = (<) p in
-            let filter_pred, _ = I.memo_filter pred in
+            let filter_pred = I.memo_filter pred in
             let fn = succ in
-            let map_fn, _ = I.memo_map (module I) fn in
+            let map_fn = I.memo_map (module I) fn in
             test_salist_op (fun xs -> List.map fn (List.filter pred xs)) (fun xs' -> map_fn (filter_pred xs'))
         end;
 
         "filter map append" >:: QC.forall QC.int begin fun p ->
             let pred = (<) p in
-            let filter_pred, _ = I.memo_filter pred in
+            let filter_pred = I.memo_filter pred in
             let fn = succ in
-            let map_fn, _ = I.memo_map (module I) fn in
-            let append, _ = I.memo_append in
+            let map_fn = I.memo_map (module I) fn in
+            let append = I.memo_append in
             test_salist_op (fun xs -> let ys = List.map fn (List.filter pred xs) in List.append ys ys) (fun xs' -> let ys' = map_fn (filter_pred xs') in append ys' ys')
         end;
 
@@ -150,7 +150,7 @@ let make_regression_testsuite name (module L : Adapton.Signatures.SAListType) =
             Gc.compact (); (* try to avoid GC messing up with memoization *)
             let update_count = ref 0 in
             let fn s = incr update_count; succ s in
-            let map_fn, _ = I.memo_map (module I) fn in
+            let map_fn = I.memo_map (module I) fn in
             let n = List.length xs in
             let xs = I.of_list xs in
             let ys = map_fn xs in
@@ -175,7 +175,7 @@ let make_regression_testsuite name (module L : Adapton.Signatures.SAListType) =
                 Gc.finalise (fun _ -> incr gc_count) xs;
                 match I.force xs with `Cons (_, xs) -> finalise xs | `Nil -> ()
             in
-            let map_succ, _ = I.memo_map (module I) succ in
+            let map_succ = I.memo_map (module I) succ in
             let n = List.length xs in
             let xs = I.of_list xs in
             let ys = map_succ xs in

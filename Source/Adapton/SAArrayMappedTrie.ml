@@ -104,9 +104,9 @@ module Make (M : Signatures.SAType)
         (** An empty self-adjusting array mapped trie. *)
         let empty = A.const Empty
 
-        (** Create memoizing constructor and updater that adds a binding to an self-adjusting array mapped trie. *)
+        (** Create memoizing constructor that adds a binding to an self-adjusting array mapped trie. *)
         let memo_add =
-            let add, update_add = A.memo3 (module A) (module Types.Int) (module R) begin fun _ xs k v ->
+            let add = A.memo3 (module A) (module Types.Int) (module R) begin fun _ xs k v ->
                 let rec add xs s =
                     (* if along k, initialize the next branch/leaf node, else lookup the subtrie under the prior AMT *)
                     if s > 0 then
@@ -144,14 +144,8 @@ module Make (M : Signatures.SAType)
                 in
                 add xs key_bits'
             end in
-            let add xs k v =
+            fun xs k v ->
                 if k < 0 || k >= size then invalid_arg "index out of bounds";
                 add xs k v
-            in
-            let update_add m xs k v =
-                if k < 0 || k >= size then invalid_arg "index out of bounds";
-                update_add m xs k v
-            in
-            ( add, update_add )
     end
 end

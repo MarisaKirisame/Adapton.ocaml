@@ -98,7 +98,7 @@ end
 include T
 
 
-(** Functor to make constructors and updaters for lazy self-adjusting values of a specific type. *)
+(** Functor to make constructors for lazy self-adjusting values of a specific type. *)
 module Make (R : Signatures.EqualsType)
         : Signatures.SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk = struct
     include T
@@ -235,12 +235,12 @@ module Make (R : Signatures.EqualsType)
         let evaluate () = make_evaluate m f () in
         m.thunk <- Thunk evaluate
 
-    (* create memoizing constructors and updaters *)
+    (* create memoizing constructors *)
     include MemoN.Make (struct
         type data = R.t
         type t = R.t thunk
 
-        (** Create memoizing constructor and updater for a lazy self-adjusting value. *)
+        (** Create memoizing constructor for a lazy self-adjusting value. *)
         let memo (type a) (module A : Hashtbl.SeededHashedType with type t = a) f =
             let module Memotable = Weak.Make (struct
                 type t = A.t * R.t thunk
@@ -250,41 +250,19 @@ module Make (R : Signatures.EqualsType)
             end) in
             let memotable = Memotable.create 0 in
 
-            (**/**) (* helper function to make a function to evaluate a thunk with memoization *)
-            let rec make_memo_evaluate m x unmemo =
-                let rec evaluate () =
-                    let repair, value, receipt, dependencies = evaluate_actual m (fun () -> f memo x) in
-                    m.thunk <- MemoValue ( repair, value, receipt, dependencies, evaluate, unmemo );
-                    ( value, receipt )
-                in
-                evaluate
-            (**/**)
-
             (* memoizing constructor *)
-            and memo x =
+            let rec memo x =
                 (* create a strong reference to binding and hide it in the closure unmemo stored in m *)
                 let rec binding = ( x, m )
                 and unmemo () = Memotable.remove memotable binding
-                and evaluate () = make_memo_evaluate m x unmemo ()
+                and evaluate () =
+                    let repair, value, receipt, dependencies = evaluate_actual m (fun () -> f memo x) in
+                    m.thunk <- MemoValue ( repair, value, receipt, dependencies, evaluate, unmemo );
+                    ( value, receipt )
                 and m = { meta=make_meta (); thunk=MemoThunk ( evaluate, unmemo ) } in
                 snd (Memotable.merge memotable binding)
             in
-
-            (* memoizing updater *)
-            let update_memo m x =
-                dirty m;
-                (* create a strong reference to binding and hide it in the closure unmemo stored in m *)
-                let rec binding = ( x, m )
-                and unmemo () = Memotable.remove memotable binding in
-                let evaluate () = make_memo_evaluate m x unmemo () in
-                if Memotable.merge memotable binding == binding then
-                    m.thunk <- MemoThunk ( evaluate, unmemo )
-                else
-                    let evaluate = make_evaluate m (fun () -> f memo x) in
-                    m.thunk <- Thunk evaluate;
-            in
-
-            ( memo, update_memo )
+            memo
     end)
 end
 

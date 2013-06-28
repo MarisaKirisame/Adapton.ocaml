@@ -20,19 +20,19 @@ let measure f =
     ( x, end_time, end_heap, end_stack )
 
 let list_filter_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
-    fst (L.memo_filter (fun x -> log (1. +. x) < log 1.5))
+    L.memo_filter (fun x -> log (1. +. x) < log 1.5)
 
 let list_map_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
-    fst (L.memo_map (module L) (fun x -> log (1. +. x) +. log 1.5))
+    L.memo_map (module L) (fun x -> log (1. +. x) +. log 1.5)
 
 let list_sum_task (type a) (type b) (module L : Adapton.Signatures.SAListType.S with type t = a and type SAData.t = b and type data = float) =
-    fst (L.memo_tfold (+.))
+    L.memo_tfold (+.)
 
 let list_quicksort_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
-    fst (L.memo_quicksort Pervasives.compare)
+    L.memo_quicksort Pervasives.compare
 
 let list_mergesort_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
-    fst (L.memo_mergesort Pervasives.compare)
+    L.memo_mergesort Pervasives.compare
 
 let tasks = [
     ( "filter", `List list_filter_task );

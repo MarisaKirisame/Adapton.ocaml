@@ -525,12 +525,12 @@ module Make (R : Signatures.EqualsType)
         m.meta.evaluate <- (fun () -> evaluate_actual m f);
         enqueue m.meta
 
-    (* create memoizing constructors and updaters *)
+    (* create memoizing constructors *)
     include MemoN.Make (struct
         type data = R.t
         type t = R.t thunk
 
-        (** Create memoizing constructor and updater for an eager self-adjusting value. *)
+        (** Create memoizing constructor for an eager self-adjusting value. *)
         let memo (type a) (module A : Hashtbl.SeededHashedType with type t = a) f =
             let module Binding = struct
                 type t = { key : A.t; mutable value : R.t thunk option }
@@ -558,17 +558,7 @@ module Make (R : Signatures.EqualsType)
                         m
             in
 
-            (* memoizing updater *)
-            let update_memo m x =
-                update_thunk m (fun () -> f memo x);
-                let binding = Memotable.merge memotable Binding.({ key=x; value=None }) in
-                if binding.Binding.value == None then begin
-                    m.meta.unmemo <- (fun () -> Memotable.remove memotable binding);
-                    binding.Binding.value <- Some m
-                end
-            in
-
-            ( memo, update_memo )
+            memo
     end)
 end
 
