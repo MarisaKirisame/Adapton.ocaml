@@ -279,3 +279,6 @@ module Make (R : Signatures.EqualsType)
             ( memo, update_memo )
     end)
 end
+
+(** Tweak GC for this module. *)
+let tweak_gc () = ()

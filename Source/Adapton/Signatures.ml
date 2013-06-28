@@ -42,6 +42,7 @@ module type SAType = sig
     val force : 'a thunk -> 'a
     val refresh : unit -> unit
     module Make (R : EqualsType) : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk
+    val tweak_gc : unit -> unit
 end
 
 (** {2 Self-adjusting lists} *)

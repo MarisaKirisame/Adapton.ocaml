@@ -78,10 +78,11 @@ let _ =
 
     let rng = Random.State.make [| !opt_random_seed |] in
     Random.init (Random.State.bits rng);
-    Gc.compact ();
     let module SA = (val (List.assoc !opt_sa Adapton.All.sa_list)) in
     let module SAList = Adapton.SAList.Make (SA) in
     let module SAFloatList = SAList.Make (Adapton.Types.Float) in
+    SA.tweak_gc ();
+    Gc.compact ();
     let task = match List.assoc !opt_task tasks with
         | `One task ->
             if !opt_take_count != 1 then begin

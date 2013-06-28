@@ -571,3 +571,12 @@ module Make (R : Signatures.EqualsType)
             ( memo, update_memo )
     end)
 end
+
+(** Tweak GC for this module. *)
+let tweak_gc () =
+    let open Gc in
+    let control = get () in
+    set { control with
+        minor_heap_size = max control.minor_heap_size (2 * 1024 * 1024);
+        major_heap_increment = max control.minor_heap_size (4 * 1024 * 1024);
+    }
