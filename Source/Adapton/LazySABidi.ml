@@ -116,12 +116,17 @@ module Make (R : Signatures.EqualsType)
         meta
     (**/**)
 
-    (**/**) (* helper function to dirty a thunk *)
-    let dirty m =
+    (**/**) (* helper function to unmemo a thunk *)
+    let unmemo m =
         begin match m.thunk with
             | MemoValue ( _, _, _, _, _, unmemo ) | MemoThunk ( _, unmemo ) -> unmemo ()
             | Value _  | Thunk _ | Const _ -> ()
-        end;
+        end
+    (**/**)
+
+    (**/**) (* helper function to dirty a thunk *)
+    let dirty m =
+        unmemo m;
         let rec dirty = function
             | d::ds ->
                 dirty begin Dependents.fold begin fun d ds ->
@@ -159,7 +164,10 @@ module Make (R : Signatures.EqualsType)
 
     (** Update a lazy self-adjusting value with a constant value that does not depend on other lazy self-adjusting values. *)
     let update_const m x =
-        dirty m;
+        begin match m.thunk with
+            | MemoValue ( _, value, _, _, _, _ ) | Value ( _, value, _, _, _ ) | Const ( value, _ ) when not (R.equal value x) -> dirty m
+            | MemoValue _ | MemoThunk _ | Value _ | Thunk _ | Const _ -> unmemo m
+        end;
         let receipt k = make_const_receipt m x k in
         m.thunk <- Const ( x, receipt )
 
