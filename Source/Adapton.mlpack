@@ -1,12 +1,8 @@
 Adapton/All
 Adapton/Default
-Adapton/EagerSALazy
 Adapton/EagerSATotalOrder
 Adapton/Exceptions
 Adapton/LazySABidi
-Adapton/LazySABidiObject
-Adapton/LazySANaive
-Adapton/LazySAObject
 Adapton/LazySparseArray
 Adapton/MemoN
 Adapton/NonSAEager
