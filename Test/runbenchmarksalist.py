@@ -13,7 +13,7 @@ def driver(( module, task, size, take, edit, monotonic, seed )):
     results = OrderedDict((
         ( "module", module ), ( "task", task ), ( "size", size ), ( "take", take ), ( "edit", edit ), ( "monotonic", monotonic ), ( "seed", seed ) ))
     try:
-        cmd = [ runbenchmarkadapton_native, "-m", "SAList (%s)" % ( module, ), "-t", str(task), "-I", str(size), "-T", str(take), "-E", str(edit) ]
+        cmd = [ runbenchmarkadapton_native, "-m", "%s" % ( module, ), "-t", str(task), "-I", str(size), "-T", str(take), "-E", str(edit) ]
         if monotonic:
             cmd.append("-M")
         cmd.extend(( "-S", str(seed) ))
@@ -51,9 +51,8 @@ def physical_cpu_count():
 if __name__ == "__main__":
     import argparse, errno, gzip, multiprocessing, pprint, re, urllib
 
-    salist_re = re.compile(r"SAList \(([^)]+)\)")
     config = json.loads(subprocess.check_output([ runbenchmarkadapton_native, "-c" ]))
-    config["modules"] = map(lambda m: salist_re.sub(r"\1", str(m)), config["modules"])
+    config["modules"] = map(str, config["modules"])
     config["baselines"] = [ config["modules"][-1] ]
     config["takes"] = { str(m["name"]) : str(m["take"]) for m in config["tasks"] }
     config["tasks"] = config["takes"].keys()

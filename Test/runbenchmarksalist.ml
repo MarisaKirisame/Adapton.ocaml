@@ -42,7 +42,7 @@ let tasks = [
     ( "mergesort", `List list_mergesort_task );
 ]
 
-let opt_salist = ref (fst (List.hd Adapton.All.salist_list))
+let opt_sa = ref (fst (List.hd Adapton.All.sa_list))
 let opt_task = ref "filter"
 let opt_edit_count = ref 1
 let opt_input_size = ref 1
@@ -50,7 +50,7 @@ let opt_take_count = ref 1
 let opt_random_seed = ref 1
 let opt_monotonic = ref false
 
-let header ff = Printf.fprintf ff "%32s %24s %8d %8d %20d" !opt_salist !opt_task !opt_take_count !opt_input_size !opt_random_seed
+let header ff = Printf.fprintf ff "%32s %24s %8d %8d %20d" !opt_sa !opt_task !opt_take_count !opt_input_size !opt_random_seed
 
 let show_config () =
     let list_printer printer ff list =
@@ -60,14 +60,14 @@ let show_config () =
         Printf.fprintf ff "{ \"name\": %S, \"take\": %S }" (fst task) (match snd task with `One _ -> "one" | `List _ -> "list")
     in
     Printf.printf "{ \"modules\": [ %a ], \"tasks\": [ %a ] }\n%!"
-        (list_printer (fun ff -> Printf.fprintf ff "%S")) (fst (List.split Adapton.All.salist_list))
+        (list_printer (fun ff -> Printf.fprintf ff "%S")) (fst (List.split Adapton.All.sa_list))
         (list_printer task_printer) tasks;
     exit 0
 
 let _ =
     Arg.parse (Arg.align [
         ( "-c", Arg.Unit show_config, " output available configuration" );
-        ( "-m", Arg.Symbol ( (fst (List.split Adapton.All.salist_list)), (fun s -> opt_salist := s) ), "list module" );
+        ( "-m", Arg.Symbol ( (fst (List.split Adapton.All.sa_list)), (fun s -> opt_sa := s) ), "list module" );
         ( "-t", Arg.Symbol ( (fst (List.split tasks)), (fun s -> opt_task := s) ), "list task" );
         ( "-I", Arg.Set_int opt_input_size, "size input size" );
         ( "-T", Arg.Set_int opt_take_count, "count take count" );
@@ -79,7 +79,8 @@ let _ =
     let rng = Random.State.make [| !opt_random_seed |] in
     Random.init (Random.State.bits rng);
     Gc.compact ();
-    let module SAList = (val (List.assoc !opt_salist Adapton.All.salist_list)) in
+    let module SA = (val (List.assoc !opt_sa Adapton.All.sa_list)) in
+    let module SAList = Adapton.SAList.Make (SA) in
     let module SAFloatList = SAList.Make (Adapton.Types.Float) in
     let task = match List.assoc !opt_task tasks with
         | `One task ->
