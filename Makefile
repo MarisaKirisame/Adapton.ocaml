@@ -31,7 +31,7 @@ $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py : runbenchmark%.py
 benchmark-% : check $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py ocamlbuild//runbenchmark%.native
 	ulimit -s hard && \
 		$(OCAMLBUILD_PRODUCTDIR)/runbenchmark$*.py \
-			-L "$(strip $(shell hg qapplied --config defaults.qapplied=))" \
+			$(and $(shell hg id 2>/dev/null),--label "r$(shell (hg id -n -rqparent && hg qapplied --config defaults.qapplied= || hg id -n) 2>/dev/null)") \
 			$(BENCHMARK_FLAGS) $(BENCHMARK_FLAGS.$*)
 
 resummarize-benchmark-% : check $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py ocamlbuild//runbenchmark%.native
