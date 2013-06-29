@@ -140,10 +140,13 @@ if __name__ == "__main__":
             def __exit__(self, exc_type, exc_val, exc_tb):
                 self.flags.pop().set()
             def run(self, flag):
+                start = time.time()
                 while not flag.is_set():
+                    elapsed = time.time() - start
                     load = os.getloadavg()
                     free = psutil.virtual_memory().available / 1024 / 1024
-                    print>>sys.stderr, "Load: %5.2f %5.2f %5.2f  Mem: %6dM free" % ( load[0], load[1], load[2], free )
+                    print>>sys.stderr, "==== Elapsed: %5ds  ==== Load: %5.2f %5.2f %5.2f ==== Mem: %6dM free ====" \
+                        % ( elapsed, load[0], load[1], load[2], free )
                     flag.wait(3)
 
         with heartbeat:
