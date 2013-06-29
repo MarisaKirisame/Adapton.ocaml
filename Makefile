@@ -30,13 +30,15 @@ $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py : runbenchmark%.py
 
 benchmark-% : check $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py ocamlbuild//runbenchmark%.native
 	ulimit -s hard && \
-		$(OCAMLBUILD_PRODUCTDIR)/runbenchmark$*.py \
+		$(OCAMLBUILD_PRODUCTDIR)/runbenchmark$*.py benchmark \
 			$(and $(shell hg id 2>/dev/null),--label "r$(shell (hg id -n -rqparent && hg qapplied --config defaults.qapplied= || hg id -n) 2>/dev/null)") \
 			$(BENCHMARK_FLAGS) $(BENCHMARK_FLAGS.$*)
 
 resummarize-benchmark-% : check $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py ocamlbuild//runbenchmark%.native
-	$(OCAMLBUILD_PRODUCTDIR)/runbenchmark$*.py $(RESUMMARIZE_FLAGS) $(RESUMMARIZE_FLAGS.$*) \
-		--resummarize $(RESUMMARIZE_DIRS) $(RESUMMARIZE_DIRS.$*)
+	$(OCAMLBUILD_PRODUCTDIR)/runbenchmark$*.py resummarize \
+		$(RESUMMARIZE_FLAGS) $(RESUMMARIZE_FLAGS.$*) \
+		$(and $(RESUMMARIZE_INPUTS.$*),--inputs $(RESUMMARIZE_INPUTS.$*)) \
+		$(and $(RESUMMARIZE_OUTPUT.$*),--output $(RESUMMARIZE_OUTPUT.$*))
 
 clean : ocamlbuild//clean
 
