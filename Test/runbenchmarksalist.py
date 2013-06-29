@@ -279,7 +279,7 @@ if __name__ == "__main__":
                                 raise ValueError("inconsistent x-axis in results:\nexpected: %s\ngot: %s" % ( results["x-axis"], more_results["x-axis"] ))
                             if more_results["x-label"] != results["x-label"]:
                                 raise ValueError("inconsistent x-label in results:\nexpected: %s\ngot: %s" % ( results["x-label"], more_results["x-label"] ))
-                            results.extend(json.load(gzip.open(filepath), object_pairs_hook=OrderedDict))
+                            results["data"].extend(more_results["data"])
                     except IOError as e:
                         if e.errno != errno.ENOENT:
                             raise
