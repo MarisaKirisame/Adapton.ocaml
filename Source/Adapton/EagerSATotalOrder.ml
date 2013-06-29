@@ -23,6 +23,7 @@ and implementation based on https://github.com/matthewhammer/ceal/blob/4b933a8/s
 module TotalOrder : sig
     type parent
     type t
+    val null : t
     val create : unit -> t
     val is_valid : t -> bool
     val compare : t -> t -> int
@@ -507,7 +508,7 @@ module Make (R : Signatures.EqualsType)
             evaluate=nop;
             unmemo=nop;
             start_timestamp=add_timestamp ();
-            end_timestamp=eager_start;
+            end_timestamp=TotalOrder.null;
             dependencies=[];
             dependents=WeakDyn.create 0;
         } in
