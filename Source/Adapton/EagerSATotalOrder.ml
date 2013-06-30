@@ -405,17 +405,16 @@ module T = struct
         try
             let rec refresh () =
                 let meta = dequeue () in
-                let last_finger = !eager_finger in
                 eager_now := meta.start_timestamp;
                 eager_finger := meta.end_timestamp;
                 meta.evaluate ();
                 TotalOrder.splice !eager_now meta.end_timestamp;
-                eager_finger := last_finger;
                 refresh ()
             in
             refresh ()
         with PriorityQueue.Queue_is_empty ->
-            eager_now := last_now
+            eager_now := last_now;
+            eager_finger := eager_start
 
     (** Return the value contained by a self-adjusting value, computing it if necessary. *)
     let force m =
