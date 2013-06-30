@@ -367,12 +367,9 @@ module T = struct
     let eager_now = ref eager_start
     let eager_finger = ref eager_start
 
-    let set_eager_now timestamp =
-        eager_now := timestamp
-
     let add_timestamp () =
         let timestamp = TotalOrder.add_next !eager_now in
-        set_eager_now timestamp;
+        eager_now := timestamp;
         timestamp
 
     let rec dequeue () =
@@ -402,7 +399,7 @@ module T = struct
         let rec refresh () =
             let meta = dequeue () in
             let last_finger = !eager_finger in
-            set_eager_now meta.start_timestamp;
+            eager_now := meta.start_timestamp;
             eager_finger := meta.end_timestamp;
             meta.evaluate ();
             TotalOrder.splice !eager_now meta.end_timestamp;
@@ -550,7 +547,7 @@ module Make (R : Signatures.EqualsType)
                             && TotalOrder.compare m.meta.start_timestamp !eager_now > 0
                             && TotalOrder.compare m.meta.end_timestamp !eager_finger < 0 ->
                         TotalOrder.splice !eager_now m.meta.start_timestamp;
-                        set_eager_now m.meta.end_timestamp;
+                        eager_now := m.meta.end_timestamp;
                         m
                     | _ ->
                         let m = thunk (fun () -> f memo x) in
