@@ -395,20 +395,22 @@ module T = struct
     let equal = (==)
 
     (** Recompute self-adjusting values if necessary. *)
-    let refresh () = try
-        let rec refresh () =
-            let meta = dequeue () in
-            let last_finger = !eager_finger in
-            eager_now := meta.start_timestamp;
-            eager_finger := meta.end_timestamp;
-            meta.evaluate ();
-            TotalOrder.splice !eager_now meta.end_timestamp;
-            eager_finger := last_finger;
+    let refresh () =
+        let last_now = !eager_now in
+        try
+            let rec refresh () =
+                let meta = dequeue () in
+                let last_finger = !eager_finger in
+                eager_now := meta.start_timestamp;
+                eager_finger := meta.end_timestamp;
+                meta.evaluate ();
+                TotalOrder.splice !eager_now meta.end_timestamp;
+                eager_finger := last_finger;
+                refresh ()
+            in
             refresh ()
-        in
-        refresh ()
-    with PriorityQueue.Queue_is_empty ->
-        ()
+        with PriorityQueue.Queue_is_empty ->
+            eager_now := last_now
 
     (** Return the value contained by a self-adjusting value, computing it if necessary. *)
     let force m =
