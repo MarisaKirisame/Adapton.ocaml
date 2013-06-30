@@ -30,6 +30,7 @@ module TotalOrder : sig
     val add_next : t -> t
     val splice : t -> t -> unit
     val set_invalidator : t -> (unit -> unit) -> unit
+    val reset_invalidator : t -> unit
 end = struct
     let threshold = 1.4 (* rebalancing region threshold (inverse density) *)
     let label_bits = Sys.word_size - 2 (* use only the positive range *)
@@ -292,9 +293,13 @@ end = struct
             end
         end
 
-    (** Set an invalidator function to the given total-order element. *)
+    (** Set an invalidator function for the given total-order element. *)
     let set_invalidator ts invalidator =
         ts.invalidator <- invalidator
+
+    (** Reset the invalidator function for the given total-order element. *)
+    let reset_invalidator ts =
+        ts.invalidator <- nop
 end
 (**/**)
 
@@ -314,7 +319,7 @@ module T = struct
         id : int;
         mutable evaluate : unit -> unit;
         mutable unmemo : unit -> unit;
-        start_timestamp : TotalOrder.t;
+        mutable start_timestamp : TotalOrder.t;
         mutable end_timestamp : TotalOrder.t;
         mutable dependencies : meta list;
         dependents : meta WeakDyn.t; (* doesn't have to be a set since it is cleared and dependents are immediately re-evaluated and re-added if updated *)
@@ -443,28 +448,26 @@ module Make (R : Signatures.EqualsType)
         (* help GC mark phase by cutting the object graph *)
         meta.evaluate <- nop;
         meta.unmemo <- nop;
+        meta.start_timestamp <- TotalOrder.null;
+        meta.end_timestamp <- TotalOrder.null;
         meta.dependencies <- [];
         WeakDyn.clear meta.dependents
     (**/**)
 
     (** Create an eager self-adjusting value from a constant value. *)
     let const x =
-        let start_timestamp = add_timestamp () in
-        let end_timestamp = add_timestamp () in
         let m = {
             value=x;
             meta={
                 id=(!eager_id_counter);
                 evaluate=nop;
                 unmemo=nop;
-                start_timestamp;
-                end_timestamp;
+                start_timestamp=TotalOrder.null;
+                end_timestamp=TotalOrder.null;
                 dependencies=[];
                 dependents=WeakDyn.create 0;
             };
         } in
-        if !eager_stack != [] then
-            TotalOrder.set_invalidator start_timestamp (invalidator m.meta);
         incr eager_id_counter;
         m
 
@@ -473,6 +476,9 @@ module Make (R : Signatures.EqualsType)
         m.meta.unmemo ();
         m.meta.unmemo <- nop;
         m.meta.evaluate <- nop;
+        TotalOrder.reset_invalidator m.meta.start_timestamp;
+        m.meta.start_timestamp <- TotalOrder.null;
+        m.meta.end_timestamp <- TotalOrder.null;
         m.meta.dependencies <- [];
         if not (R.equal m.value x) then begin
             m.value <- x;
@@ -520,10 +526,20 @@ module Make (R : Signatures.EqualsType)
 
     (** Update an eager self-adjusting value with a thunk. *)
     let update_thunk m f =
+        m.meta.evaluate <- nop;
         m.meta.unmemo ();
         m.meta.unmemo <- nop;
-        m.meta.evaluate <- (fun () -> evaluate_actual m f);
-        enqueue m.meta
+        TotalOrder.reset_invalidator m.meta.start_timestamp;
+        m.meta.start_timestamp <- add_timestamp ();
+        m.meta.end_timestamp <- TotalOrder.null;
+        TotalOrder.set_invalidator m.meta.start_timestamp (invalidator m.meta);
+        let x = evaluate_meta m.meta f in
+        if not (R.equal m.value x) then begin
+            m.value <- x;
+            enqueue_dependents m.meta.dependents
+        end;
+        m.meta.end_timestamp <- add_timestamp ();
+        m.meta.evaluate <- (fun () -> evaluate_actual m f)
 
     (* create memoizing constructors *)
     include MemoN.Make (struct
