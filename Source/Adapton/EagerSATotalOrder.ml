@@ -380,9 +380,9 @@ module T = struct
     let rec dequeue () =
         let meta, queue = PriorityQueue.extract !eager_queue in
         eager_queue := queue;
-        if TotalOrder.is_valid meta.start_timestamp then begin
+        if TotalOrder.is_valid meta.start_timestamp then
             meta
-        end else
+        else
             dequeue ()
 
     let enqueue meta = if TotalOrder.is_valid meta.start_timestamp then
