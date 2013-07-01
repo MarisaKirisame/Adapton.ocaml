@@ -117,11 +117,9 @@ module Make (R : Signatures.EqualsType)
     (**/**)
 
     (**/**) (* helper function to unmemo a thunk *)
-    let unmemo m =
-        begin match m.thunk with
-            | MemoValue ( _, _, _, _, _, unmemo ) | MemoThunk ( _, unmemo ) -> unmemo ()
-            | Value _  | Thunk _ | Const _ -> ()
-        end
+    let unmemo m = match m.thunk with
+        | MemoValue ( _, _, _, _, _, unmemo ) | MemoThunk ( _, unmemo ) -> unmemo ()
+        | Value _  | Thunk _ | Const _ -> ()
     (**/**)
 
     (**/**) (* helper function to dirty a thunk *)
