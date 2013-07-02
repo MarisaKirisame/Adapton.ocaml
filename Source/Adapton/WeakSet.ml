@@ -26,6 +26,7 @@ module Make (H : Hashtbl.HashedType) = struct
     let fold fn xs acc =
         let acc = ref acc in
         if xs.size <= limit then begin
+            (* as array, fold while compacting the array *)
             let j = ref 0 in
             for i = 0 to xs.size - 1 do
                 match Weak.get xs.array i with
@@ -38,6 +39,7 @@ module Make (H : Hashtbl.HashedType) = struct
             done;
             xs.size <- !j;
         end else
+            (* as hash table, just fold *)
             for i = 0 to xs.size - 1 do
                 match Weak.get xs.array i with
                     | Some x -> acc := fn x !acc;
@@ -51,6 +53,7 @@ module Make (H : Hashtbl.HashedType) = struct
             let old_array = xs.array in
             xs.array <- Weak.create (old_size * 2);
             if Weak.length xs.array <= limit then begin
+                (* as array, copy and compact *)
                 let j = ref 0 in
                 for i = 0 to old_size - 1 do
                     match Weak.get old_array i with
@@ -59,6 +62,7 @@ module Make (H : Hashtbl.HashedType) = struct
                 done;
                 xs.size <- !j
             end else begin
+                (* as hash table, reinsert *)
                 xs.size <- Weak.length xs.array;
                 for i = 0 to old_size - 1 do
                     match Weak.get old_array i with
@@ -68,6 +72,7 @@ module Make (H : Hashtbl.HashedType) = struct
             end
         in
         if xs.size <= limit then
+            (* as array, use fold to find and compact *)
             let x'opt = fold begin fun x' x'opt -> match x'opt with
                 | Some _ -> x'opt
                 | None -> if H.equal x' x then Some x' else None
@@ -84,6 +89,7 @@ module Make (H : Hashtbl.HashedType) = struct
                     end else
                         merge xs x
         else
+            (* as hash table, perform a lookup with linear probing *)
             let i = H.hash x mod xs.size in
             let rec find j result =
                 let k = (i + j) mod xs.size in
