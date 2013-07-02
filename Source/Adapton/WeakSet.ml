@@ -91,9 +91,10 @@ module Make (H : Hashtbl.HashedType) = struct
         else
             (* as hash table, perform a lookup with linear probing *)
             let i = H.hash x mod xs.size in
+            let window = max limit (xs.size / 4) in
             let rec find j result =
                 let k = (i + j) mod xs.size in
-                if j < limit then match Weak.get xs.array k with
+                if j < window then match Weak.get xs.array k with
                     | Some x' -> if H.equal x x' then `Found x' else find (j + 1) result
                     | None -> find (j + 1) (`Empty k)
                 else
