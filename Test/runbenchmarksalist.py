@@ -381,8 +381,8 @@ if __name__ == "__main__":
                         with open(os.path.join(summary, pdffilename), "w") as pdffile:
                             fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                             ax = fig.add_subplot(1, 1, 1,
-                                xlim=( 0, 1.01 * max( xmax[measurement][timing] for timing in timings ) ),
-                                ylim=( 0, yadjust * max( ymax[measurement][timing] for timing in timings ) ))
+                                xlim=( 0, 1.01 * max( xmax[measurement].get(timing, 0) for timing in timings ) ),
+                                ylim=( 0, yadjust * max( ymax[measurement].get(timing, 0) for timing in timings ) ))
 
                             ax.set_title(results["label"], fontsize=8)
                             ax.set_xlabel(results["x-label"], fontsize=8)
@@ -401,6 +401,8 @@ if __name__ == "__main__":
                             ax.grid(linewidth=0.5, linestyle=":", color="silver")
 
                             for timing in ( "from-scratch", "propagate" ):
+                                if timing == "propagate" and not editables:
+                                    continue
                                 module_table = measurement_table[timing]
                                 for module, xvalues in module_table.iteritems():
                                     xvalues, yvalues = zip(*xvalues.iteritems())
@@ -427,7 +429,7 @@ if __name__ == "__main__":
                     with open(os.path.join(summary, pdffilename), "w") as pdffile:
                         fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                         ax = fig.add_subplot(1, 1, 1,
-                            xlim=( 0, 1.01 * xmax["time"]["propagate"] ))
+                            xlim=( 0, 1.01 * xmax["time"].get("propagate", 0) ))
                         ax.set_title(results["label"], fontsize=8)
                         ax.set_xlabel(results["x-label"], fontsize=8)
                         ax.set_ylabel("time overhead\nX (from-scratch) / %s (from-scratch)" % ( baseline, ), fontsize=8, multialignment="center")
@@ -469,7 +471,7 @@ if __name__ == "__main__":
                     with open(os.path.join(summary, pdffilename), "w") as pdffile:
                         fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                         ax = fig.add_subplot(1, 1, 1,
-                            xlim=( 0, 1.01 * xmax["time"]["propagate"] ))
+                            xlim=( 0, 1.01 * xmax["time"].get("propagate", 0) ))
                         ax.set_title(results["label"], fontsize=8)
                         ax.set_xlabel(results["x-label"], fontsize=8)
                         ax.set_ylabel("time speed-up\n%s (from-scratch) / X (propagate)" % ( baseline, ), fontsize=8, multialignment="center")
