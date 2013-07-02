@@ -245,7 +245,9 @@ module Make (M : Signatures.SAType)
 
         (** Create memoizing constructor to mergesort a self-adjusting list with a comparator. *)
         let memo_mergesort cmp =
-            let lift = RunType.memo_map (module L) (fun x -> const (`Cons ( x, const `Nil ))) in
+            let nil = const `Nil in
+            let single = memo (module R) (fun single x -> `Cons ( x, nil )) in
+            let lift = RunType.memo_map (module L) single in
             let merge = memo2 (module L) (module L) begin fun merge xs ys -> match force xs, force ys with
                 | `Cons ( x', xs' ), `Cons ( y', ys' ) ->
                     if cmp x' y' < 0 then
