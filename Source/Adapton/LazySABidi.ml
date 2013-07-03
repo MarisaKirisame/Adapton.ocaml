@@ -134,8 +134,8 @@ module Make (R : Signatures.EqualsType)
         dirty [ m.meta.dependents ]
     (**/**)
 
-    (**/**) (* helper function to make a const receipt check *)
-    let make_const_check m x k = match m.thunk with
+    (**/**) (* helper function to make a receipt check *)
+    let make_check m x k = match m.thunk with
         | MemoValue ( repair, _, _, _, _, _ ) | Value ( repair, _, _, _, _ ) -> repair.repair (fun ( value, _ ) -> k (R.equal value x))
         | MemoThunk _ | Thunk _ -> k false
         | Const ( value, _ ) -> k (R.equal value x)
@@ -143,7 +143,7 @@ module Make (R : Signatures.EqualsType)
 
     (** Create a lazy self-adjusting value from a constant value that does not depend on other lazy self-adjusting values. *)
     let const x =
-        let rec check : 'a . (bool -> 'a) -> 'a = fun k -> make_const_check m x k
+        let rec check : 'a . (bool -> 'a) -> 'a = fun k -> make_check m x k
         and m = { meta=make_meta (); thunk=Const ( x, { check } ) } in
         m
 
@@ -153,7 +153,7 @@ module Make (R : Signatures.EqualsType)
             | MemoValue ( _, value, _, _, _, _ ) | Value ( _, value, _, _, _ ) | Const ( value, _ ) when not (R.equal value x) -> dirty m
             | MemoValue _ | MemoThunk _ | Value _ | Thunk _ | Const _ -> unmemo m
         end;
-        let check k = make_const_check m x k in
+        let check k = make_check m x k in
         m.thunk <- Const ( x, { check } )
 
     (**/**) (* helper function to evaluate a thunk *)
@@ -190,10 +190,7 @@ module Make (R : Signatures.EqualsType)
                 k ( value, receipt )
         in
 
-        let check k = repair begin fun _ -> k begin match m.thunk with
-            | MemoValue ( _, value', _, _, _, _ ) | Value ( _, value', _, _, _ ) | Const ( value', _ ) -> R.equal value' value
-            | MemoThunk _ | Thunk _ -> false
-        end end in
+        let check k = make_check m value k in
 
         ( { repair }, value, { check }, dependencies )
     (**/**)
