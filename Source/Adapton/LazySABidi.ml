@@ -17,15 +17,15 @@ module T = struct
             dependents : Dependents.t;
         }
         and 'a thunk' =
-            | MemoValue of repair * 'a * receipt * dependency list * 'a evaluate * unmemo (* 7 words *)
-            | Value of repair * 'a * receipt * dependency list * 'a evaluate (* 6 words *)
+            | MemoValue of 'a repair * 'a * receipt * dependency list * 'a evaluate * unmemo (* 7 words *)
+            | Value of 'a repair * 'a * receipt * dependency list * 'a evaluate (* 6 words *)
             | MemoThunk of 'a evaluate * unmemo (* 3  words *)
             | Thunk of 'a evaluate (* 2 words *)
             | Const of 'a * receipt (* 3 words *)
         and unmemo = unit -> unit
         and 'a evaluate = unit -> 'a * receipt
-        and receipt = (bool -> unit) -> unit
-        and repair = (unit -> unit) -> unit
+        and receipt = { check : 'a . (bool -> 'a) -> 'a }
+        and 'a repair = { repair : 'b . ('a * receipt -> 'b) -> 'b }
         and dependency = { (* 3 words (meta shared with 'a thunk) *)
             mutable dirty : bool;
             mutable receipt : receipt;
@@ -69,14 +69,7 @@ module T = struct
     let force m =
         let value, receipt = match m.thunk with
             | MemoValue ( repair, _, _, _, _, _ ) | Value ( repair, _, _, _, _ ) ->
-                (* compute the value if necessary *)
-                repair (fun () -> ());
-                begin match m.thunk with
-                    | MemoValue ( _, value, receipt, _, _, _ ) | Value ( _, value, receipt, _, _ ) ->
-                        ( value, receipt )
-                    | MemoThunk _ | Thunk _ | Const _ ->
-                        failwith "repair did not compute result"
-                end
+                repair.repair (fun result -> result)
             | MemoThunk ( evaluate, _ ) | Thunk evaluate ->
                 evaluate ()
             | Const ( value, receipt ) ->
@@ -141,23 +134,17 @@ module Make (R : Signatures.EqualsType)
         dirty [ m.meta.dependents ]
     (**/**)
 
-    (**/**) (* helper function to make a const receipt *)
-    let make_const_receipt m x k = match m.thunk with
-        | MemoValue ( repair, _, _, _, _, _ ) | Value ( repair, _, _, _, _ ) ->
-            repair begin fun () -> k begin match m.thunk with
-                | MemoValue ( _, value, _, _, _, _ ) | Value ( _, value, _, _, _ ) | Const ( value, _ ) -> R.equal value x
-                | MemoThunk _ | Thunk _ -> false
-            end end
-        | MemoThunk _ | Thunk _ ->
-            k false
-        | Const ( value, _ ) ->
-            k (R.equal value x)
+    (**/**) (* helper function to make a const receipt check *)
+    let make_const_check m x k = match m.thunk with
+        | MemoValue ( repair, _, _, _, _, _ ) | Value ( repair, _, _, _, _ ) -> repair.repair (fun ( value, _ ) -> k (R.equal value x))
+        | MemoThunk _ | Thunk _ -> k false
+        | Const ( value, _ ) -> k (R.equal value x)
     (**/**)
 
     (** Create a lazy self-adjusting value from a constant value that does not depend on other lazy self-adjusting values. *)
     let const x =
-        let rec receipt k = make_const_receipt m x k
-        and m = { meta=make_meta (); thunk=Const ( x, receipt ) } in
+        let rec check : 'a . (bool -> 'a) -> 'a = fun k -> make_const_check m x k
+        and m = { meta=make_meta (); thunk=Const ( x, { check } ) } in
         m
 
     (** Update a lazy self-adjusting value with a constant value that does not depend on other lazy self-adjusting values. *)
@@ -166,8 +153,8 @@ module Make (R : Signatures.EqualsType)
             | MemoValue ( _, value, _, _, _, _ ) | Value ( _, value, _, _, _ ) | Const ( value, _ ) when not (R.equal value x) -> dirty m
             | MemoValue _ | MemoThunk _ | Value _ | Thunk _ | Const _ -> unmemo m
         end;
-        let receipt k = make_const_receipt m x k in
-        m.thunk <- Const ( x, receipt )
+        let check k = make_const_check m x k in
+        m.thunk <- Const ( x, { check } )
 
     (**/**) (* helper function to evaluate a thunk *)
     let evaluate_actual m f =
@@ -185,30 +172,30 @@ module Make (R : Signatures.EqualsType)
 
         (* repair/receipt performs a truncated inorder traversal of the dependency graph *)
         let repair k = match m.thunk with
-            | MemoValue ( _, _, _, dependencies, evaluate, _ ) | Value ( _, _, _, dependencies, evaluate ) ->
+            | MemoValue ( _, value, receipt, dependencies, evaluate, _ ) | Value ( _, value, receipt, dependencies, evaluate ) ->
                 let rec repair = function
                     | d::ds ->
                         if d.dirty then begin
                             d.dirty <- false;
-                            d.receipt (fun c -> if c then repair ds else (ignore (evaluate ()); k ()))
+                            d.receipt.check (fun c -> if c then repair ds else k (evaluate ()))
                         end else
                             repair ds
                     | [] ->
-                        k ()
+                        k ( value, receipt )
                 in
                 repair dependencies
             | MemoThunk ( evaluate, _ ) | Thunk evaluate ->
-                ignore (evaluate ()); k ()
-            | Const _ ->
-                k ()
+                k (evaluate ())
+            | Const ( value, receipt ) ->
+                k ( value, receipt )
         in
 
-        let receipt k = repair begin fun () -> k begin match m.thunk with
+        let check k = repair begin fun _ -> k begin match m.thunk with
             | MemoValue ( _, value', _, _, _, _ ) | Value ( _, value', _, _, _ ) | Const ( value', _ ) -> R.equal value' value
             | MemoThunk _ | Thunk _ -> false
         end end in
 
-        ( repair, value, receipt, dependencies )
+        ( { repair }, value, { check }, dependencies )
     (**/**)
 
     (**/**) (** helper function to make a function to evaluate a thunk *)
