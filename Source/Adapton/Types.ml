@@ -76,6 +76,13 @@ module Tuple4 (A : Hashtbl.SeededHashedType) (B : Hashtbl.SeededHashedType) (C :
     let equal ( a, b, c, d as x ) ( a', b', c', d' as x' ) = x == x' || A.equal a a' && B.equal b b' && C.equal c c' && D.equal d d'
 end
 
+(** Counter. *)
+module Counter = struct
+    type t = int ref
+    let make = ref
+    let next c = let x = !c in incr c; x
+end
+
 (** Random number stream. *)
 module Seeds = struct
     type t = Seeds of int * t Lazy.t

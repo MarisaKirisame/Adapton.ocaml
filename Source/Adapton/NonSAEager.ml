@@ -18,7 +18,7 @@ module T = struct
     let is_lazy = false
 
     (**/**) (* internal state *)
-    let eager_id_counter = ref 0
+    let eager_id_counter = Types.Counter.make 0
     (**/**)
 
     (** Compute the hash value of a non-self-adjusting value. *)
@@ -48,19 +48,13 @@ module Make (R : Signatures.EqualsType)
     type t = R.t thunk
 
     (** Create an eager non-self-adjusting value from a constant value. *)
-    let const x =
-        let m = { id=(!eager_id_counter); value=x } in
-        incr eager_id_counter;
-        m
+    let const x = { id=Types.Counter.next eager_id_counter; value=x }
 
     (** Update an eager non-self-adjusting value with a constant value (not supported by this module; raises {!NonSelfAdjustingValue}). *)
     let update_const _ _ = raise Exceptions.NonSelfAdjustingValue
 
     (** Create an eager non-self-adjusting value from a thunk. *)
-    let thunk f =
-        let m = { id=(!eager_id_counter); value=f () } in
-        incr eager_id_counter;
-        m
+    let thunk f = { id=Types.Counter.next eager_id_counter; value=f () }
 
     (** Update an eager non-self-adjusting value with a thunk (not supported by this module; raises {!NonSelfAdjustingValue}). *)
     let update_thunk _ _ = raise Exceptions.NonSelfAdjustingValue
@@ -73,11 +67,7 @@ module Make (R : Signatures.EqualsType)
         (** Create non-memoizing constructor for an eager non-self-adjusting value. *)
         let memo (type a) (module A : Hashtbl.SeededHashedType with type t = a) f =
             (* non-memoizing constructor *)
-            let rec memo x =
-                let m = { id=(!eager_id_counter); value=f memo x } in
-                incr eager_id_counter;
-                m
-            in
+            let rec memo x = { id=Types.Counter.next eager_id_counter; value=f memo x } in
             memo
     end)
 end

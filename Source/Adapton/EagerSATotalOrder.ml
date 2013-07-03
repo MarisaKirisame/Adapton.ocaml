@@ -365,7 +365,7 @@ module T = struct
                 raise Queue_is_empty
     end
 
-    let eager_id_counter = ref 0
+    let eager_id_counter = Types.Counter.make 0
     let eager_stack = ref []
     let eager_queue = ref PriorityQueue.empty
     let eager_start = TotalOrder.create ()
@@ -458,7 +458,7 @@ module Make (R : Signatures.EqualsType)
         let m = {
             value=x;
             meta={
-                id=(!eager_id_counter);
+                id=Types.Counter.next eager_id_counter;
                 evaluate=nop;
                 unmemo=nop;
                 start_timestamp=TotalOrder.null;
@@ -467,7 +467,6 @@ module Make (R : Signatures.EqualsType)
                 dependents=WeakDyn.create 0;
             };
         } in
-        incr eager_id_counter;
         m
 
     (** Update an eager self-adjusting value with a constant value. *)
@@ -508,7 +507,7 @@ module Make (R : Signatures.EqualsType)
     (** Create an eager self-adjusting value from a thunk. *)
     let thunk f =
         let meta = {
-            id=(!eager_id_counter);
+            id=Types.Counter.next eager_id_counter;
             evaluate=nop;
             unmemo=nop;
             start_timestamp=add_timestamp ();
@@ -517,7 +516,6 @@ module Make (R : Signatures.EqualsType)
             dependents=WeakDyn.create 0;
         } in
         TotalOrder.set_invalidator meta.start_timestamp (invalidator meta);
-        incr eager_id_counter;
         let m = { value=evaluate_meta meta f; meta } in
         meta.end_timestamp <- add_timestamp ();
         meta.evaluate <- (fun () -> evaluate_actual m f);

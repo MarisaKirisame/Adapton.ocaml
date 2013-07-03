@@ -51,7 +51,7 @@ module T = struct
 
 
     (**/**) (* change-propagation state *)
-    let lazy_id_counter = ref 0
+    let lazy_id_counter = Types.Counter.make 0
     let lazy_stack = ref []
     (**/**)
 
@@ -103,10 +103,7 @@ module Make (R : Signatures.EqualsType)
     type t = R.t thunk
 
     (**/**) (* helper function to make a new thunk meta *)
-    let make_meta () =
-        let meta = { id=(!lazy_id_counter); dependents=Dependents.create 0 } in
-        incr lazy_id_counter;
-        meta
+    let make_meta () = { id=Types.Counter.next lazy_id_counter; dependents=Dependents.create 0 }
     (**/**)
 
     (**/**) (* helper function to unmemo a thunk *)
