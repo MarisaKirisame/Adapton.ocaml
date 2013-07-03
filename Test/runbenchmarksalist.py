@@ -128,11 +128,11 @@ if __name__ == "__main__":
             output_label = os.path.basename(output)
     else:
         assert args.subparser == "benchmark"
-        if len(args.input_sizes) > 1 and len(args.take_counts) > 1:
-            parser.error("either -I/--input-sizes or -T/--take-counts must be given only one value")
-        elif len(args.input_sizes) == 1 and len(args.take_counts) == 1:
-            parser.error("-I/--input-sizes and -T/--take-counts must not both be given only one value")
-        if len(args.take_counts) > 1 or args.take_counts[0] != 1:
+        if len(set(args.input_sizes)) > 1 and len(set(args.take_counts)) > 1:
+            parser.error("either -I/--input-sizes or -T/--take-counts must be given only one unique value")
+        elif len(set(args.input_sizes)) == 1 and len(set(args.take_counts)) == 1:
+            parser.error("-I/--input-sizes and -T/--take-counts must not both be given only one unique value each")
+        if len(set(args.take_counts)) > 1 or any(take != 1 for take in args.take_counts):
             for task in args.tasks:
                 if config["takes"][task] == "one":
                     parser.error("-t/--tasks \"%s\" only supports -T/--take-counts 1" % ( task, ))
