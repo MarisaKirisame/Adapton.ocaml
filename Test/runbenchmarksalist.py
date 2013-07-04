@@ -103,7 +103,10 @@ if __name__ == "__main__":
                 if args.label:
                     output += " " + args.label.strip()
                     os.makedirs(output)
-                output_label = os.path.basename(output)
+                if inputs[0] == os.path.join(config["output"], "latest") and os.path.islink(inputs[0]):
+                    output_label = os.path.basename(os.readlink(inputs[0]))
+                else:
+                    output_label = os.path.basename(output)
             else:
                 output_label = time.strftime("%Y-%m-%d-%H-%M-%S summary")
                 if args.label:
