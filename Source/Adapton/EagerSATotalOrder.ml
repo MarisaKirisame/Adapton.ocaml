@@ -336,38 +336,15 @@ module T = struct
 
     (**/**) (* internal state and helper functions *)
 
-    (* priority set based on simple binary tree: usually, the size is quite small, but duplicate insertion occur frequently *)
-    module PriorityQueue = struct
-        type queue = Empty | Node of meta * queue * queue
-
-        let empty = Empty
-
-        let rec insert queue meta = match queue with
-            | Empty ->
-                Node ( meta, Empty, Empty )
-            | Node ( meta', left, right ) ->
-                if meta == meta' then
-                    queue
-                else if TotalOrder.compare meta.start_timestamp meta'.start_timestamp <= 0 then
-                    Node ( meta', insert left meta, right )
-                else
-                    Node ( meta', left, insert right meta )
-
-        exception Queue_is_empty
-
-        let rec extract = function
-            | Node ( meta, (Node _ as left), right ) ->
-                let meta', left = extract left in
-                ( meta', Node ( meta, left, right ) )
-            | Node ( meta, Empty, right ) ->
-                ( meta, right )
-            | Empty ->
-                raise Queue_is_empty
-    end
+    (* use a priority set because, although the size is usually quite small, duplicate insertions occur frequently *)
+    module PriorityQueue = PrioritySet.Make (struct
+        type t = meta
+        let compare meta meta' = TotalOrder.compare meta.start_timestamp meta'.start_timestamp
+    end)
 
     let eager_id_counter = Types.Counter.make 0
     let eager_stack = ref []
-    let eager_queue = ref PriorityQueue.empty
+    let eager_queue = PriorityQueue.create ()
     let eager_start = TotalOrder.create ()
     let eager_now = ref eager_start
     let eager_finger = ref eager_start
@@ -378,18 +355,17 @@ module T = struct
         timestamp
 
     let rec dequeue () =
-        let meta, queue = PriorityQueue.extract !eager_queue in
-        eager_queue := queue;
+        let meta = PriorityQueue.pop eager_queue in
         if TotalOrder.is_valid meta.start_timestamp then
             meta
         else
             dequeue ()
 
     let enqueue meta = if TotalOrder.is_valid meta.start_timestamp then
-        eager_queue := PriorityQueue.insert !eager_queue meta
+        PriorityQueue.add eager_queue meta
 
     let enqueue_dependents dependents =
-        eager_queue := WeakDyn.fold (fun d q -> if TotalOrder.is_valid d.start_timestamp then PriorityQueue.insert q d else q) dependents !eager_queue;
+        ignore (WeakDyn.fold (fun d () -> if TotalOrder.is_valid d.start_timestamp then PriorityQueue.add eager_queue d) dependents ());
         WeakDyn.clear dependents
     (**/**)
 
@@ -412,7 +388,7 @@ module T = struct
                 refresh ()
             in
             refresh ()
-        with PriorityQueue.Queue_is_empty ->
+        with PriorityQueue.Empty ->
             eager_now := last_now;
             eager_finger := eager_start
 
