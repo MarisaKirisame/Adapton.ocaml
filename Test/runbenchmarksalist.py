@@ -391,10 +391,7 @@ if __name__ == "__main__":
                         pdffilename = "%s-%s-%s-%s.pdf" % ( label, measurement, yadjust, "-".join(timings) )
                         with open(os.path.join(summary, pdffilename), "w") as pdffile:
                             fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
-                            ax = fig.add_subplot(1, 1, 1,
-                                xlim=( 0, 1.01 * max( xmax[measurement].get(timing, 0) for timing in timings ) ),
-                                ylim=( 0, yadjust * max( ymax[measurement].get(timing, 0) for timing in timings ) ))
-
+                            ax = fig.add_subplot(1, 1, 1)
                             ax.set_title(results["label"], fontsize=8)
                             ax.set_xlabel(results["x-label"], fontsize=8)
                             ax.set_ylabel("%s (%s)" % ( measurement, units[measurement] ), fontsize=8)
@@ -421,6 +418,8 @@ if __name__ == "__main__":
                                         % ( "%s (%s)" % ( module, timing ), " ".join( format(yvalue, "9.3g") for yvalue in yvalues ) )
                                     ax.plot(xvalues, yvalues, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none",
                                         **styles[module, timing])
+                            ax.set_xbound(lower=0)
+                            ax.set_ybound(lower=0, upper=yadjust * max( ymax[measurement].get(timing, 0) for timing in timings ))
 
                             try:
                                 ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
@@ -440,8 +439,7 @@ if __name__ == "__main__":
                         pdffilename = "%s-%s-overhead.pdf" % ( label, baseline )
                         with open(os.path.join(summary, pdffilename), "w") as pdffile:
                             fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
-                            ax = fig.add_subplot(1, 1, 1,
-                                xlim=( 0, 1.01 * xmax["time"]["propagate"] ))
+                            ax = fig.add_subplot(1, 1, 1)
                             ax.set_title(results["label"], fontsize=8)
                             ax.set_xlabel(results["x-label"], fontsize=8)
                             ax.set_ylabel("time overhead\nX (from-scratch) / %s (from-scratch)" % ( baseline, ), fontsize=8, multialignment="center")
@@ -464,6 +462,8 @@ if __name__ == "__main__":
                                     for xvalue, yvalue in table["time"]["from-scratch"][module].iteritems() ))
                                 print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(overhead, "9.3g") for overhead in overheads ) )
                                 ax.plot(xvalues, overheads, clip_on=False, label=module, markeredgecolor="none", **styles[module, "from-scratch"])
+                            ax.set_xbound(lower=0)
+                            ax.set_ybound(lower=0)
 
                             try:
                                 ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
@@ -482,8 +482,7 @@ if __name__ == "__main__":
                         pdffilename = "%s-%s-speedup.pdf" % ( label, baseline )
                         with open(os.path.join(summary, pdffilename), "w") as pdffile:
                             fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
-                            ax = fig.add_subplot(1, 1, 1,
-                                xlim=( 0, 1.01 * xmax["time"]["propagate"] ))
+                            ax = fig.add_subplot(1, 1, 1)
                             ax.set_title(results["label"], fontsize=8)
                             ax.set_xlabel(results["x-label"], fontsize=8)
                             ax.set_ylabel("time speed-up\n%s (from-scratch) / X (propagate)" % ( baseline, ), fontsize=8, multialignment="center")
@@ -506,6 +505,8 @@ if __name__ == "__main__":
                                     for xvalue, yvalue in table["time"]["propagate"][module].iteritems() ))
                                 print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(speedup, "9.3g") for speedup in speedups ) )
                                 ax.plot(xvalues, speedups, clip_on=False, label=module, markeredgecolor="none", **styles[module, "propagate"])
+                            ax.set_xbound(lower=0)
+                            ax.set_ybound(lower=0)
 
                             try:
                                 ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
@@ -525,8 +526,7 @@ if __name__ == "__main__":
                         pdffilename = "%s-%s-details.pdf" % ( label, module )
                         with open(os.path.join(summary, pdffilename), "w") as pdffile:
                             fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
-                            ax = fig.add_subplot(1, 1, 1,
-                                xlim=( 0, 1.01 * xmax["time"]["propagate"] ))
+                            ax = fig.add_subplot(1, 1, 1)
                             ax.set_title("%s details; %s" % ( module, results["label"] ), fontsize=8)
                             ax.set_xlabel(results["x-label"], fontsize=8)
                             ax.set_ylabel("time (%s)" % ( units["time"], ), fontsize=8)
@@ -548,6 +548,8 @@ if __name__ == "__main__":
                                 print>>txtfile, "            %24s ... %s" \
                                     % ( timing, " ".join( format(yvalue, "9.3g") for yvalue in yvalues ) )
                                 ax.plot(xvalues, yvalues, clip_on=False, label="%s" % ( timing, ), markeredgecolor="none", **styles[module, timing])
+                            ax.set_xbound(lower=0)
+                            ax.set_ybound(lower=0)
 
                             try:
                                 ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
