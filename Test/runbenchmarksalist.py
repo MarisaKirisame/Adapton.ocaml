@@ -177,12 +177,16 @@ if __name__ == "__main__":
                 self.flags.pop().set()
             def run(self, flag):
                 start = time.time()
+                max_load = 0
+                min_free = float("inf")
                 while not flag.is_set():
                     elapsed = time.time() - start
                     load = os.getloadavg()
                     free = psutil.virtual_memory().free / 1024 / 1024
-                    print>>sys.stderr, "==== Elapsed: %5ds  ==== Load: %5.2f %5.2f %5.2f ==== Mem: %6dM free ====" \
-                        % ( elapsed, load[0], load[1], load[2], free )
+                    max_load = max(max_load, *load)
+                    min_free = min(min_free, free)
+                    print>>sys.stderr, "==== Elapsed: %5ds  ==== Load: %5.2f %5.2f %5.2f (max: %5.2f) ==== Mem: %6dM free (min: %6dM) ====" \
+                        % ( elapsed, load[0], load[1], load[2], max_load, free, min_free )
                     flag.wait(3)
 
         with heartbeat:
