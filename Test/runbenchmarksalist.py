@@ -180,7 +180,7 @@ if __name__ == "__main__":
                 while not flag.is_set():
                     elapsed = time.time() - start
                     load = os.getloadavg()
-                    free = psutil.virtual_memory().available / 1024 / 1024
+                    free = psutil.virtual_memory().free / 1024 / 1024
                     print>>sys.stderr, "==== Elapsed: %5ds  ==== Load: %5.2f %5.2f %5.2f ==== Mem: %6dM free ====" \
                         % ( elapsed, load[0], load[1], load[2], free )
                     flag.wait(3)
