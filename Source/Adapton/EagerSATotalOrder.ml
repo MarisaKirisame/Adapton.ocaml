@@ -65,9 +65,6 @@ module T = struct
         else
             dequeue ()
 
-    let enqueue meta = if TotalOrder.is_valid meta.start_timestamp then
-        PriorityQueue.add eager_queue meta
-
     let enqueue_dependents dependents =
         ignore (WeakDyn.fold (fun d () -> if TotalOrder.is_valid d.start_timestamp then PriorityQueue.add eager_queue d) dependents ());
         WeakDyn.clear dependents
