@@ -128,6 +128,10 @@ module Make (R : Signatures.EqualsType)
         meta.start_timestamp <- TotalOrder.null;
         meta.end_timestamp <- TotalOrder.null;
         WeakDyn.clear meta.dependents
+    let update m x = if not (R.equal m.value x) then begin
+        m.value <- x;
+        enqueue_dependents m.meta.dependents
+    end
     (**/**)
 
     (** Create an eager self-adjusting value from a constant value. *)
@@ -153,10 +157,7 @@ module Make (R : Signatures.EqualsType)
         TotalOrder.reset_invalidator m.meta.start_timestamp;
         m.meta.start_timestamp <- TotalOrder.null;
         m.meta.end_timestamp <- TotalOrder.null;
-        if not (R.equal m.value x) then begin
-            m.value <- x;
-            enqueue_dependents m.meta.dependents
-        end
+        update m x
 
     (**/**) (* helper function to evaluate a thunk *)
     let evaluate_meta meta f =
@@ -170,12 +171,7 @@ module Make (R : Signatures.EqualsType)
         eager_stack := List.tl !eager_stack;
         value
 
-    let evaluate_actual m f =
-        let x = evaluate_meta m.meta f in
-        if not (R.equal m.value x) then begin
-            m.value <- x;
-            enqueue_dependents m.meta.dependents
-        end
+    let make_evaluate m f = fun () -> update m (evaluate_meta m.meta f)
     (**/**)
 
     (** Create an eager self-adjusting value from a thunk. *)
@@ -191,7 +187,7 @@ module Make (R : Signatures.EqualsType)
         TotalOrder.set_invalidator meta.start_timestamp (invalidator meta);
         let m = { value=evaluate_meta meta f; meta } in
         meta.end_timestamp <- add_timestamp ();
-        meta.evaluate <- (fun () -> evaluate_actual m f);
+        meta.evaluate <- make_evaluate m f;
         m
 
     (** Update an eager self-adjusting value with a thunk. *)
@@ -203,13 +199,10 @@ module Make (R : Signatures.EqualsType)
         m.meta.start_timestamp <- add_timestamp ();
         m.meta.end_timestamp <- TotalOrder.null;
         TotalOrder.set_invalidator m.meta.start_timestamp (invalidator m.meta);
-        let x = evaluate_meta m.meta f in
-        if not (R.equal m.value x) then begin
-            m.value <- x;
-            enqueue_dependents m.meta.dependents
-        end;
+        let evaluate = make_evaluate m f in
+        evaluate ();
         m.meta.end_timestamp <- add_timestamp ();
-        m.meta.evaluate <- (fun () -> evaluate_actual m f)
+        m.meta.evaluate <- evaluate
 
     (* create memoizing constructors *)
     include MemoN.Make (struct
