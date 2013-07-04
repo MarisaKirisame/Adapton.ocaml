@@ -13,19 +13,20 @@ module T = struct
     type sa
 
     (** Eager self-adjusting values containing ['a]. *)
-    type 'a thunk = { (* 2 + 17 = 19 words *)
+    type 'a thunk = { (* 2 + 16 = 18 words *)
         mutable value : 'a;
         meta : meta;
     }
     (**/**) (* auxiliary types *)
-    and meta = { (* 7 + 5 + 5 = 17 words (not including closures of evaluate and unmemo as well as WeakDyn.t) *)
+    and meta = { (* 6 + 5 + 5 = 16 words (not including closures of evaluate and unmemo as well as WeakDyn.t) *)
         id : int;
         mutable evaluate : unit -> unit;
         mutable unmemo : unit -> unit;
         mutable start_timestamp : TotalOrder.t;
         mutable end_timestamp : TotalOrder.t;
-        mutable dependencies : meta list;
-        dependents : meta WeakDyn.t; (* doesn't have to be a set since it is cleared and dependents are immediately re-evaluated and re-added if updated *)
+        dependents : meta WeakDyn.t;
+        (* dependents doesn't have to be a set since it is cleared and dependents are immediately re-evaluated and re-added if updated;
+            also, start_timestamp invalidators should provide strong references to dependencies to prevent the GC from breaking the dependents graph *)
     }
     (**/**)
 
@@ -99,11 +100,8 @@ module T = struct
     let force m =
         (* add dependency to caller *)
         begin match !eager_stack with
-            | dependent::_ ->
-                WeakDyn.add m.meta.dependents dependent;
-                dependent.dependencies <- m.meta::dependent.dependencies
-            | [] ->
-                ()
+            | dependent::_ -> WeakDyn.add m.meta.dependents dependent
+            | [] -> ()
         end;
         m.value
 end
@@ -129,7 +127,6 @@ module Make (R : Signatures.EqualsType)
         meta.unmemo <- nop;
         meta.start_timestamp <- TotalOrder.null;
         meta.end_timestamp <- TotalOrder.null;
-        meta.dependencies <- [];
         WeakDyn.clear meta.dependents
     (**/**)
 
@@ -143,7 +140,6 @@ module Make (R : Signatures.EqualsType)
                 unmemo=nop;
                 start_timestamp=TotalOrder.null;
                 end_timestamp=TotalOrder.null;
-                dependencies=[];
                 dependents=WeakDyn.create 0;
             };
         } in
@@ -157,7 +153,6 @@ module Make (R : Signatures.EqualsType)
         TotalOrder.reset_invalidator m.meta.start_timestamp;
         m.meta.start_timestamp <- TotalOrder.null;
         m.meta.end_timestamp <- TotalOrder.null;
-        m.meta.dependencies <- [];
         if not (R.equal m.value x) then begin
             m.value <- x;
             enqueue_dependents m.meta.dependents
@@ -165,7 +160,6 @@ module Make (R : Signatures.EqualsType)
 
     (**/**) (* helper function to evaluate a thunk *)
     let evaluate_meta meta f =
-        meta.dependencies <- [];
         eager_stack := meta::!eager_stack;
         let value = try
             f ()
@@ -192,7 +186,6 @@ module Make (R : Signatures.EqualsType)
             unmemo=nop;
             start_timestamp=add_timestamp ();
             end_timestamp=TotalOrder.null;
-            dependencies=[];
             dependents=WeakDyn.create 0;
         } in
         TotalOrder.set_invalidator meta.start_timestamp (invalidator meta);
