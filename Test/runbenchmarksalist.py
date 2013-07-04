@@ -128,6 +128,8 @@ if __name__ == "__main__":
             output_label = os.path.basename(output)
     else:
         assert args.subparser == "benchmark"
+        if args.processes < 1 or args.processes > physical_cpu_count():
+            parser.error("-P/--processes must be between 1 and %d (the total number of physical processor cores)" % ( physical_cpu_count(), ))
         if len(set(args.input_sizes)) > 1 and len(set(args.take_counts)) > 1:
             parser.error("either -I/--input-sizes or -T/--take-counts must be given only one unique value")
         elif len(set(args.input_sizes)) == 1 and len(set(args.take_counts)) == 1:
