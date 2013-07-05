@@ -21,8 +21,8 @@ module rec SAType : sig
         val is_lazy : bool
         val hash : int -> t -> int
         val equal : t -> t -> bool
-        val force : t -> data
         val refresh : unit -> unit
+        val force : t -> data
         val const : data -> t
         val update_const : t -> data -> unit
         val thunk : (unit -> data) -> t
@@ -39,8 +39,8 @@ module type SAType = sig
     val is_lazy : bool
     val hash : int -> 'a thunk -> int
     val equal : 'a thunk -> 'a thunk -> bool
-    val force : 'a thunk -> 'a
     val refresh : unit -> unit
+    val force : 'a thunk -> 'a
     module Make (R : EqualsType) : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk
     val tweak_gc : unit -> unit
 end
@@ -61,8 +61,8 @@ module rec SAListType : sig
         val is_lazy : bool
         val hash : int -> t -> int
         val equal : t -> t -> bool
-        val force : t -> t'
         val refresh : unit -> unit
+        val force : t -> t'
         val to_list : t -> data list
         val take : t -> int -> data list
         val hd : t -> data
@@ -114,8 +114,8 @@ module type SAListType = sig
     val is_lazy : bool
     val hash : int -> 'a salist -> int
     val equal : 'a salist -> 'a salist -> bool
-    val force : 'a salist -> 'a salist'
     val refresh : unit -> unit
+    val force : 'a salist -> 'a salist'
     val to_list : 'a salist -> 'a list
     val take : 'a salist -> int -> 'a list
     val hd : 'a salist -> 'a
