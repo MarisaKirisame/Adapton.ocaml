@@ -288,20 +288,18 @@ if __name__ == "__main__":
     }
 
 
-    with Tee(sys.stderr, os.path.join(output, "summary.txt"), "w") as txtfile:
-        with open(os.path.join(output, "summary.html"), "w") as htmlfile:
-            print>>htmlfile, "<!doctype html>"
-            print>>htmlfile, "<meta charset=utf-8>"
-            print>>htmlfile, "<head>"
-            print>>htmlfile, "<title>%s</title>" % ( output_label, )
-            print>>htmlfile, "<style>figure.inline-figure { display: inline-block; margin: 0; }</style>"
-            print>>htmlfile, "</head>"
+    with open(os.path.join(output, "index.html"), "w") as htmlfile:
+        print>>htmlfile, "<!doctype html>"
+        print>>htmlfile, "<meta charset=utf-8>"
+        print>>htmlfile, "<title>%s</title>" % ( output_label, )
+        print>>htmlfile, "<style>figure.inline-figure { display: inline-block; margin: 0; }</style>"
 
+        with Tee(sys.stderr, os.path.join(output, "summary.txt"), "w") as txtfile:
             for file in files:
                 print>>txtfile, "    Summarizing %s ..." % ( file, )
                 label = file[:-8]
                 summary = os.path.join(output, label)
-                print>>htmlfile, "<h1>%s</h1>" % ( label, )
+                print>>htmlfile, "<h1 id=\"%s\">%s</h1>" % ( label, label )
 
                 try:
                     os.makedirs(summary)
@@ -562,3 +560,16 @@ if __name__ == "__main__":
                             fig.savefig(pdffile, format="pdf")
                             print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
                                 % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
+
+        import cgi
+        print>>htmlfile, "<h1 id=\"summary\">Summary</h1>"
+        print>>htmlfile, "<pre>"
+        print>>htmlfile, cgi.escape(open(os.path.join(output, "summary.txt")).read())
+        print>>htmlfile, "</pre>"
+
+        print>>htmlfile, "<style>div#header { position: fixed; top: 0; right: 0; padding: 0.5em; background: white }</style>"
+        print>>htmlfile, "<div id=\"header\">"
+        print>>htmlfile, "<a href=\"#summary\">Summary</a>"
+        for label in ( file[:-8] for file in files ):
+            print>>htmlfile, "<a href=\"#%s\">%s</a>" % ( label, label )
+        print>>htmlfile, "</div>"
