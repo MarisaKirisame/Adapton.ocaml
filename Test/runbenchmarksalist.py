@@ -198,7 +198,7 @@ if __name__ == "__main__":
             for task in args.tasks:
                 results = []
                 try:
-                    # don't use pool.apply_async, it's triggers http://bugs.python.org/issue10332
+                    # don't use pool.apply_async, it triggers http://bugs.python.org/issue10332
                     for result in pool.imap_unordered(driver, ( ( module, task, size, take, args.edit_count, args.monotonic, seed )
                             for take in args.take_counts
                             for size in args.input_sizes
