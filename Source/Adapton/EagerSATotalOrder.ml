@@ -58,12 +58,9 @@ module T = struct
         eager_now := timestamp;
         timestamp
 
-    let rec dequeue () =
-        let meta = PriorityQueue.pop eager_queue in
-        if TotalOrder.is_valid meta.start_timestamp then
-            meta
-        else
-            dequeue ()
+    let unqueue = PriorityQueue.remove eager_queue
+
+    let dequeue () = PriorityQueue.pop eager_queue
 
     let enqueue_dependents dependents =
         ignore (WeakDyn.fold (fun d () -> if TotalOrder.is_valid d.start_timestamp then PriorityQueue.add eager_queue d) dependents ());
@@ -122,8 +119,11 @@ module Make (R : Signatures.EqualsType)
         (* help GC mark phase by cutting the object graph *)
         meta.evaluate <- nop;
         meta.unmemo <- nop;
-        meta.start_timestamp <- TotalOrder.null;
-        meta.end_timestamp <- TotalOrder.null;
+        if meta.start_timestamp != TotalOrder.null then begin
+            unqueue meta;
+            meta.start_timestamp <- TotalOrder.null;
+            meta.end_timestamp <- TotalOrder.null
+        end;
         WeakDyn.clear meta.dependents
     let update m x = if not (R.equal m.value x) then begin
         m.value <- x;
@@ -151,9 +151,12 @@ module Make (R : Signatures.EqualsType)
         m.meta.unmemo ();
         m.meta.unmemo <- nop;
         m.meta.evaluate <- nop;
-        TotalOrder.reset_invalidator m.meta.start_timestamp;
-        m.meta.start_timestamp <- TotalOrder.null;
-        m.meta.end_timestamp <- TotalOrder.null;
+        if m.meta.start_timestamp != TotalOrder.null then begin
+            unqueue m.meta;
+            TotalOrder.reset_invalidator m.meta.start_timestamp;
+            m.meta.start_timestamp <- TotalOrder.null;
+            m.meta.end_timestamp <- TotalOrder.null
+        end;
         update m x
 
     (**/**) (* helper function to evaluate a thunk *)
@@ -192,7 +195,10 @@ module Make (R : Signatures.EqualsType)
         m.meta.evaluate <- nop;
         m.meta.unmemo ();
         m.meta.unmemo <- nop;
-        TotalOrder.reset_invalidator m.meta.start_timestamp;
+        if m.meta.start_timestamp != TotalOrder.null then begin
+            unqueue m.meta;
+            TotalOrder.reset_invalidator m.meta.start_timestamp
+        end;
         m.meta.start_timestamp <- add_timestamp ();
         m.meta.end_timestamp <- TotalOrder.null;
         TotalOrder.set_invalidator m.meta.start_timestamp (invalidator m.meta);

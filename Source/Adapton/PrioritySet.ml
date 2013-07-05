@@ -7,6 +7,7 @@ module type S = sig
     val create : unit -> t
     val add : t -> data -> unit
     val pop : t -> data
+    val remove : t -> data -> unit
 end
 
 module Make (O : Set.OrderedType) = struct
@@ -39,4 +40,16 @@ module Make (O : Set.OrderedType) = struct
             value
         | Null ->
             raise Empty
+
+    let rec remove queue x = match !queue with
+        | Node ( value, left, right ) ->
+            let dir = O.compare x value in
+            if dir == 0 then
+                queue := try Node ( pop right, left, right ) with Empty -> !left
+            else if dir < 0 then
+                remove left x
+            else
+                remove right x
+        | Null ->
+            ()
 end
