@@ -51,13 +51,13 @@ end = struct
 
     (**/**) (* sentinel values *)
     let rec null_parent = {
-        parent_label=(-1);
+        parent_label=min_int;
         parent_next=null_parent;
         parent_prev=null_parent;
         front=null;
         back=null;
     } and null = {
-        label=(-1);
+        label=min_int;
         parent=null_parent;
         prev=null;
         next=null;
@@ -82,8 +82,11 @@ end = struct
         } in
         ts
 
+    (** Return if a total-order element is the initial element (i.e., that was returned by [create]). *)
+    let is_initial ts = ts.label == 0 && ts.parent.parent_label == 0
+
     (** Return if a total-order element is valid (i.e., has not been removed). *)
-    let is_valid ts = ts.label >= 0 && ts.parent.parent_label >= 0
+    let is_valid ts = ts.label > 0 && ts.parent.parent_label >= 0
 
     (**/**) (* helper functions *)
     let neg = (lor) min_int
@@ -112,12 +115,13 @@ end = struct
 
     (** Compare two total-order elements. *)
     let compare ts ts' =
+        if ts == null || ts' == null then failwith "compare";
         let p = Pervasives.compare (pos ts.parent.parent_label) (pos ts'.parent.parent_label) in
         if p != 0 then p else Pervasives.compare (pos ts.label) (pos ts'.label)
 
     (** Add a new total-order element after the given element. *)
     let add_next ts =
-        if not (is_valid ts) then failwith "add_next";
+        if not (is_valid ts or is_initial ts) then failwith "add_next";
 
         let parent = ts.parent in
         let ts' = if ts.next != null then begin
@@ -216,10 +220,10 @@ end = struct
                         in
                         rebalance lower label
                     end;
-                    rebalance 0 parent' next next
+                    rebalance (if parent'.parent_label == 0 then 0 else 1) parent' next next
                 end
             in
-            rebalance 0 parent parent.front parent.front
+            rebalance (if parent.parent_label == 0 then 0 else 1) parent parent.front parent.front
         end;
         ts'
 
