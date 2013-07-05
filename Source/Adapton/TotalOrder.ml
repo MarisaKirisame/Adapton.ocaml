@@ -18,7 +18,7 @@ module T : sig
     val is_valid : t -> bool
     val compare : t -> t -> int
     val add_next : t -> t
-    val splice : t -> t -> unit
+    val splice : ?inclusive:bool -> t -> t -> unit
     val set_invalidator : t -> (unit -> unit) -> unit
     val reset_invalidator : t -> unit
 end = struct
@@ -227,8 +227,9 @@ end = struct
         end;
         ts'
 
-    (** Splice two elements [ts] and [ts'] in a total-order such that [ts] is immediately followed by [ts'], removing all elements between them. *)
-    let splice ts ts' =
+    (** Splice two elements [ts] and [ts'] in a total-order such that, [ts] is immediately followed by [ts'], removing all elements between them;
+        optionally, if [inclusive] is [true], [ts] and [ts'] will also be removed. *)
+    let splice ?(inclusive=false) ts ts' =
         if compare ts ts' > 0 then invalid_arg "TotalOrder.splice";
 
         if ts.parent != ts'.parent then begin
@@ -281,6 +282,36 @@ end = struct
             invalidate_next ts.next;
             ts'.prev <- ts;
             ts.next <- ts'
+        end;
+
+        if inclusive then begin
+            let remove ts =
+                if ts.prev == null then begin
+                    if ts.next == null then begin
+                        if ts.parent.parent_next != null_parent then
+                            ts.parent.parent_next.parent_prev <- ts.parent.parent_prev;
+                        if ts.parent.parent_prev != null_parent then
+                            ts.parent.parent_prev.parent_next <- ts.parent.parent_next;
+                        invalidate_parent ts.parent
+                    end else begin
+                        ts.next.prev <- null;
+                        ts.parent.front <- ts.next;
+                        invalidate ts
+                    end
+                end else begin
+                    if ts.next == null then begin
+                        ts.prev.next <- null;
+                        ts.parent.back <- ts.prev;
+                        invalidate ts
+                    end else begin
+                        ts.prev.next <- ts.next;
+                        ts.next.prev <- ts.prev;
+                        invalidate ts
+                    end
+                end
+            in
+            if not (is_initial ts) then remove ts;
+            if ts' != ts then remove ts'
         end
 
     (** Set an invalidator function for the given total-order element. *)

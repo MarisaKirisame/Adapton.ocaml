@@ -154,6 +154,7 @@ module Make (R : Signatures.EqualsType)
         if m.meta.start_timestamp != TotalOrder.null then begin
             unqueue m.meta;
             TotalOrder.reset_invalidator m.meta.start_timestamp;
+            TotalOrder.splice ~inclusive:true m.meta.start_timestamp m.meta.end_timestamp;
             m.meta.start_timestamp <- TotalOrder.null;
             m.meta.end_timestamp <- TotalOrder.null
         end;
@@ -197,7 +198,8 @@ module Make (R : Signatures.EqualsType)
         m.meta.unmemo <- nop;
         if m.meta.start_timestamp != TotalOrder.null then begin
             unqueue m.meta;
-            TotalOrder.reset_invalidator m.meta.start_timestamp
+            TotalOrder.reset_invalidator m.meta.start_timestamp;
+            TotalOrder.splice ~inclusive:true m.meta.start_timestamp m.meta.end_timestamp
         end;
         m.meta.start_timestamp <- add_timestamp ();
         m.meta.end_timestamp <- TotalOrder.null;
