@@ -115,13 +115,13 @@ end = struct
 
     (** Compare two total-order elements. *)
     let compare ts ts' =
-        if ts == null || ts' == null then failwith "compare";
+        if ts == null || ts' == null then invalid_arg "TotalOrder.compare";
         let p = Pervasives.compare (pos ts.parent.parent_label) (pos ts'.parent.parent_label) in
         if p != 0 then p else Pervasives.compare (pos ts.label) (pos ts'.label)
 
     (** Add a new total-order element after the given element. *)
     let add_next ts =
-        if not (is_valid ts or is_initial ts) then failwith "add_next";
+        if not (is_valid ts or is_initial ts) then invalid_arg "TotalOrder.add_next";
 
         let parent = ts.parent in
         let ts' = if ts.next != null then begin
@@ -229,11 +229,9 @@ end = struct
 
     (** Splice two elements [ts] and [ts'] in a total-order such that [ts] is immediately followed by [ts'], removing all elements between them. *)
     let splice ts ts' =
-        if compare ts ts' > 0 then failwith "splice";
+        if compare ts ts' > 0 then invalid_arg "TotalOrder.splice";
 
         if ts.parent != ts'.parent then begin
-            if ts.parent.parent_next == null_parent then failwith "splice";
-
             (* invalidate all parents between ts and ts' *)
             let rec invalidate_next parent =
                 if parent == ts'.parent then
@@ -269,8 +267,6 @@ end = struct
             invalidate_next ts.next;
             ts.next <- null
         end else if ts != ts' then begin
-            if ts.next == null then failwith "splice";
-
             (* invalidate all elements between ts and ts' *)
             let rec invalidate_next ts =
                 if ts == ts' then
@@ -289,10 +285,12 @@ end = struct
 
     (** Set an invalidator function for the given total-order element. *)
     let set_invalidator ts invalidator =
+        if not (is_valid ts) then invalid_arg "TotalOrder.set_invalidator";
         ts.invalidator <- invalidator
 
     (** Reset the invalidator function for the given total-order element. *)
     let reset_invalidator ts =
+        if not (is_valid ts) then invalid_arg "TotalOrder.reset_invalidator";
         ts.invalidator <- nop
 end
 include T
