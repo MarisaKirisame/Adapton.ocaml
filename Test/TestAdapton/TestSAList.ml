@@ -48,19 +48,10 @@ let make_regression_testsuite name (module L : Adapton.Signatures.SAListType) =
                         end else
                             let k = abs k mod n in
                             if i then begin
-                                let rec insert k xs' = match I.force xs' with
-                                    | `Cons ( x', xs' ) when k > 0 -> insert (pred k) xs'
-                                    | _ -> I.push x xs'
-                                in
-                                insert k xs';
+                                I.insert k x xs';
                                 succ n
                             end else begin
-                                let rec delete k xs' = match I.force xs' with
-                                    | `Cons ( x', xs' ) when k > 0 -> delete (pred k) xs'
-                                    | `Cons _ -> ignore (I.pop xs')
-                                    | `Nil -> failwith "delete"
-                                in
-                                delete k xs';
+                                ignore (I.remove k xs');
                                 pred n
                             end
                     end n ks end;

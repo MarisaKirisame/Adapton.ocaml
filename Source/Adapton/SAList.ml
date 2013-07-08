@@ -135,6 +135,26 @@ module Make (M : Signatures.SAType)
             | `Cons ( x', xs' ) -> update_const xs (force xs'); x'
             | `Nil -> failwith "pop"
 
+        (** Update the [k]th element of a self-adjusting list to insert a value [x]. *)
+        let insert k x xs =
+            if k < 0 then invalid_arg "insert";
+            let rec insert k xs = match force xs with
+                | `Cons ( _, xs ) when k > 0 -> insert (k - 1) xs
+                | `Nil when k > 0 -> failwith "insert"
+                | `Cons _ | `Nil -> push x xs
+            in
+            insert k xs
+
+        (** Update the [k]th element of a self-adjusting list to remove a value and return it. *)
+        let remove k xs =
+            if k < 0 then invalid_arg "remove";
+            let rec remove k xs = match force xs with
+                | `Cons ( _, xs ) when k > 0 -> remove (k - 1) xs
+                | `Cons _ -> pop xs
+                | `Nil -> failwith "remove"
+            in
+            remove k xs
+
         (** Create memoizing constructor that concatenate two self-adjusting lists. *)
         let memo_append =
             memo2 (module L) (module L) begin fun append xs ys -> match force xs with

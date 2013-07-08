@@ -75,6 +75,8 @@ module rec SAListType : sig
         val of_list : data list -> t
         val push : data -> t -> unit
         val pop : t -> data
+        val insert : int -> data -> t -> unit
+        val remove : int -> t -> data
         val memo_append : t -> t -> t
         val memo_filter : (data -> bool) -> (t -> t)
         val memo_filter_with_key
