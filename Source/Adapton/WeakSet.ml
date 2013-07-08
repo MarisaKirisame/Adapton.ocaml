@@ -95,8 +95,9 @@ module Make (H : Hashtbl.HashedType) = struct
             let rec find j result =
                 let k = (i + j) mod xs.size in
                 if j < window then match Weak.get xs.array k with
-                    | Some x' -> if H.equal x x' then `Found x' else find (j + 1) result
-                    | None -> find (j + 1) (`Empty k)
+                    | Some x' when H.equal x x' -> `Found x'
+                    | Some _ -> find (j + 1) result
+                    | None -> find (j + 1) (if result == `Not_found then `Empty k else result)
                 else
                     result
             in
