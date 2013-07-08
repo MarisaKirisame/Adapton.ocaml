@@ -14,12 +14,13 @@ module Make (H : Hashtbl.HashedType) = struct
 
     type t = {
         mutable size : int;
+        mutable extent : int;
         mutable array : H.t Weak.t;
     }
 
     type data = H.t
 
-    let create n = { size=0; array=Weak.create (max 1 n) }
+    let create n = { size=0; extent=0; array=Weak.create (max 1 n) }
 
     let clear xs = if xs.size <= limit then xs.size <- 0 else xs.array <- Weak.create xs.size
 
@@ -93,16 +94,27 @@ module Make (H : Hashtbl.HashedType) = struct
             let i = H.hash x mod xs.size in
             let window = max limit (xs.size / 4) in
             let rec find j result =
-                let k = (i + j) mod xs.size in
-                if j < window then match Weak.get xs.array k with
-                    | Some x' when H.equal x x' -> `Found x'
-                    | Some _ -> find (j + 1) result
-                    | None -> find (j + 1) (if result == `Not_found then `Empty k else result)
-                else
-                    result
+                if j <= xs.extent then
+                    let k = (i + j) mod xs.size in
+                    match Weak.get xs.array k with
+                        | Some x' when H.equal x x' -> x'
+                        | Some _ -> find (j + 1) result
+                        | None -> find (j + 1) (if result == None then Some ( j, k ) else result)
+                else match result with
+                    | Some ( j, k ) ->
+                        xs.extent <- max j xs.extent; Weak.set xs.array k (Some x); x
+                    | None ->
+                        let rec find j =
+                            if j < window then
+                                let k = (i + j) mod xs.size in
+                                match Weak.get xs.array k with
+                                    | Some _ -> find (j + 1)
+                                    | None -> xs.extent <- max j xs.extent; Weak.set xs.array k (Some x); x
+                            else begin
+                                resize (); merge xs x
+                            end
+                        in
+                        find j
             in
-            match find 0 `Not_found with
-                | `Found x -> x
-                | `Empty k -> Weak.set xs.array k (Some x); x
-                | `Not_found -> resize (); merge xs x
+            find 0 None
 end
