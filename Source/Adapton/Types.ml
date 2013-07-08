@@ -79,7 +79,7 @@ end
 (** Counter. *)
 module Counter = struct
     type t = int ref
-    let make = ref
+    let make x : t = ref x
     let next c = let x = !c in incr c; x
 end
 
