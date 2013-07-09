@@ -115,7 +115,7 @@ module Make (R : Signatures.EqualsType)
 
     (**/**) (* helper functions *)
     let nop () = ()
-    let invalidator meta () =
+    let invalidator meta ts =
         (* help GC mark phase by cutting the object graph *)
         (* no need to call unmemo since the memo entry will be replaced when it sees start_timestamp is invalid;
             also, no need to replace {start,end}_timestamp with null since they are already cut by TotalOrder during invalidation *)

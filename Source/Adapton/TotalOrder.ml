@@ -19,7 +19,7 @@ module T : sig
     val compare : t -> t -> int
     val add_next : t -> t
     val splice : ?inclusive:bool -> t -> t -> unit
-    val set_invalidator : t -> (unit -> unit) -> unit
+    val set_invalidator : t -> (t -> unit) -> unit
     val reset_invalidator : t -> unit
 end = struct
     let threshold = 1.4 (* rebalancing region threshold (inverse density) *)
@@ -42,11 +42,11 @@ end = struct
         mutable parent : parent;
         mutable next : t;
         mutable prev : t;
-        mutable invalidator : unit -> unit;
+        mutable invalidator : t -> unit;
     }
 
     (**/**) (* helper functions *)
-    let nop () = ()
+    let nop _ = ()
     (**/**)
 
     (**/**) (* sentinel values *)
@@ -93,7 +93,7 @@ end = struct
     let pos = (land) (lnot min_int)
     let invalidate ts =
         ts.label <- neg ts.label;
-        ts.invalidator ();
+        ts.invalidator ts;
         (* help GC mark phase by cutting the object graph *)
         ts.invalidator <- nop;
         ts.prev <- null;
