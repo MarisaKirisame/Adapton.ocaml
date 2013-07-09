@@ -20,15 +20,14 @@ Quick-start
         % make repl
                 OCaml version 4.00.1
 
-        # module Int = struct
-            type t = int
-            let hash x = x
-            let equal = (==)
-        end;;
-        # module IntList = Adapton.Default.SAList.Make (Int);;
+        # module IntList = Adapton.Default.SAList.Make (Adapton.Types.Int);;
         # let xs = IntList.of_list [1;2;3];;
-        # let filter_gt_1, _ = IntList.filter (fun x -> x > 1);;
-        # let map_succ, _ = IntList.map (module Int) succ;;
+        # let filter_gt_1 = IntList.memo_filter (fun x -> x > 1);;
+        # let map_succ = IntList.memo_map (module IntList) succ;;
         # let ys = filter_gt_1 xs;;
-        # let zs = map_succ xs;;
-        # IntList.to_list ys;;
+        # let zs = map_succ ys;;
+        # IntList.to_list zs;;
+        - : IntList.data list = [3; 4]
+        # IntList.insert 0 10 xs;;
+        # IntList.to_list zs;;
+        - : IntList.data list = [11; 3; 4]
