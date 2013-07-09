@@ -22,8 +22,8 @@ module T = struct
         id : int;
         mutable evaluate : unit -> unit;
         mutable unmemo : unit -> unit;
-        mutable start_timestamp : TotalOrder.t;
-        mutable end_timestamp : TotalOrder.t;
+        mutable start_timestamp : TotalOrder.t; (* for const thunks, {start,end}_timestamp == TotalOrder.null and evaluate == nop *)
+        mutable end_timestamp : TotalOrder.t; (* while evaluating non-const thunk, end_timestamp == TotalOrder.null *)
         dependents : meta WeakDyn.t;
         (* dependents doesn't have to be a set since it is cleared and dependents are immediately re-evaluated and re-added if updated;
             also, start_timestamp invalidators should provide strong references to dependencies to prevent the GC from breaking the dependents graph *)
@@ -117,13 +117,11 @@ module Make (R : Signatures.EqualsType)
     let nop () = ()
     let invalidator meta () =
         (* help GC mark phase by cutting the object graph *)
-        meta.evaluate <- nop;
+        (* no need to call unmemo since the memo entry will be replaced when it sees start_timestamp is invalid;
+            also, no need to replace {start,end}_timestamp with null since they are already cut by TotalOrder during invalidation *)
         meta.unmemo <- nop;
-        if meta.start_timestamp != TotalOrder.null then begin
-            unqueue meta;
-            meta.start_timestamp <- TotalOrder.null;
-            meta.end_timestamp <- TotalOrder.null
-        end;
+        meta.evaluate <- nop;
+        unqueue meta;
         WeakDyn.clear meta.dependents
     let update m x = if not (R.equal m.value x) then begin
         m.value <- x;
@@ -148,10 +146,10 @@ module Make (R : Signatures.EqualsType)
 
     (** Update an eager self-adjusting value with a constant value. *)
     let update_const m x =
-        m.meta.unmemo ();
-        m.meta.unmemo <- nop;
-        m.meta.evaluate <- nop;
         if m.meta.start_timestamp != TotalOrder.null then begin
+            (* no need to call unmemo since the memo entry will be replaced when it sees start_timestamp is invalid *)
+            m.meta.unmemo <- nop;
+            m.meta.evaluate <- nop;
             unqueue m.meta;
             TotalOrder.reset_invalidator m.meta.start_timestamp;
             TotalOrder.splice ~inclusive:true m.meta.start_timestamp m.meta.end_timestamp;
@@ -185,28 +183,28 @@ module Make (R : Signatures.EqualsType)
             end_timestamp=TotalOrder.null;
             dependents=WeakDyn.create 0;
         } in
-        TotalOrder.set_invalidator meta.start_timestamp (invalidator meta);
         let m = { value=evaluate_meta meta f; meta } in
         meta.end_timestamp <- add_timestamp ();
+        TotalOrder.set_invalidator meta.start_timestamp (invalidator meta);
         meta.evaluate <- make_evaluate m f;
         m
 
     (** Update an eager self-adjusting value with a thunk. *)
     let update_thunk m f =
-        m.meta.evaluate <- nop;
-        m.meta.unmemo ();
-        m.meta.unmemo <- nop;
         if m.meta.start_timestamp != TotalOrder.null then begin
+            m.meta.unmemo ();
+            m.meta.unmemo <- nop;
+            m.meta.evaluate <- nop;
             unqueue m.meta;
             TotalOrder.reset_invalidator m.meta.start_timestamp;
-            TotalOrder.splice ~inclusive:true m.meta.start_timestamp m.meta.end_timestamp
+            TotalOrder.splice ~inclusive:true m.meta.start_timestamp m.meta.end_timestamp;
+            m.meta.end_timestamp <- TotalOrder.null
         end;
         m.meta.start_timestamp <- add_timestamp ();
-        m.meta.end_timestamp <- TotalOrder.null;
-        TotalOrder.set_invalidator m.meta.start_timestamp (invalidator m.meta);
         let evaluate = make_evaluate m f in
         evaluate ();
         m.meta.end_timestamp <- add_timestamp ();
+        TotalOrder.set_invalidator m.meta.start_timestamp (invalidator m.meta);
         m.meta.evaluate <- evaluate
 
     (* create memoizing constructors *)
