@@ -1,4 +1,4 @@
-(** Bidirectional variant of lazy self-adjusting values based on {!LazySANaive}. *)
+(** Lazy variant of self-adjusting values based on a push-pull dependency graph. *)
 
 (** Types and operations common to lazy self-adjusting values containing any type. *)
 module T = struct
