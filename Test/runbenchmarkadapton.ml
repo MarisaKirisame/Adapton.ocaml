@@ -43,6 +43,7 @@ let tasks = [
     ( "mergesort", `List list_mergesort_task );
     ( "updown1", `Flip list_updown1_task );
     ( "updown2", `Flip list_updown2_task );
+    ( "exptree", `ExpTree );
 ]
 
 let opt_sa = ref (fst (List.hd Adapton.All.sa_list))
@@ -68,11 +69,205 @@ let show_config () =
         ignore (List.fold_left (fun b x -> Printf.fprintf ff "%(%)%a" b printer x; ", ") "" list)
     in
     let task_printer ff task =
-        Printf.fprintf ff "{ \"name\": %S, \"take\": %S }" (fst task) (match snd task with `One _ -> "one" | `List _ -> "list" | `Flip _ -> "flip")
+        Printf.fprintf ff "{ \"name\": %S, \"take\": %S }"
+            (fst task) (match snd task with `One _ -> "one" | `List _ -> "list" | `Flip _ -> "flip" | `ExpTree -> "exptree")
     in
     Printf.printf "{ \"modules\": [ %a ], \"tasks\": [ %a ] }\n%!"
         (list_printer (fun ff -> Printf.fprintf ff "%S")) (fst (List.split Adapton.All.sa_list))
         (list_printer task_printer) tasks;
+    exit 0
+
+let exptree (module SA : Adapton.Signatures.SAType) rng =
+    if !opt_input_size < 4 then begin
+        Printf.eprintf "Task %s only supports -I n where n >= 4\n%!" !opt_task;
+        exit 1
+    end;
+    if !opt_take_count != 1 then begin
+        Printf.eprintf "Task %s only supports -T 1\n%!" !opt_task;
+        exit 1
+    end;
+    let module F = SA.Make (Adapton.Types.Float) in
+    let module E = struct
+        type e = e' SA.thunk
+        and e' = Num of float | Op of op * e * e
+        and op = Plus | Mul | Minus | Div
+        module E = SA.Make (struct
+            type t = e'
+            let hash seed = function
+                | Num f -> Hashtbl.seeded_hash seed f
+                | Op  ( op, x, y ) -> SA.hash (SA.hash (Hashtbl.seeded_hash seed op) x) y
+            let equal x y = x == y || match x, y with
+                | Num x, Num y -> x == y
+                | Op ( op1, x1, y1 ), Op ( op2, x2, y2 ) -> op1 == op2 && SA.equal x1 x2 && SA.equal y1 y2
+                | _ -> false
+        end)
+        include E
+        let rand_num () = Num (Random.State.float rng 1.0)
+        let rand_op x y =
+            let op = if Random.State.bool rng then
+                if Random.State.bool rng then Plus else Mul
+            else
+                if Random.State.bool rng then Minus else Div
+            in
+            if Random.State.bool rng then
+                Op ( op, x, y )
+            else
+                Op ( op, y, x )
+        let eval = F.memo (module E) begin fun eval e -> match E.force e with
+            | Num f -> f
+            | Op ( Plus, x, y ) -> F.force (eval x) +. F.force (eval y)
+            | Op ( Mul, x, y ) -> F.force (eval x) *. F.force (eval y)
+            | Op ( Minus, x, y ) -> F.force (eval x) -. F.force (eval y)
+            | Op ( Div, x, y ) -> let y = F.force (eval y) in F.force (eval x) /. (if y == 0. then 1. else y)
+        end
+    end in
+    SA.tweak_gc ();
+    Gc.compact ();
+    let start_time = get_time () in
+
+    let x =
+        let rec make_xs n acc = if n > 0 then
+            make_xs (n - 1) (E.const (E.rand_num ())::acc)
+        else
+            let rec make_xs acc n = function
+                | x::y::rest ->
+                    let x = if Random.State.bool rng then
+                        if Random.State.bool rng then E.Op ( E.Plus, x, y ) else E.Op ( E.Mul, x, y )
+                    else
+                        if Random.State.bool rng then E.Op ( E.Minus, x, y ) else E.Op ( E.Div, x, y )
+                    in
+                    make_xs (E.const x::acc) (n + 1) rest
+                | y::[] when n > 0 -> make_xs [] 0 (y::acc)
+                | y::[] -> y
+                | [] -> make_xs [] 0 acc
+            in
+            make_xs [] 0 acc
+        in
+        make_xs !opt_input_size []
+    in
+
+    Printf.eprintf "%t\n%!" header;
+    begin try
+        let take, setup_stats = measure begin fun () ->
+            let y = E.eval x in
+            let take () = ignore (F.force y) in
+            take ();
+            take
+        end in
+        let setup_stats = finish setup_stats 1 in
+        let setup_top_heap_stack = get_top_heap_stack () in
+
+        if SA.is_self_adjusting then begin
+            let half = int_of_float (floor (log (float_of_int !opt_input_size) /. log 2. /. 2.)) in
+            let rec do_edits past n update_stats take_stats edit_count =
+                if n == 0 then
+                    ( update_stats, take_stats, edit_count )
+                else begin
+                    let past =
+                        let now = get_time () in
+                        if now -. past < 20. then
+                            past
+                        else begin
+                            let heap, stack = get_top_heap_stack () in
+                            Printf.eprintf "%t edit %10d %9.2fMB %9.2fMB\n%!"
+                                header n (word_megabytes heap) (word_megabytes stack);
+                            now
+                        end
+                    in
+
+                    let update_stats', take_stats', edit_count' = if !opt_monotonic then
+                        (* add/remove one leaf *)
+                        let rec change add x = match E.force x with
+                            | E.Op ( op, a, b ) ->
+                                let dir = Random.State.bool rng in
+                                let y = if dir then a else b in
+                                begin match E.force y with
+                                    | E.Num _ as z ->
+                                        if add then
+                                            E.update_const y (E.rand_op (E.const z) (E.const (E.rand_num ())))
+                                        else
+                                            E.update_const x (E.force (if dir then b else a))
+                                    | _ ->
+                                        change add y
+                                end
+                            | E.Num _ ->
+                                failwith "change"
+                        in
+
+                        let (), update_stats = measure (fun () -> change false x) in
+                        let (), take_stats = measure (fun () -> SA.refresh (); take ()) in
+                        let (), update_stats' = measure (fun () -> change true x) in
+                        let (), take_stats' = measure (fun () -> SA.refresh (); take ()) in
+
+                        ( add update_stats update_stats', add take_stats take_stats', 2 )
+                    else
+                        (* swap two nodes *)
+                        let rec pick n x =
+                            if n == 0 then x else match E.force x with
+                                | E.Op ( op, a, b ) ->
+                                    let dir = Random.State.bool rng in
+                                    pick (n - 1) (if dir then a else b)
+                                | E.Num _ ->
+                                    failwith "pick"
+                        in
+                        let a = pick half x in
+                        let b =
+                            let rec pick_b () = let b = pick half x in if b == a then pick_b () else b in
+                            pick_b ()
+                        in
+                        let (), update_stats = measure begin fun () -> match E.force a, E.force b with
+                            | E.Op ( aop, a1, a2 ), E.Op ( bop, b1, b2 ) ->
+                                if Random.State.bool rng then
+                                    if Random.State.bool rng then begin
+                                        E.update_const a (E.Op ( aop, a1, b1 ));
+                                        E.update_const b (E.Op ( bop, a2, b2 ));
+                                    end else begin
+                                        E.update_const a (E.Op ( aop, b2, a2 ));
+                                        E.update_const b (E.Op ( bop, b1, a1 ));
+                                    end
+                                else
+                                    if Random.State.bool rng then begin
+                                        E.update_const a (E.Op ( aop, b1, a2 ));
+                                        E.update_const b (E.Op ( bop, a1, b2 ));
+                                    end else begin
+                                        E.update_const a (E.Op ( aop, a1, b2 ));
+                                        E.update_const b (E.Op ( bop, b1, a2 ));
+                                    end
+                            | _ ->
+                                failwith "swap"
+                        end in
+
+                        let (), take_stats = measure (fun () -> SA.refresh (); take ()) in
+
+                        ( update_stats, take_stats, 1 )
+                    in
+
+                    do_edits past (pred n)
+                        (add update_stats update_stats')
+                        (add take_stats take_stats')
+                        (edit_count + edit_count')
+                end
+            in
+            let update_stats, take_stats, edit_count = do_edits 0. !opt_edit_count zero zero 0 in
+            let edit_top_heap_stack = get_top_heap_stack () in
+            let update_stats = finish update_stats !opt_edit_count in
+            let take_stats = finish take_stats !opt_edit_count in
+            Printf.printf "{ \"setup\": { %a, %a }, \"edits\": { \"update\": { %a }, \"take\": { %a }, %a }, %s }\n%!"
+                stats setup_stats max_heap_stack setup_top_heap_stack stats update_stats stats take_stats max_heap_stack edit_top_heap_stack units;
+            Printf.eprintf "%t ... done (%9.2fs) %9.3gs edit %9.3gs\n%!"
+                header (get_time () -. start_time) setup_stats.time (update_stats.time +. take_stats.time)
+        end else begin
+            Printf.printf "{ \"setup\": { %a, %a }, %s }\n%!"
+                stats setup_stats max_heap_stack setup_top_heap_stack units;
+            Printf.eprintf "%t ... done (%9.2fs) %9.3gs\n%!" header (get_time () -. start_time) setup_stats.time
+        end
+
+    with e ->
+        let err = Printexc.to_string e in
+        Printf.printf ("{ \"error\": %S }\n%!") err;
+        Printf.eprintf "%s\n%!" err;
+        Printf.eprintf "%t ... done (%9.2fs)\n%!" header (get_time () -. start_time)
+    end;
     exit 0
 
 let _ =
@@ -90,6 +285,10 @@ let _ =
     let rng = Random.State.make [| !opt_random_seed |] in
     Random.init (Random.State.bits rng);
     let module SA = (val (List.assoc !opt_sa Adapton.All.sa_list)) in
+    begin match List.assoc !opt_task tasks with
+        | `ExpTree -> exptree (module SA) rng
+        | _ -> ()
+    end;
     let module SABool = SA.Make (Adapton.Types.Bool) in
     let module SAList = Adapton.SAList.Make (SA) in
     let module SAFloatList = SAList.Make (Adapton.Types.Float) in
@@ -110,6 +309,8 @@ let _ =
                 exit 1
             end;
             `Flip (task (module SAFloatList) (module SABool))
+        | `ExpTree ->
+            failwith "exptree"
     in
 
     let start_time = get_time () in
@@ -137,6 +338,8 @@ let _ =
                 | `Flip task ->
                     let ys = task xs b in
                     (fun () -> ignore (SAFloatList.take ys !opt_take_count))
+                | `ExpTree ->
+                    failwith "exptree"
             in
             take ();
             take
@@ -247,6 +450,9 @@ let _ =
                             let (), take_stats' = measure (fun () -> SA.refresh (); take ()) in
 
                             ( add update_stats update_stats', add take_stats take_stats', 2 )
+
+                        | `ExpTree ->
+                            failwith "exptree"
                     in
 
                     do_edits past (pred n)

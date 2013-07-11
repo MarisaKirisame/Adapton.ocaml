@@ -73,13 +73,13 @@ if __name__ == "__main__":
     benchmark.add_argument("-t", "--tasks", metavar="TASK",
         help="apply benchmark to %(metavar)s(s) (default: \"%(default)s\")", nargs="+", default=config["tasks"], choices=config["tasks"])
     benchmark.add_argument("-I", "--input-sizes", metavar="SIZE",
-        help="run benchmarks with input list size (default: 100000 10000 1000 100 50000 5000 500 50 200000 20000 2000 200 20)",
+        help="run benchmarks with input size (default: 100000 10000 1000 100 50000 5000 500 50 200000 20000 2000 200 20)",
         nargs="+", default=( 100000, 10000, 1000, 100, 50000, 5000, 500, 50, 20000, 2000, 200, 20 ), type=int)
-    benchmark.add_argument("-T", "--take-counts", metavar="TAKE", help="take only the first %(metavar)s elements of each output list (default: 1)",
+    benchmark.add_argument("-T", "--take-counts", metavar="TAKE", help="take only the first %(metavar)s elements of each output (default: 1)",
         nargs="+", default=( 1, ), type=int)
-    benchmark.add_argument("-E", "--edit-count", metavar="COUNT", help="average self-adjusting benchmarks over %(metavar)s list edits ",
+    benchmark.add_argument("-E", "--edit-count", metavar="COUNT", help="average self-adjusting benchmarks over %(metavar)s edits ",
         default=250, type=int)
-    benchmark.add_argument("-M", "--monotonic", help="make monotonic list edits ", action="store_true")
+    benchmark.add_argument("-M", "--monotonic", help="make monotonic edits ", action="store_true")
     benchmark.add_argument("-S", "--random-seeds", metavar="SEED", help="run benchmark for seeds (default: 5 random seeds)",
         nargs="+", default=random.sample(xrange(sys.maxint >> 1), 5), type=int)
 
@@ -137,9 +137,13 @@ if __name__ == "__main__":
             parser.error("either -I/--input-sizes or -T/--take-counts must be given only one unique value")
         elif len(set(args.input_sizes)) == 1 and len(set(args.take_counts)) == 1:
             parser.error("-I/--input-sizes and -T/--take-counts must not both be given only one unique value each")
+        if min(args.input_sizes) < 4:
+            for task in args.tasks:
+                if config["takes"][task] == "exptree":
+                    parser.error("-t/--tasks \"%s\" only supports -I/--input-sizes n where n >= 4" % ( task, ))
         if len(set(args.take_counts)) > 1 or any(take != 1 for take in args.take_counts):
             for task in args.tasks:
-                if config["takes"][task] == "one":
+                if config["takes"][task] == "one" or config["takes"][task] == "exptree" :
                     parser.error("-t/--tasks \"%s\" only supports -T/--take-counts 1" % ( task, ))
         if args.monotonic:
             for task in args.tasks:
