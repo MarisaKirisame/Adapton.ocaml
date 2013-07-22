@@ -6,6 +6,9 @@ let list_filter_task (type a) (module L : Adapton.Signatures.SAListType.S with t
 let list_map_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
     L.memo_map (module L) (fun x -> log (1. +. x) +. log 1.5)
 
+let list_tfold_min_task (type a) (type b) (module L : Adapton.Signatures.SAListType.S with type t = a and type SAData.t = b and type data = float) =
+    L.memo_tfold min
+
 let list_tfold_sum_task (type a) (type b) (module L : Adapton.Signatures.SAListType.S with type t = a and type SAData.t = b and type data = float) =
     L.memo_tfold (+.)
 
@@ -18,6 +21,7 @@ let list_mergesort_task (type a) (module L : Adapton.Signatures.SAListType.S wit
 let tasks = [
     ( "filter", `List list_filter_task );
     ( "map", `List list_map_task );
+    ( "tfold(min)", `One list_tfold_min_task );
     ( "tfold(sum)", `One list_tfold_sum_task );
     ( "quicksort", `List list_quicksort_task );
     ( "mergesort", `List list_mergesort_task );
