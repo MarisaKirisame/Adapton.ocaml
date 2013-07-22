@@ -155,42 +155,42 @@ module Make (M : Signatures.SAType)
             in
             remove k xs
 
-        (** Create memoizing constructor that concatenate two self-adjusting lists. *)
+        (** Create memoizing constructor to concatenate two self-adjusting lists. *)
         let memo_append =
             memo2 (module L) (module L) begin fun append xs ys -> match force xs with
                 | `Cons ( x, xs ) -> `Cons ( x, append xs ys )
                 | `Nil -> force ys
             end
 
-        (** Create memoizing constructor that filter a self-adjusting list with a predicate. *)
+        (** Create memoizing constructor to filter a self-adjusting list with a predicate. *)
         let memo_filter f =
             memo (module L) begin fun filter xs -> match force xs with
                 | `Cons ( x, xs ) -> if f x then `Cons ( x, filter xs ) else force (filter xs)
                 | `Nil -> `Nil
             end
 
-        (** Create memoizing constructor that filter a self-adjusting list with a predicate and key. *)
+        (** Create memoizing constructor to filter a self-adjusting list with a predicate and key. *)
         let memo_filter_with_key (type a) (module K : Hashtbl.SeededHashedType with type t = a) f =
             memo2 (module K) (module L) begin fun filter k xs -> match force xs with
                 | `Cons ( x, xs ) -> if f k x then `Cons ( x, filter k xs ) else force (filter k xs)
                 | `Nil -> `Nil
             end
 
-        (** Create memoizing constructor that simultaneously filter and map a self-adjusting list with a predicate/mapping function. *)
+        (** Create memoizing constructor to simultaneously filter and map a self-adjusting list with a predicate/mapping function. *)
         let memo_filter_map (type a) (type b) (module L : Signatures.SAListType.BasicS with type sa = sa and type data = a and type t = b) f =
             memo (module L) begin fun filter xs -> match L.force xs with
                 | `Cons ( x, xs ) -> (match f x with Some y -> `Cons ( y, filter xs ) | None -> force (filter xs))
                 | `Nil -> `Nil
             end
 
-        (** Create memoizing constructor that map a self-adjusting list with a mapping function. *)
+        (** Create memoizing constructor to map a self-adjusting list with a mapping function. *)
         let memo_map (type a) (type b) (module L : Signatures.SAListType.BasicS with type sa = sa and type data = a and type t = b) f =
             memo (module L) begin fun map xs -> match L.force xs with
                 | `Cons ( x, xs ) -> `Cons ( f x, map xs )
                 | `Nil -> `Nil
             end
 
-        (** Create memoizing constructor that map a self-adjusting list with a mapping function and key. *)
+        (** Create memoizing constructor to map a self-adjusting list with a mapping function and key. *)
         let memo_map_with_key
                 (type a) (module K : Hashtbl.SeededHashedType with type t = a)
                 (type b) (type c) (module L : Signatures.SAListType.BasicS with type sa = sa and type data = b and type t = c)
@@ -200,14 +200,14 @@ module Make (M : Signatures.SAType)
                 | `Nil -> `Nil
             end
 
-        (** Create memoizing constructor that scan (fold over prefixes of) a self-adjusting list with an scanning function. *)
+        (** Create memoizing constructor to scan (fold over prefixes of) a self-adjusting list with an scanning function. *)
         let memo_scan (type a) (type b) (module L : Signatures.SAListType.BasicS with type sa = sa and type data = a and type t = b) f =
             memo2 (module L) (module R) begin fun scan xs acc -> match L.force xs with
                 | `Cons ( x, xs ) -> let acc = f x acc in `Cons ( acc, scan xs acc )
                 | `Nil -> `Nil
             end
 
-        (** Create memoizing constructor that tree-folds a self-adjusting list with an associative fold function. *)
+        (** Create memoizing constructor to tree-fold a self-adjusting list with an associative fold function. *)
         let memo_tfold f =
             let fold_pairs = L.memo2 (module Types.Int) (module L) begin fun fold_pairs seed xs -> match L.force xs with
                 | `Cons ( x', xs' ) as xs'' ->
