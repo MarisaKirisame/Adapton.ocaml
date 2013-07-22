@@ -21,6 +21,9 @@ module T = struct
     let lazy_id_counter = Types.Counter.make 0
     (**/**)
 
+    (** Return the id of a non-self-adjusting value. *)
+    let id m = m.id
+
     (** Compute the hash value of a non-self-adjusting value. *)
     let hash seed m = Hashtbl.seeded_hash seed m.id
 

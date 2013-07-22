@@ -56,6 +56,9 @@ module T = struct
     (**/**)
 
 
+    (** Return the id of a self-adjusting value. *)
+    let id m = m.meta.id
+
     (** Compute the hash value of a self-adjusting value. *)
     let hash seed m = Hashtbl.seeded_hash seed m.meta.id
 

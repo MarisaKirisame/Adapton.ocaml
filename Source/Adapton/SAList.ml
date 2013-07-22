@@ -24,6 +24,9 @@ module Make (M : Signatures.SAType)
         (** True if this module implements lazy lists. *)
         let is_lazy = M.is_lazy
 
+        (** Return the id of a self-adjusting list. *)
+        let id = M.id
+
         (** Compute the hash value of a self-adjusting list. *)
         let hash = M.hash
 
@@ -43,6 +46,14 @@ module Make (M : Signatures.SAType)
                 | `Nil -> List.rev acc
             in
             to_list [] xs
+
+        (** Create a regular list of ids of elements from a self-adjusting list. *)
+        let to_ids xs =
+            let rec to_ids acc xs = match force xs with
+                | `Cons ( _, xs ) -> to_ids (id xs::acc) xs
+                | `Nil -> List.rev (id xs::acc)
+            in
+            to_ids [] xs
 
         (** Create a regular list from the first [k] elements of a self-adjusting list. *)
         let take xs k =

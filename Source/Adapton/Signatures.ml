@@ -19,6 +19,7 @@ module rec SAType : sig
         type t
         val is_self_adjusting : bool
         val is_lazy : bool
+        val id : t -> int
         val hash : int -> t -> int
         val equal : t -> t -> bool
         val refresh : unit -> unit
@@ -37,6 +38,7 @@ module type SAType = sig
     type 'a thunk
     val is_self_adjusting : bool
     val is_lazy : bool
+    val id : 'a thunk -> int
     val hash : int -> 'a thunk -> int
     val equal : 'a thunk -> 'a thunk -> bool
     val refresh : unit -> unit
@@ -59,11 +61,13 @@ module rec SAListType : sig
         type t' = [ `Cons of data * t | `Nil ]
         val is_self_adjusting : bool
         val is_lazy : bool
+        val id : t -> int
         val hash : int -> t -> int
         val equal : t -> t -> bool
         val refresh : unit -> unit
         val force : t -> t'
         val to_list : t -> data list
+        val to_ids : t -> int list
         val take : t -> int -> data list
         val hd : t -> data
         val tl : t -> t
@@ -114,11 +118,13 @@ module type SAListType = sig
     type 'a salist' = [ `Cons of 'a * 'a salist | `Nil ]
     val is_self_adjusting : bool
     val is_lazy : bool
+    val id : 'a salist -> int
     val hash : int -> 'a salist -> int
     val equal : 'a salist -> 'a salist -> bool
     val refresh : unit -> unit
     val force : 'a salist -> 'a salist'
     val to_list : 'a salist -> 'a list
+    val to_ids : 'a salist -> int list
     val take : 'a salist -> int -> 'a list
     val hd : 'a salist -> 'a
     val tl : 'a salist -> 'a salist
