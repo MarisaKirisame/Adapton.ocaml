@@ -58,12 +58,18 @@ module T = struct
         eager_now := timestamp;
         timestamp
 
-    let unqueue = PriorityQueue.remove eager_queue
+    let unqueue meta =
+        if PriorityQueue.remove eager_queue meta then
+            incr Statistics.Counts.clean
 
     let dequeue () = PriorityQueue.pop eager_queue
 
     let enqueue_dependents dependents =
-        ignore (WeakDyn.fold (fun d () -> if TotalOrder.is_valid d.start_timestamp then PriorityQueue.add eager_queue d) dependents ());
+        ignore begin WeakDyn.fold begin fun d () ->
+            if TotalOrder.is_valid d.start_timestamp then
+                if PriorityQueue.add eager_queue d then
+                    incr Statistics.Counts.dirty
+        end dependents () end;
         WeakDyn.clear dependents
     (**/**)
 
@@ -150,6 +156,7 @@ module Make (R : Signatures.EqualsType)
 
     (** Update an eager self-adjusting value with a constant value. *)
     let update_const m x =
+        incr Statistics.Counts.update;
         if m.meta.start_timestamp != TotalOrder.null then begin
             (* no need to call unmemo since the memo entry will be replaced when it sees start_timestamp is invalid *)
             m.meta.unmemo <- nop;
@@ -164,6 +171,7 @@ module Make (R : Signatures.EqualsType)
 
     (**/**) (* helper function to evaluate a thunk *)
     let evaluate_meta meta f =
+        incr Statistics.Counts.evaluate;
         eager_stack := meta::!eager_stack;
         let value = try
             f ()
@@ -195,6 +203,7 @@ module Make (R : Signatures.EqualsType)
 
     (** Update an eager self-adjusting value with a thunk. *)
     let update_thunk m f =
+        incr Statistics.Counts.update;
         if m.meta.start_timestamp != TotalOrder.null then begin
             m.meta.unmemo ();
             m.meta.unmemo <- nop;

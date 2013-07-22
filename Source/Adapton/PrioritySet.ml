@@ -5,9 +5,9 @@ module type S = sig
     type t
     exception Empty
     val create : unit -> t
-    val add : t -> data -> unit
+    val add : t -> data -> bool
     val pop : t -> data
-    val remove : t -> data -> unit
+    val remove : t -> data -> bool
 end
 
 module Make (O : Set.OrderedType) = struct
@@ -24,13 +24,14 @@ module Make (O : Set.OrderedType) = struct
         | Node ( value, left, right ) ->
             let dir = O.compare x value in
             if dir == 0 then
-                ()
+                false
             else if dir < 0 then
                 add left x
             else
                 add right x
         | Null ->
-            queue := Node ( x, ref Null, ref Null )
+            queue := Node ( x, ref Null, ref Null );
+            true
 
     let rec pop queue = match !queue with
         | Node ( value, ({ contents=Node _ } as left), _ ) ->
@@ -44,12 +45,13 @@ module Make (O : Set.OrderedType) = struct
     let rec remove queue x = match !queue with
         | Node ( value, left, right ) ->
             let dir = O.compare x value in
-            if dir == 0 then
-                queue := try Node ( pop right, left, right ) with Empty -> !left
-            else if dir < 0 then
+            if dir == 0 then begin
+                queue := (try Node ( pop right, left, right ) with Empty -> !left);
+                true
+            end else if dir < 0 then
                 remove left x
             else
                 remove right x
         | Null ->
-            ()
+            false
 end

@@ -279,13 +279,9 @@ if __name__ == "__main__":
             cycle(( "black", "darkblue", "darkred", "darkgreen", "darkcyan", "dimgray" )),
             cycle(product(( "-", "--", "-." ), ( ( ".", 8 ), ( "^", 6 ), ( "s", 4 ), ( "*", 7 ), ( "D", 4 ) ))) )).next)
 
-    scalings = {
-        "time": ( ( 1.01, ( "from-scratch", "propagate" ) ), (  1.01, ( "propagate", ) ) ),
-        "heap": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
-        "stack": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
-        "max-heap": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
-        "max-stack": ( ( 1.01, ( "from-scratch", "propagate" ) ), ),
-    }
+    scalings = defaultdict(lambda: ( ( 1.01, ( "from-scratch", "propagate" ) ), ))
+    scalings["time"] += ( (  1.01, ( "propagate", ) ), )
+    scalings["evaluate"] += ( (  1.01, ( "propagate", ) ), )
 
 
     with open(os.path.join(output, "index.html"), "w") as htmlfile:
@@ -332,7 +328,7 @@ if __name__ == "__main__":
                     else:
                         print>>txtfile, " done"
 
-                table = OrderedDict( ( key, {} ) for key in ( "time", "heap", "stack", "max-heap", "max-stack" ) )
+                table = OrderedDict( ( key, {} ) for key in ( "time", "heap", "stack", "update", "evaluate", "clean", "dirty", "max-heap", "max-stack" ) )
                 units = {}
                 editables = set()
                 for record in results["data"]:
@@ -392,7 +388,10 @@ if __name__ == "__main__":
                             ax = fig.add_subplot(1, 1, 1)
                             ax.set_title(results["label"], fontsize=8)
                             ax.set_xlabel(results["x-label"], fontsize=8)
-                            ax.set_ylabel("%s (%s)" % ( measurement, units[measurement] ), fontsize=8)
+                            if units[measurement]:
+                                ax.set_ylabel("%s (%s)" % ( measurement, units[measurement] ), fontsize=8)
+                            else:
+                                ax.set_ylabel("%s" % ( measurement, ), fontsize=8)
                             for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
                                 axis.set_major_formatter(EngFormatter())
                                 axis.set_ticks_position("none")
@@ -433,90 +432,91 @@ if __name__ == "__main__":
 
 
                 if editables:
-                    for baseline in args.baselines:
-                        pdffilename = "%s-%s-overhead.pdf" % ( label, baseline )
-                        with open(os.path.join(summary, pdffilename), "w") as pdffile:
-                            fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
-                            ax = fig.add_subplot(1, 1, 1)
-                            ax.set_title(results["label"], fontsize=8)
-                            ax.set_xlabel(results["x-label"], fontsize=8)
-                            ax.set_ylabel("time overhead\nX (from-scratch) / %s (from-scratch)" % ( baseline, ), fontsize=8, multialignment="center")
-                            for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
-                                axis.set_major_formatter(EngFormatter())
-                                axis.set_ticks_position("none")
-                            if hasattr(ax, "tick_params"):
-                                ax.tick_params(labelsize=7)
-                            for side in ( "left", "bottom" ):
-                                ax.spines[side].set_color("silver")
-                                ax.spines[side].set_linestyle("dotted")
-                                ax.spines[side].set_linewidth(0.5)
-                            for side in ( "right", "top" ):
-                                ax.spines[side].set_visible(False)
-                            ax.grid(linewidth=0.5, linestyle=":", color="silver")
+                    for measurement in ( "time", "evaluate" ):
+                        for baseline in args.baselines:
+                            pdffilename = "%s-%s-%s-overhead.pdf" % ( label, baseline, measurement )
+                            with open(os.path.join(summary, pdffilename), "w") as pdffile:
+                                fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
+                                ax = fig.add_subplot(1, 1, 1)
+                                ax.set_title(results["label"], fontsize=8)
+                                ax.set_xlabel(results["x-label"], fontsize=8)
+                                ax.set_ylabel("%s overhead\nX (from-scratch) / %s (from-scratch)" % ( measurement, baseline ), fontsize=8, multialignment="center")
+                                for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
+                                    axis.set_major_formatter(EngFormatter())
+                                    axis.set_ticks_position("none")
+                                if hasattr(ax, "tick_params"):
+                                    ax.tick_params(labelsize=7)
+                                for side in ( "left", "bottom" ):
+                                    ax.spines[side].set_color("silver")
+                                    ax.spines[side].set_linestyle("dotted")
+                                    ax.spines[side].set_linewidth(0.5)
+                                for side in ( "right", "top" ):
+                                    ax.spines[side].set_visible(False)
+                                ax.grid(linewidth=0.5, linestyle=":", color="silver")
 
-                            print>>txtfile, "        Plotting overhead using baseline %s ..." % ( baseline, )
-                            for module in editables:
-                                xvalues, overheads = zip(*( ( xvalue, yvalue / table["time"]["from-scratch"][baseline][xvalue] ) \
-                                    for xvalue, yvalue in table["time"]["from-scratch"][module].iteritems() ))
-                                print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(overhead, "9.3g") for overhead in overheads ) )
-                                ax.plot(xvalues, overheads, clip_on=False, label=module, markeredgecolor="none", **styles[module, "from-scratch"])
-                            ax.set_xbound(lower=0)
-                            ax.set_ybound(lower=0)
+                                print>>txtfile, "        Plotting %s overhead using baseline %s ..." % ( measurement, baseline )
+                                for module in editables:
+                                    xvalues, overheads = zip(*( ( xvalue, yvalue / table[measurement]["from-scratch"][baseline][xvalue] ) \
+                                        for xvalue, yvalue in table[measurement]["from-scratch"][module].iteritems() ))
+                                    print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(overhead, "9.3g") for overhead in overheads ) )
+                                    ax.plot(xvalues, overheads, clip_on=False, label=module, markeredgecolor="none", **styles[module, "from-scratch"])
+                                ax.set_xbound(lower=0)
+                                ax.set_ybound(lower=0)
 
-                            try:
-                                ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
-                            except TypeError:
-                                ax.legend(loc="best", prop={ "size": 8 }, fancybox=False)
+                                try:
+                                    ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
+                                except TypeError:
+                                    ax.legend(loc="best", prop={ "size": 8 }, fancybox=False)
 
-                            if hasattr(fig, "tight_layout"):
-                                fig.tight_layout(pad=0.5)
+                                if hasattr(fig, "tight_layout"):
+                                    fig.tight_layout(pad=0.5)
 
-                            fig.savefig(pdffile, format="pdf")
-                            print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
-                                % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
+                                fig.savefig(pdffile, format="pdf")
+                                print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
+                                    % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
 
 
-                    for baseline in args.baselines:
-                        pdffilename = "%s-%s-speedup.pdf" % ( label, baseline )
-                        with open(os.path.join(summary, pdffilename), "w") as pdffile:
-                            fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
-                            ax = fig.add_subplot(1, 1, 1)
-                            ax.set_title(results["label"], fontsize=8)
-                            ax.set_xlabel(results["x-label"], fontsize=8)
-                            ax.set_ylabel("time speed-up\n%s (from-scratch) / X (propagate)" % ( baseline, ), fontsize=8, multialignment="center")
-                            for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
-                                axis.set_major_formatter(EngFormatter())
-                                axis.set_ticks_position("none")
-                            if hasattr(ax, "tick_params"):
-                                ax.tick_params(labelsize=7)
-                            for side in ( "left", "bottom" ):
-                                ax.spines[side].set_color("silver")
-                                ax.spines[side].set_linestyle("dotted")
-                                ax.spines[side].set_linewidth(0.5)
-                            for side in ( "right", "top" ):
-                                ax.spines[side].set_visible(False)
-                            ax.grid(linewidth=0.5, linestyle=":", color="silver")
+                        for baseline in args.baselines:
+                            pdffilename = "%s-%s-%s-speedup.pdf" % ( label, baseline, measurement )
+                            with open(os.path.join(summary, pdffilename), "w") as pdffile:
+                                fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
+                                ax = fig.add_subplot(1, 1, 1)
+                                ax.set_title(results["label"], fontsize=8)
+                                ax.set_xlabel(results["x-label"], fontsize=8)
+                                ax.set_ylabel("%s speed-up\n%s (from-scratch) / X (propagate)" % ( measurement, baseline ), fontsize=8, multialignment="center")
+                                for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
+                                    axis.set_major_formatter(EngFormatter())
+                                    axis.set_ticks_position("none")
+                                if hasattr(ax, "tick_params"):
+                                    ax.tick_params(labelsize=7)
+                                for side in ( "left", "bottom" ):
+                                    ax.spines[side].set_color("silver")
+                                    ax.spines[side].set_linestyle("dotted")
+                                    ax.spines[side].set_linewidth(0.5)
+                                for side in ( "right", "top" ):
+                                    ax.spines[side].set_visible(False)
+                                ax.grid(linewidth=0.5, linestyle=":", color="silver")
 
-                            print>>txtfile, "        Plotting speed-up using baseline %s ..." % ( baseline, )
-                            for module in editables:
-                                xvalues, speedups = zip(*( ( xvalue, table["time"]["from-scratch"][baseline][xvalue] / yvalue ) \
-                                    for xvalue, yvalue in table["time"]["propagate"][module].iteritems() ))
-                                print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(speedup, "9.3g") for speedup in speedups ) )
-                                ax.plot(xvalues, speedups, clip_on=False, label=module, markeredgecolor="none", **styles[module, "propagate"])
-                            ax.set_xbound(lower=0)
-                            ax.set_ybound(lower=0)
+                                print>>txtfile, "        Plotting %s speed-up using baseline %s ..." % ( measurement, baseline )
+                                for module in editables:
+                                    xvalues, speedups = zip(*( ( xvalue, table[measurement]["from-scratch"][baseline][xvalue] / yvalue ) \
+                                        for xvalue, yvalue in table[measurement]["propagate"][module].iteritems() ))
+                                    print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(speedup, "9.3g") for speedup in speedups ) )
+                                    ax.plot(xvalues, speedups, clip_on=False, label=module, markeredgecolor="none", **styles[module, "propagate"])
+                                ax.set_xbound(lower=0)
+                                ax.set_ybound(lower=0)
 
-                            try:
-                                ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
-                            except TypeError:
-                                ax.legend(loc="best", prop={ "size": 8 }, fancybox=False)
+                                try:
+                                    ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
+                                except TypeError:
+                                    ax.legend(loc="best", prop={ "size": 8 }, fancybox=False)
 
-                            if hasattr(fig, "tight_layout"):
-                                fig.tight_layout(pad=0.5)
+                                if hasattr(fig, "tight_layout"):
+                                    fig.tight_layout(pad=0.5)
 
-                            fig.savefig(pdffile, format="pdf")
-                            print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
-                                % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
+                                fig.savefig(pdffile, format="pdf")
+                                print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
+                                    % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
 
 
                     for module in editables:

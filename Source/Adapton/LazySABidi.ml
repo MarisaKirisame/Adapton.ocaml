@@ -124,6 +124,7 @@ module Make (R : Signatures.EqualsType)
                     if d.dirty then
                         ds
                     else begin
+                        incr Statistics.Counts.dirty;
                         d.dirty <- true;
                         d.dependent.dependents::ds
                     end
@@ -149,6 +150,7 @@ module Make (R : Signatures.EqualsType)
 
     (** Update a lazy self-adjusting value with a constant value that does not depend on other lazy self-adjusting values. *)
     let update_const m x =
+        incr Statistics.Counts.update;
         begin match m.thunk with
             | MemoValue ( _, value, _, _, _, _ ) | Value ( _, value, _, _, _ ) | Const ( value, _ ) when not (R.equal value x) -> dirty m
             | MemoValue _ | MemoThunk _ | Value _ | Thunk _ | Const _ -> unmemo m
@@ -159,6 +161,7 @@ module Make (R : Signatures.EqualsType)
     (**/**) (* helper function to evaluate a thunk *)
     let evaluate_actual m f =
         (* add self to call stack and evaluate *)
+        incr Statistics.Counts.evaluate;
         let dependencies = ref [] in
         lazy_stack := ( m.meta, dependencies )::!lazy_stack;
         let value = try
@@ -177,7 +180,7 @@ module Make (R : Signatures.EqualsType)
                     | d::ds ->
                         if d.dirty then begin
                             d.dirty <- false;
-                            d.receipt.check (fun c -> if c then repair ds else k (evaluate ()))
+                            d.receipt.check (fun c -> if c then (incr Statistics.Counts.clean; repair ds) else k (evaluate ()))
                         end else
                             repair ds
                     | [] ->
@@ -213,6 +216,7 @@ module Make (R : Signatures.EqualsType)
 
     (** Update a lazy self-adjusting value with a thunk that may depend on other lazy self-adjusting values. *)
     let update_thunk m f =
+        incr Statistics.Counts.update;
         dirty m;
         let evaluate () = make_evaluate m f () in
         m.thunk <- Thunk evaluate

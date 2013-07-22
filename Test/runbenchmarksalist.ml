@@ -32,9 +32,14 @@ let opt_random_seed = ref 1
 let opt_monotonic = ref false
 
 let header ff = Printf.fprintf ff "%32s %24s %8d %8d %20d" !opt_sa !opt_task !opt_take_count !opt_input_size !opt_random_seed
-let stats ff s = Printf.fprintf ff "\"time\": %.17g, \"heap\": %.17g, \"stack\": %.17g" s.time s.heap s.stack
+let stats ff s =
+    Printf.fprintf ff "\"time\": %.17g, \"heap\": %.17g, \"stack\": %.17g, \"update\": %.17g, \"evaluate\": %.17g, \"dirty\": %.17g, \"clean\": %.17g"
+        s.time s.heap s.stack s.update s.evaluate s.dirty s.clean
 let max_heap_stack ff ( heap, stack ) = Printf.fprintf ff "\"max-heap\": %.17g, \"max-stack\": %.17g" (word_bytes heap) (word_bytes stack)
-let units = "\"units\": { \"time\": \"seconds\", \"heap\": \"bytes\", \"stack\": \"bytes\", \"max-heap\": \"bytes\", \"max-stack\": \"bytes\" }"
+let units =
+    "\"units\": { \"time\": \"seconds\", \"heap\": \"bytes\", \"stack\": \"bytes\", "
+    ^ "\"update\": null, \"evaluate\": null, \"dirty\": null, \"clean\": null, "
+    ^ "\"max-heap\": \"bytes\", \"max-stack\": \"bytes\" }"
 
 let show_config () =
     let list_printer printer ff list =

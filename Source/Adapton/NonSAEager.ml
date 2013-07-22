@@ -57,7 +57,7 @@ module Make (R : Signatures.EqualsType)
     let update_const _ _ = raise Exceptions.NonSelfAdjustingValue
 
     (** Create an eager non-self-adjusting value from a thunk. *)
-    let thunk f = { id=Types.Counter.next eager_id_counter; value=f () }
+    let thunk f = incr Statistics.Counts.evaluate; { id=Types.Counter.next eager_id_counter; value=f () }
 
     (** Update an eager non-self-adjusting value with a thunk (not supported by this module; raises {!NonSelfAdjustingValue}). *)
     let update_thunk _ _ = raise Exceptions.NonSelfAdjustingValue
@@ -70,7 +70,7 @@ module Make (R : Signatures.EqualsType)
         (** Create non-memoizing constructor for an eager non-self-adjusting value. *)
         let memo (type a) (module A : Hashtbl.SeededHashedType with type t = a) f =
             (* non-memoizing constructor *)
-            let rec memo x = { id=Types.Counter.next eager_id_counter; value=f memo x } in
+            let rec memo x = incr Statistics.Counts.evaluate; { id=Types.Counter.next eager_id_counter; value=f memo x } in
             memo
     end)
 end
