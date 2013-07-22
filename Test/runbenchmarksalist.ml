@@ -110,7 +110,7 @@ let _ =
         let setup_stats = finish setup_stats 1 in
         let setup_top_heap_stack = get_top_heap_stack () in
 
-        if SAList.is_self_adjusting then begin
+        if SA.is_self_adjusting then begin
             let rec do_edits past n update_stats take_stats edit_count =
                 if n == 0 then
                     ( update_stats, take_stats, edit_count )
@@ -142,7 +142,7 @@ let _ =
                         end in
 
                         let (), delete_take_stats = measure begin fun () ->
-                            SAFloatList.refresh ();
+                            SA.refresh ();
                             take ()
                         end in
 
@@ -151,7 +151,7 @@ let _ =
                         end in
 
                         let (), insert_take_stats = measure begin fun () ->
-                            SAFloatList.refresh ();
+                            SA.refresh ();
                             take ()
                         end in
 
@@ -184,7 +184,7 @@ let _ =
                         end in
 
                         let (), take_stats = measure begin fun () ->
-                            SAFloatList.refresh ();
+                            SA.refresh ();
                             take ()
                         end in
 
