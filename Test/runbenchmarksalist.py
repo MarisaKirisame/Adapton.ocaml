@@ -455,7 +455,9 @@ if __name__ == "__main__":
                                 ax.grid(linewidth=0.5, linestyle=":", color="silver")
 
                                 print>>txtfile, "        Plotting %s overhead using baseline %s ..." % ( measurement, baseline )
-                                for module in editables:
+                                for module in table[measurement]["from-scratch"].iterkeys():
+                                    if module == baseline:
+                                        continue
                                     xvalues, overheads = zip(*( ( xvalue, yvalue / table[measurement]["from-scratch"][baseline][xvalue] ) \
                                         for xvalue, yvalue in table[measurement]["from-scratch"][module].iteritems() ))
                                     print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(overhead, "9.3g") for overhead in overheads ) )
@@ -483,7 +485,7 @@ if __name__ == "__main__":
                                 ax = fig.add_subplot(1, 1, 1)
                                 ax.set_title(results["label"], fontsize=8)
                                 ax.set_xlabel(results["x-label"], fontsize=8)
-                                ax.set_ylabel("%s speed-up\n%s (from-scratch) / X (propagate)" % ( measurement, baseline ), fontsize=8, multialignment="center")
+                                ax.set_ylabel("%s speed-up\n%s (from-scratch) / X" % ( measurement, baseline ), fontsize=8, multialignment="center")
                                 for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
                                     axis.set_major_formatter(EngFormatter())
                                     axis.set_ticks_position("none")
@@ -498,11 +500,19 @@ if __name__ == "__main__":
                                 ax.grid(linewidth=0.5, linestyle=":", color="silver")
 
                                 print>>txtfile, "        Plotting %s speed-up using baseline %s ..." % ( measurement, baseline )
-                                for module in editables:
+                                for module in table[measurement]["from-scratch"].iterkeys():
+                                    if module == baseline:
+                                        continue
+                                    if module in editables:
+                                        timing = "propagate"
+                                    else:
+                                        timing = "from-scratch"
                                     xvalues, speedups = zip(*( ( xvalue, table[measurement]["from-scratch"][baseline][xvalue] / yvalue ) \
-                                        for xvalue, yvalue in table[measurement]["propagate"][module].iteritems() ))
-                                    print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(speedup, "9.3g") for speedup in speedups ) )
-                                    ax.plot(xvalues, speedups, clip_on=False, label=module, markeredgecolor="none", **styles[module, "propagate"])
+                                        for xvalue, yvalue in table[measurement][timing][module].iteritems() ))
+                                    print>>txtfile, "            %50s ... %s" \
+                                        % ( "%s (%s)" % ( module, timing ), " ".join( format(speedup, "9.3g") for speedup in speedups ) )
+                                    ax.plot(xvalues, speedups, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none",
+                                        **styles[module, timing])
                                 ax.set_xbound(lower=0)
                                 ax.set_ybound(lower=0)
 
