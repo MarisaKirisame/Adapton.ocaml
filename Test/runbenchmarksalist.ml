@@ -35,7 +35,7 @@ let opt_take_count = ref 1
 let opt_random_seed = ref 1
 let opt_monotonic = ref false
 
-let header ff = Printf.fprintf ff "%32s %24s %8d %8d %20d" !opt_sa !opt_task !opt_take_count !opt_input_size !opt_random_seed
+let header ff = Printf.fprintf ff "%24s %24s %8d %8d %20d" !opt_sa !opt_task !opt_take_count !opt_input_size !opt_random_seed
 let stats ff s =
     Printf.fprintf ff "\"time\": %.17g, \"heap\": %.17g, \"stack\": %.17g, \"update\": %.17g, \"evaluate\": %.17g, \"dirty\": %.17g, \"clean\": %.17g"
         s.time s.heap s.stack s.update s.evaluate s.dirty s.clean
@@ -125,8 +125,9 @@ let _ =
                             past
                         else begin
                             let heap, stack = get_top_heap_stack () in
-                            Printf.eprintf "%t edit %10d %9.2fMB %9.2fMB\n%!"
-                                header n (word_megabytes heap) (word_megabytes stack);
+                            Printf.eprintf "%t edit %10d %9.2fMB %9.2fMB %6.0fs left\n%!"
+                                header n (word_megabytes heap) (word_megabytes stack)
+                                (float_of_int n *. (get_time () -. start_time) /. float_of_int (!opt_edit_count - n));
                             now
                         end
                     in
