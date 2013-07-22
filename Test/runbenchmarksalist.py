@@ -357,9 +357,9 @@ if __name__ == "__main__":
                                             .setdefault(record[results["x-axis"]], []).append(record["edits"][key])
                                     else:
                                         table[key].setdefault("propagate", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record[results["x-axis"]], []).append(record["edits"]["update-" + key] + record["edits"]["take-" + key])
+                                            .setdefault(record[results["x-axis"]], []).append(record["edits"]["update"][key] + record["edits"]["take"][key])
                                         table[key].setdefault("update", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record[results["x-axis"]], []).append(record["edits"]["update-" + key])
+                                            .setdefault(record[results["x-axis"]], []).append(record["edits"]["update"][key])
                             except Exception:
                                 traceback.print_exc()
                                 if "error" in record:
