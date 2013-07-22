@@ -141,6 +141,10 @@ if __name__ == "__main__":
             for task in args.tasks:
                 if config["takes"][task] == "one":
                     parser.error("-t/--tasks \"%s\" only supports -T/--take-counts 1" % ( task, ))
+        if args.monotonic:
+            for task in args.tasks:
+                if config["takes"][task] == "flip":
+                    parser.error("-t/--tasks \"%s\" does not support -M/--monotonic" % ( task, ))
         for baseline in args.baselines:
             if baseline not in args.modules:
                 args.modules.append(baseline)

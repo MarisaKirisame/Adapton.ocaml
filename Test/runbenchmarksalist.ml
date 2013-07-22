@@ -18,6 +18,22 @@ let list_quicksort_task (type a) (module L : Adapton.Signatures.SAListType.S wit
 let list_mergesort_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
     L.memo_mergesort Pervasives.compare
 
+let list_updown1_task
+        (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float)
+        (type b) (module B : Adapton.Signatures.SAType.S with type t = b and type data = bool)
+        xs b =
+    let up = L.memo_quicksort Pervasives.compare in
+    let down = L.memo_quicksort (fun x y -> -(Pervasives.compare x y)) in
+    L.thunk (fun () -> L.force (if B.force b then up xs else down xs))
+
+let list_updown2_task
+        (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float)
+        (type b) (module B : Adapton.Signatures.SAType.S with type t = b and type data = bool)
+        xs b =
+    let up = L.memo_quicksort Pervasives.compare xs in
+    let down = L.memo_quicksort (fun x y -> -(Pervasives.compare x y)) xs in
+    L.thunk (fun () -> L.force (if B.force b then up else down))
+
 let tasks = [
     ( "filter", `List list_filter_task );
     ( "map", `List list_map_task );
@@ -25,6 +41,8 @@ let tasks = [
     ( "tfold(sum)", `One list_tfold_sum_task );
     ( "quicksort", `List list_quicksort_task );
     ( "mergesort", `List list_mergesort_task );
+    ( "updown1", `Flip list_updown1_task );
+    ( "updown2", `Flip list_updown2_task );
 ]
 
 let opt_sa = ref (fst (List.hd Adapton.All.sa_list))
@@ -50,7 +68,7 @@ let show_config () =
         ignore (List.fold_left (fun b x -> Printf.fprintf ff "%(%)%a" b printer x; ", ") "" list)
     in
     let task_printer ff task =
-        Printf.fprintf ff "{ \"name\": %S, \"take\": %S }" (fst task) (match snd task with `One _ -> "one" | `List _ -> "list")
+        Printf.fprintf ff "{ \"name\": %S, \"take\": %S }" (fst task) (match snd task with `One _ -> "one" | `List _ -> "list" | `Flip _ -> "flip")
     in
     Printf.printf "{ \"modules\": [ %a ], \"tasks\": [ %a ] }\n%!"
         (list_printer (fun ff -> Printf.fprintf ff "%S")) (fst (List.split Adapton.All.sa_list))
@@ -72,6 +90,7 @@ let _ =
     let rng = Random.State.make [| !opt_random_seed |] in
     Random.init (Random.State.bits rng);
     let module SA = (val (List.assoc !opt_sa Adapton.All.sa_list)) in
+    let module SABool = SA.Make (Adapton.Types.Bool) in
     let module SAList = Adapton.SAList.Make (SA) in
     let module SAFloatList = SAList.Make (Adapton.Types.Float) in
     SA.tweak_gc ();
@@ -85,6 +104,12 @@ let _ =
             `One (task (module SAFloatList))
         | `List task ->
             `List (task (module SAFloatList))
+        | `Flip task ->
+            if !opt_monotonic then begin
+                Printf.eprintf "Task %s does not support -M\n%!" !opt_task;
+                exit 1
+            end;
+            `Flip (task (module SAFloatList) (module SABool))
     in
 
     let start_time = get_time () in
@@ -97,6 +122,8 @@ let _ =
     let xs = !xs in
     let last = ref 0 in
 
+    let b = SABool.const false in
+
     Printf.eprintf "%t\n%!" header;
     try
         let take, setup_stats = measure begin fun () ->
@@ -107,6 +134,9 @@ let _ =
                 | `One task ->
                     let y = task xs in
                     (fun () -> ignore (SAFloatList.SAData.force y))
+                | `Flip task ->
+                    let ys = task xs b in
+                    (fun () -> ignore (SAFloatList.take ys !opt_take_count))
             in
             take ();
             take
@@ -132,68 +162,91 @@ let _ =
                         end
                     in
 
-                    let update_stats', take_stats', edit_count' = if !opt_monotonic then
-                        (* delete then re-insert *)
-                        let edit = Random.State.int rng !opt_input_size in
-                        let zs = xss.(edit) in
+                    let update_stats', take_stats', edit_count' = match task with
+                        | `List _ | `One _ when !opt_monotonic ->
+                            (* delete then re-insert *)
+                            let edit = Random.State.int rng !opt_input_size in
+                            let zs = xss.(edit) in
 
-                        let ( z', zs' ), delete_update_stats = measure begin fun () ->
-                            match SAFloatList.force zs with
-                                | `Cons ( z', zs' ) ->
-                                    SAFloatList.update_const zs (SAFloatList.force zs');
-                                    ( z', zs' )
-                                | `Nil ->
-                                    failwith "delete"
-                        end in
+                            let ( z', zs' ), delete_update_stats = measure begin fun () ->
+                                match SAFloatList.force zs with
+                                    | `Cons ( z', zs' ) ->
+                                        SAFloatList.update_const zs (SAFloatList.force zs');
+                                        ( z', zs' )
+                                    | `Nil ->
+                                        failwith "delete"
+                            end in
 
-                        let (), delete_take_stats = measure begin fun () ->
-                            SA.refresh ();
-                            take ()
-                        end in
+                            let (), delete_take_stats = measure begin fun () ->
+                                SA.refresh ();
+                                take ()
+                            end in
 
-                        let (), insert_update_stats = measure begin fun () ->
-                            SAFloatList.update_const zs (`Cons ( z', zs' ))
-                        end in
+                            let (), insert_update_stats = measure begin fun () ->
+                                SAFloatList.update_const zs (`Cons ( z', zs' ))
+                            end in
 
-                        let (), insert_take_stats = measure begin fun () ->
-                            SA.refresh ();
-                            take ()
-                        end in
+                            let (), insert_take_stats = measure begin fun () ->
+                                SA.refresh ();
+                                take ()
+                            end in
 
-                        ( add delete_update_stats insert_update_stats, add delete_take_stats insert_take_stats, 2 )
-                    else
-                        (* split into two and swap *)
-                        let edit = 1 + Random.State.int rng (!opt_input_size - 2) in
-                        let edit = if edit = !last then edit + 1 else edit in
-                        let zs = xss.(edit) in
+                            ( add delete_update_stats insert_update_stats, add delete_take_stats insert_take_stats, 2 )
 
-                        let (), update_stats = measure begin fun () ->
-                            match SAFloatList.force xs with
-                                | `Cons _ as xs' ->
-                                    begin match SAFloatList.force xss.(!last) with
-                                        | `Cons _ as last' ->
-                                            begin match SAFloatList.force zs with
-                                                | `Cons _ as zs' ->
-                                                    SAFloatList.update_const xs zs';
-                                                    SAFloatList.update_const xss.(!last) xs';
-                                                    SAFloatList.update_const zs last';
-                                                    last := edit;
-                                                | `Nil ->
-                                                    failwith "swap"
-                                            end
-                                        | `Nil ->
-                                            failwith "swap"
-                                    end
-                                | `Nil ->
-                                    failwith "swap"
-                        end in
+                        | `List _ | `One _ ->
+                            (* split into two and swap *)
+                            let edit = 1 + Random.State.int rng (!opt_input_size - 2) in
+                            let edit = if edit = !last then edit + 1 else edit in
+                            let zs = xss.(edit) in
 
-                        let (), take_stats = measure begin fun () ->
-                            SA.refresh ();
-                            take ()
-                        end in
+                            let (), update_stats = measure begin fun () ->
+                                match SAFloatList.force xs with
+                                    | `Cons _ as xs' ->
+                                        begin match SAFloatList.force xss.(!last) with
+                                            | `Cons _ as last' ->
+                                                begin match SAFloatList.force zs with
+                                                    | `Cons _ as zs' ->
+                                                        SAFloatList.update_const xs zs';
+                                                        SAFloatList.update_const xss.(!last) xs';
+                                                        SAFloatList.update_const zs last';
+                                                        last := edit;
+                                                    | `Nil ->
+                                                        failwith "swap"
+                                                end
+                                            | `Nil ->
+                                                failwith "swap"
+                                        end
+                                    | `Nil ->
+                                        failwith "swap"
+                            end in
 
-                        ( update_stats, take_stats, 1 )
+                            let (), take_stats = measure begin fun () ->
+                                SA.refresh ();
+                                take ()
+                            end in
+
+                            ( update_stats, take_stats, 1 )
+
+                        | `Flip _ ->
+                            (* change one value *)
+                            let edit = Random.State.int rng !opt_input_size in
+                            let value = Random.State.float rng 1.0 in
+                            let zs = xss.(edit) in
+
+                            let (), update_stats = measure begin fun () ->
+                                SABool.update_const b (not (SABool.force b));
+                                match SAFloatList.force zs with
+                                    | `Cons ( _, zs' ) ->
+                                        SAFloatList.update_const zs (`Cons ( value, zs' ))
+                                    | `Nil ->
+                                        failwith "flip"
+                            end in
+
+                            let (), take_stats = measure (fun () -> SA.refresh (); take ()) in
+                            let (), update_stats' = measure (fun () -> SABool.update_const b (not (SABool.force b))) in
+                            let (), take_stats' = measure (fun () -> SA.refresh (); take ()) in
+
+                            ( add update_stats update_stats', add take_stats take_stats', 2 )
                     in
 
                     do_edits past (pred n)
