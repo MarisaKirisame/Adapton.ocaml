@@ -1,0 +1,140 @@
+module Ast = struct
+
+  type col = int
+  type row = int
+  type sht = int
+
+  (** -- commands -- **)
+
+  type cmd =
+    | C_help | C_exit
+    | C_nav of nav_cmd
+    | C_mut of mut_cmd
+
+  and mut_cmd =
+    | C_set of formula
+
+  and nav_cmd =
+    | C_next of nav_thing
+    | C_prev of nav_thing
+    | C_goto of coord
+
+  and nav_thing = Nav_row | Nav_col | Nav_sht
+
+  (** - - Coordinates, Regions - - **)
+
+  and local_coord = col * row
+  and absolute_coord = sht * local_coord
+  and pos = absolute_coord
+      (* pos is nice short-hand; pos is a "cononical form" for
+         coordinates within the interpreter. *)
+  and coord =
+    | Lcl of local_coord
+    | Abs of absolute_coord
+
+  and local_region = local_coord * local_coord
+  and absolute_region = sht * local_region
+  and region =
+    | R_lcl of local_region
+    | R_abs of absolute_region
+
+  (** - - Formulas - - **)
+
+  and formula =
+    | F_func of func * region
+    | F_binop of binop * formula * formula
+    | F_const of const
+    | F_coord of coord
+    | F_paren of formula
+
+  and binop =
+    | Bop_add
+    | Bop_sub
+    | Bop_div
+    | Bop_mul
+
+  and func =
+    | Fn_sum
+    | Fn_max
+    | Fn_min
+
+  and const =
+    | Num   of Num.num (* ocaml standard library; arbitrary-precision numbers. *)
+    | Undef
+
+end
+include Ast
+
+module Pretty = struct
+
+  let string_of_const = function
+    | Num n -> Num.string_of_num n
+    | Undef -> "#undef"
+
+  let ps = print_string
+
+  let rec pp_cmd = function
+    | C_help -> ps "help"
+    | C_exit -> ps "exit"
+    | C_nav c -> pp_nav_cmd c
+    | C_mut c -> pp_mut_cmd c
+
+  (** - - Navigation / Focus - - **)
+
+  and pp_nav_cmd = function
+    | C_next nt -> ps "next " ; pp_nav_thing nt
+    | C_prev nt -> ps "prev " ; pp_nav_thing nt
+    | C_goto c -> ps "goto " ; pp_coord c
+
+  and pp_nav_thing = function
+    | Nav_row -> ps "row"
+    | Nav_col -> ps "col"
+    | Nav_sht -> ps "sheet"
+
+  (** - - Coordinates, Regions - - **)
+
+  and pp_local_coord = fun (col,row) ->
+    ps (String.make 1 (Char.chr ((Char.code 'A') + col - 1))) ;
+    (* ps "[" ; ps (string_of_int col) ; ps "]" ; *)
+    ps (string_of_int row)
+
+  and pp_pos (s,lc) = pp_coord (Abs(s,lc))
+  and pp_coord = function
+    | Lcl lc -> pp_local_coord lc
+    | Abs (s,lc) ->
+        ps "Sheet" ; ps (string_of_int s) ; ps "!" ;
+        pp_local_coord lc
+
+  and pp_local_region = fun (lc1,lc2) ->
+    pp_local_coord lc1 ; ps ":" ;
+    pp_local_coord lc2
+
+  and pp_region = function
+  | R_lcl lr -> pp_local_region lr
+  | R_abs (s,lr) ->  ps (string_of_int s) ; pp_local_region lr
+
+  (** - - Formulas - - **)
+
+  and pp_mut_cmd = function
+    | C_set f -> ps "=" ; pp_formula f ; ps "."
+
+  and pp_formula = function
+    | F_func (f,r) -> pp_func f ; ps "(" ; pp_region r ; ps ")"
+    | F_binop (b,f1,f2) -> ps "" ; pp_formula f1 ; ps " " ;
+        pp_binop b ; ps " " ; pp_formula f2 ; ps ""
+    | F_const (Num n) -> ps (Num.string_of_num n)
+    | F_const Undef -> ps "#undef"
+    | F_coord c -> pp_coord c
+    | F_paren f -> ps "(" ; pp_formula f ; ps ")"
+
+  and pp_binop = function
+    | Bop_add -> ps "+"
+    | Bop_sub -> ps "-"
+    | Bop_div -> ps "/"
+    | Bop_mul -> ps "*"
+
+  and pp_func = function
+    | Fn_sum -> ps "SUM"
+    | Fn_max -> ps "MAX"
+    | Fn_min -> ps "MIN"
+end
