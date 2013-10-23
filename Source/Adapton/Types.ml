@@ -48,6 +48,13 @@ module Nativeint = struct
     let equal = (=)
 end
 
+module Function = struct
+	type t = 'a -> 'b
+	let hash = Hashtbl.seeded_hash
+	let equal = (==)
+end
+
+
 module Option (A : Hashtbl.SeededHashedType) = struct
     type t = A.t option
     let hash seed = function
