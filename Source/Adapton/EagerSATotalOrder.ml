@@ -13,13 +13,13 @@ module T = struct
     type sa
 
     (** Eager self-adjusting values containing ['a]. *)
-    type 'a thunk = { (* 2 + 16 = 18 words *)
+    type 'a thunk = { (* 3 + 16 = 19 words *)
+        id : int;
         mutable value : 'a;
         meta : meta;
     }
     (**/**) (* auxiliary types *)
-    and meta = { (* 6 + 5 + 5 = 16 words (not including closures of evaluate and unmemo as well as WeakDyn.t) *)
-        id : int;
+    and meta = { (* 5 + 5 + 5 = 15 words (not including closures of evaluate and unmemo as well as WeakDyn.t) *)
         mutable evaluate : unit -> unit;
         mutable unmemo : unit -> unit;
         mutable start_timestamp : TotalOrder.t; (* for const thunks, {start,end}_timestamp == TotalOrder.null and evaluate == nop *)
@@ -75,10 +75,10 @@ module T = struct
 
 
     (** Return the id of a self-adjusting value. *)
-    let id m = m.meta.id
+    let id m = m.id
 
     (** Compute the hash value of a self-adjusting value. *)
-    let hash seed m = Hashtbl.seeded_hash seed m.meta.id
+    let hash seed m = Hashtbl.seeded_hash seed m.id
 
     (** Compute whether two self-adjusting values are equal. *)
     let equal = (==)
@@ -142,9 +142,9 @@ module Make (R : Signatures.EqualsType)
     (** Create an eager self-adjusting value from a constant value. *)
     let const x =
         let m = {
+            id=Types.Counter.next eager_id_counter;
             value=x;
             meta={
-                id=Types.Counter.next eager_id_counter;
                 evaluate=nop;
                 unmemo=nop;
                 start_timestamp=TotalOrder.null;
@@ -188,14 +188,13 @@ module Make (R : Signatures.EqualsType)
     (** Create an eager self-adjusting value from a thunk. *)
     let thunk f =
         let meta = {
-            id=Types.Counter.next eager_id_counter;
             evaluate=nop;
             unmemo=nop;
             start_timestamp=add_timestamp ();
             end_timestamp=TotalOrder.null;
             dependents=WeakDyn.create 0;
         } in
-        let m = { value=evaluate_meta meta f; meta } in
+        let m = { id=Types.Counter.next eager_id_counter; value=evaluate_meta meta f; meta } in
         meta.end_timestamp <- add_timestamp ();
         TotalOrder.set_invalidator meta.start_timestamp (invalidator meta);
         meta.evaluate <- make_evaluate m f;
