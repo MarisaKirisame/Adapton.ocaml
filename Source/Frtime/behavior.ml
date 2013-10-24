@@ -1,28 +1,28 @@
 
 open Adapton.Signatures
+module T = Adapton.Types
 
 module type Behavior = sig
 	type 'a behavior
 
 	(* Core combinators. *)
+	val const : (module Hashtbl.SeededHashedType with type t = 'a ) -> 'a -> 'a behavior
 	(*
-	val const : (module type Hashtbl.SeededHashedType) -> 'a -> 'a behavior
 	val app : ('a->'b) behavior -> 'a behavior -> 'b behavior
 	(* val flatten? *)
 	val prev : 'a behavior -> 'a -> 'a behavior
 	val fix : ('a behavior -> 'a behavior) -> 'a behavior
 
-	val filter : ('a -> bool) -> 'a behavior -> 'a behavior
-	val merge : 'a behavior -> 'a behavior -> 'a behavior
-
 	(* Derived combinators. *)
 	val lift : ('a -> 'b) -> 'a behavior -> 'b behavior
 	val lift2 : ('a -> 'b -> 'c) -> 'a behavior -> 'b behavior-> 'c behavior
 	(* val appf? implement without flatten? *)
+
+	val filter : ('a -> bool) -> 'a behavior -> 'a behavior
+	val merge : 'a behavior -> 'a behavior -> 'a behavior
+
+	TODO: more...?
 	*)
-
-	(* TODO: more... *)
-
 end
 
 (* Make a behavior, given a SAType. *)
@@ -30,10 +30,16 @@ module Make (M : SAType) : Behavior = struct
 	type 'a sa_mod = (module SAType.S with type sa = M.sa and type data = 'a)
 	type 'a behavior = 'a sa_mod * 'a M.thunk
 
-	let const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c:t) : t behavior = 
+	let const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c : t) : t behavior = 
 		let module R = M.Make( H) in
 		let r = R.const c in
 		(module R), r
+	
+	(*
+	let app ((module F, f) : ('a -> 'b) behavior) ((module A, a) : 'a behavior) : 'b behavior = 
+		(* let module R = M.Make( T.Function) in *)
+	*)	
+		
 
 end
 

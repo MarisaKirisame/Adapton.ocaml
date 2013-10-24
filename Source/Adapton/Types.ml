@@ -49,7 +49,9 @@ module Nativeint = struct
 end
 
 module Function = struct
-	type t = 'a -> 'b
+	type a
+	type b
+	type t = a -> b
 	let hash = Hashtbl.seeded_hash
 	let equal = (==)
 end
