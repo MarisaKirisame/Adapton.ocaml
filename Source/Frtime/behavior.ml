@@ -1,20 +1,23 @@
 
 open Adapton.Signatures
 module T = Adapton.Types
+module type SHT = Hashtbl.SeededHashedType
 
 module type Behavior = sig
 	type 'a behavior
 
 	(* Core combinators. *)
-	val const : (module Hashtbl.SeededHashedType with type t = 'a ) -> 'a -> 'a behavior
-	(*
-	val app : ('a->'b) behavior -> 'a behavior -> 'b behavior
+	val const : (module SHT with type t = 'a ) -> 'a -> 'a behavior
+	val app : ('a->'b) behavior -> 'a behavior -> (module SHT with type t = 'b ) -> 'b behavior
 	(* val flatten? *)
 	val prev : 'a behavior -> 'a -> 'a behavior
+	(* How do I implement this?
 	val fix : ('a behavior -> 'a behavior) -> 'a behavior
+	*)
 
 	(* Derived combinators. *)
-	val lift : ('a -> 'b) -> 'a behavior -> 'b behavior
+	(*
+	val lift : ('a -> 'b) -> 'a behavior -> (module SHT with type t = 'b ) -> 'b behavior
 	val lift2 : ('a -> 'b -> 'c) -> 'a behavior -> 'b behavior-> 'c behavior
 	(* val appf? implement without flatten? *)
 
@@ -27,18 +30,42 @@ end
 
 (* Make a behavior, given a SAType. *)
 module Make (M : SAType) : Behavior = struct
-	type 'a sa_mod = (module SAType.S with type sa = M.sa and type data = 'a)
-	type 'a behavior = 'a sa_mod * 'a M.thunk
+	type 'a sa_mod = (module SAType.S with type sa = M.sa and type data = 'a and type t = 'a M.thunk)
+	type 'a behavior = 'a sa_mod * 'a M.thunk (* Add a time component of event that propogates? *)
 
-	let const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c : t) : t behavior = 
+	let const (type t) (module H : SHT with type t = t) (c : t) : t behavior = 
 		let module R = M.Make( H) in
 		let r = R.const c in
 		(module R), r
 	
-	(*
-	let app ((module F, f) : ('a -> 'b) behavior) ((module A, a) : 'a behavior) : 'b behavior = 
-		(* let module R = M.Make( T.Function) in *)
-	*)	
+	let app (type a) (type b) (((module F), f) : (a -> b) behavior) (((module A), a) : a behavior) (module B : SHT with type t = b) : b behavior = 
+		let module R = M.Make( B) in
+		let r = R.thunk (fun () -> (F.force f) (A.force a)) in
+		(module R), r
+	
+	let prev (type a) (((module A), a) : a behavior) (default : a) : a behavior =
+		let store = ref default in
+		let r = A.thunk (fun () ->
+			let r' = !store in
+			store := A.force a;
+			r'
+		)
+		in
+		(module A), r
+
+	let lift (type a) (type b) (f : a -> b) (a : a behavior) (module B : SHT with type t = b) : b behavior = 
+		(*
+		let module F = struct
+			type t = a -> b
+			let equal = (==)
+			let hash = Hashtbl.seeded_hash
+		end
+		in
+		*)
+		let module F = T.Function in
+		(* let m = (module F) in with type a = a and type b = b) in*)
+		let f' = const (module F) f in
+		app f' a (module B)
 		
 
 end
