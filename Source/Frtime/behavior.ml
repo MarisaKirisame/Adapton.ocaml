@@ -54,23 +54,23 @@ module Make (M : SAType) : Behavior = struct
 		in
 		(module A), r
 
-	let lift (type a) (type b) (f : a -> b) (module B : Hashtbl.SeededHashedType with type t = b) (a : a behavior) : b behavior = 
-		let mF = T.makeFunction f in
+	let lift (type a) (type b) (f : a -> b) (module B : Hashtbl.SeededHashedType with type t = b) (a : a behavior) : b behavior =
+		let mF = T.makeFunction () in
 		let f' = const mF f in
 		app f' (module B) a
 
 	let lift2 (type a) (type b) (type c) (f : a -> b -> c) (module C : Hashtbl.SeededHashedType with type t = c) (a : a behavior) (b : b behavior) : c behavior =
-		let mF = T.makeFunctionReturn f in
+		let mF = T.makeFunction () in
 		let f' = lift f mF a in
 		app f' (module C) b
 	
 	let lift3 (type a) (type b) (type c) (type d) (f : a -> b -> c -> d) (module D : Hashtbl.SeededHashedType with type t = d) (a : a behavior) (b : b behavior) (c : c behavior) : d behavior =
-		let mF = T.makeFunctionReturn f in
+		let mF = T.makeFunction () in
 		let f' = lift2 f mF a b in
 		app f' (module D) c
 	
-	let lift4 (type a) (type b) (type c) (type d) (type e) (f : a -> b -> c -> d -> e) (module E : Hashtbl.SeededHashedType with type t = e) (a : a behavior) (b : b behavior) (c : c behavior) (d : d behavior) : e behavior = 
-		let mF = T.makeFunctionReturn f in
+	let lift4 (type a) (type b) (type c) (type d) (type e) (f : a -> b -> c -> d -> e) (module E : Hashtbl.SeededHashedType with type t = e) (a : a behavior) (b : b behavior) (c : c behavior) (d : d behavior) : e behavior =
+		let mF = T.makeFunction () in
 		let f' = lift3 f mF a b c in
 		app f' (module E) d
 
