@@ -28,7 +28,7 @@ module type Behavior = sig
 
 	(* Core combinators. *)
 	val const : (module SHT with type t = 'a ) -> 'a -> 'a behavior
-	val app : ('a->'b) behavior -> 'a behavior -> (module SHT with type t = 'b ) -> 'b behavior
+	val app : ('a->'b) behavior -> (module SHT with type t = 'b ) -> 'a behavior -> 'b behavior
 	(* val flatten? *)
 	val prev : 'a behavior -> 'a -> 'a behavior
 	(* How do I implement this?
@@ -36,9 +36,11 @@ module type Behavior = sig
 	*)
 
 	(* Derived combinators. *)
-	val lift : ('a -> 'b) -> 'a behavior -> (module SHT with type t = 'b ) -> 'b behavior
+	val lift : ('a -> 'b) -> (module SHT with type t = 'b ) -> 'a behavior -> 'b behavior
+	val lift2 : ('a -> 'b -> 'c) -> (module SHT with type t = 'c ) -> 'a behavior -> 'b behavior-> 'c behavior
+	val lift3 : ('a -> 'b -> 'c -> 'd) -> (module SHT with type t = 'd ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior
+	val lift4 : ('a -> 'b -> 'c -> 'd -> 'e) -> (module SHT with type t = 'e ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior -> 'e behavior
 	(*
-	val lift2 : ('a -> 'b -> 'c) -> 'a behavior -> 'b behavior-> 'c behavior
 	(* val appf? implement without flatten? *)
 
 	val filter : ('a -> bool) -> 'a behavior -> 'a behavior
@@ -58,7 +60,7 @@ module Make (M : SAType) : Behavior = struct
 		let r = R.const c in
 		(module R), r
 	
-	let app (type a) (type b) (((module F), f) : (a -> b) behavior) (((module A), a) : a behavior) (module B : SHT with type t = b) : b behavior = 
+	let app (type a) (type b) (((module F), f) : (a -> b) behavior) (module B : SHT with type t = b) (((module A), a) : a behavior) : b behavior = 
 		let module R = M.Make( B) in
 		let r = R.thunk (fun () -> (F.force f) (A.force a)) in
 		(module R), r
@@ -73,25 +75,25 @@ module Make (M : SAType) : Behavior = struct
 		in
 		(module A), r
 
-	let lift (type a) (type b) (f : a -> b) (a : a behavior) (module B : SHT with type t = b) : b behavior = 
+	let lift (type a) (type b) (f : a -> b) (module B : SHT with type t = b) (a : a behavior) : b behavior = 
 		let mF = makeFunction f in
 		let f' = const mF f in
-		app f' a (module B)
+		app f' (module B) a
 
-	let lift2 (type a) (type b) (type c) (f : a -> b -> c) (a : a behavior) (b : b behavior) (module C : SHT with type t = c) : c behavior =
+	let lift2 (type a) (type b) (type c) (f : a -> b -> c) (module C : SHT with type t = c) (a : a behavior) (b : b behavior) : c behavior =
 		let mF = makeFunctionReturn f in
-		let f' = lift f a mF in
-		app f' b (module C)
+		let f' = lift f mF a in
+		app f' (module C) b
 	
-	let lift3 (type a) (type b) (type c) (type d) (f : a -> b -> c -> d) (a : a behavior) (b : b behavior) (c : c behavior) (module D : SHT with type t = d) : d behavior =
+	let lift3 (type a) (type b) (type c) (type d) (f : a -> b -> c -> d) (module D : SHT with type t = d) (a : a behavior) (b : b behavior) (c : c behavior) : d behavior =
 		let mF = makeFunctionReturn f in
-		let f' = lift2 f a b mF in
-		app f' c (module D)
+		let f' = lift2 f mF a b in
+		app f' (module D) c
 	
-	let lift4 (type a) (type b) (type c) (type d) (type e) (f : a -> b -> c -> d -> e) (a : a behavior) (b : b behavior) (c : c behavior) (d : d behavior) (module E : SHT with type t = e) : e behavior = 
+	let lift4 (type a) (type b) (type c) (type d) (type e) (f : a -> b -> c -> d -> e) (module E : SHT with type t = e) (a : a behavior) (b : b behavior) (c : c behavior) (d : d behavior) : e behavior = 
 		let mF = makeFunctionReturn f in
-		let f' = lift3 f a b c mF in
-		app f' d (module E)
+		let f' = lift3 f mF a b c in
+		app f' (module E) d
 
 end
 
