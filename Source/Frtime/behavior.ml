@@ -3,6 +3,26 @@ open Adapton.Signatures
 module T = Adapton.Types
 module type SHT = Hashtbl.SeededHashedType
 
+(* TODO: temp. make functor version in types.ml *)
+let makeFunction (type a) (type b) (f : a -> b) : (module SHT with type t = a -> b) = 
+	let module F = struct
+		type t = a -> b
+		let equal = (==)
+		let hash = Hashtbl.seeded_hash
+	end
+	in 
+	(module F)
+
+(* TODO: I'm not sure whether this'll work in general... *)
+let makeFunctionReturn (type b) (type c) (f : 'a -> 'b -> 'c) : (module SHT with type t = b -> c) = 
+	let module F = struct
+		type t = b -> c
+		let equal = (==)
+		let hash = Hashtbl.seeded_hash
+	end
+	in 
+	(module F)
+
 module type Behavior = sig
 	type 'a behavior
 
@@ -16,8 +36,8 @@ module type Behavior = sig
 	*)
 
 	(* Derived combinators. *)
-	(*
 	val lift : ('a -> 'b) -> 'a behavior -> (module SHT with type t = 'b ) -> 'b behavior
+	(*
 	val lift2 : ('a -> 'b -> 'c) -> 'a behavior -> 'b behavior-> 'c behavior
 	(* val appf? implement without flatten? *)
 
@@ -54,19 +74,24 @@ module Make (M : SAType) : Behavior = struct
 		(module A), r
 
 	let lift (type a) (type b) (f : a -> b) (a : a behavior) (module B : SHT with type t = b) : b behavior = 
-		(*
-		let module F = struct
-			type t = a -> b
-			let equal = (==)
-			let hash = Hashtbl.seeded_hash
-		end
-		in
-		*)
-		let module F = T.Function in
-		(* let m = (module F) in with type a = a and type b = b) in*)
-		let f' = const (module F) f in
+		let mF = makeFunction f in
+		let f' = const mF f in
 		app f' a (module B)
-		
+
+	let lift2 (type a) (type b) (type c) (f : a -> b -> c) (a : a behavior) (b : b behavior) (module C : SHT with type t = c) : c behavior =
+		let mF = makeFunctionReturn f in
+		let f' = lift f a mF in
+		app f' b (module C)
+	
+	let lift3 (type a) (type b) (type c) (type d) (f : a -> b -> c -> d) (a : a behavior) (b : b behavior) (c : c behavior) (module D : SHT with type t = d) : d behavior =
+		let mF = makeFunctionReturn f in
+		let f' = lift2 f a b mF in
+		app f' c (module D)
+	
+	let lift4 (type a) (type b) (type c) (type d) (type e) (f : a -> b -> c -> d -> e) (a : a behavior) (b : b behavior) (c : c behavior) (d : d behavior) (module E : SHT with type t = e) : e behavior = 
+		let mF = makeFunctionReturn f in
+		let f' = lift3 f a b c mF in
+		app f' d (module E)
 
 end
 
