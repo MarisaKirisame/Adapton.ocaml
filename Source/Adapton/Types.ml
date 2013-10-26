@@ -48,15 +48,6 @@ module Nativeint = struct
     let equal = (=)
 end
 
-module Function = struct
-	type a
-	type b
-	type t = a -> b
-	let hash = Hashtbl.seeded_hash
-	let equal = (==)
-end
-
-
 module Option (A : Hashtbl.SeededHashedType) = struct
     type t = A.t option
     let hash seed = function
@@ -106,3 +97,24 @@ module Seeds = struct
     let hash seed ( Seeds ( s, _ ) ) = Hashtbl.seeded_hash seed s
     let equal = (==)
 end
+
+(* Functions to make Function modules. *)
+let makeFunction (type a) (type b) (f : a -> b) : (module Hashtbl.SeededHashedType with type t = a -> b) = 
+	let module F = struct
+		type t = a -> b
+		let equal = (==)
+		let hash = Hashtbl.seeded_hash
+	end
+	in 
+	(module F)
+
+(* TODO: I'm not sure whether this'll work in general... *)
+let makeFunctionReturn (type b) (type c) (f : 'a -> 'b -> 'c) : (module Hashtbl.SeededHashedType with type t = b -> c) = 
+	let module F = struct
+		type t = b -> c
+		let equal = (==)
+		let hash = Hashtbl.seeded_hash
+	end
+	in 
+	(module F)
+
