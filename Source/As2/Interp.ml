@@ -22,6 +22,8 @@
    -- lazy lists -- are these needed / relevant here?
 *)
 
+module A = Adapton.PolySA.Make(Adapton.LazySABidi)
+
 module type INTERP = sig
   type cell
   type db

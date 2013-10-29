@@ -1,1 +1,1 @@
-<**/*.cm*> or <**/*.top> or <**/*.mli>: rectypes
+<**/*.cm*> or <**/*.top> or <**/*.mli> or <**/*.native>: rectypes, package(unix)
