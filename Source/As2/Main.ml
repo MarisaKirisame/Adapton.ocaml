@@ -109,13 +109,14 @@ let _ =
       and eval_cmd cmd cur = begin match cmd with
         | Ast.C_print -> 
             let (sht,_) = Interp.get_pos cur in
+            ps "================================================\n" ;
             Interp.print_region (sht,((1,1),(10,10))) db stdout ;
+            ps "================================================\n" ;
             cur
 
         | Ast.C_seq(c1,c2) -> 
             let cur = eval_cmd c1 cur in
             eval_cmd c2 cur
-
         | Ast.C_repeat(f,c) -> begin
             try
               let cnt = Ast.A.force (Interp.eval cur (Ast.A.force f)) in

@@ -13,8 +13,8 @@ module Ast = struct
     | C_help | C_exit
     | C_nav of nav_cmd
     | C_mut of mut_cmd
-    | C_print
     | C_seq of cmd * cmd
+    | C_print
     | C_repeat of formula' * cmd
 
   and scramble_flags = 

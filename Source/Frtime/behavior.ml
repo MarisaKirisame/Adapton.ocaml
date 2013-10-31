@@ -9,7 +9,7 @@ module type Behavior = sig
 	val const : (module Hashtbl.SeededHashedType with type t = 'a ) -> 'a -> 'a behavior
 	val app : ('a->'b) behavior -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
 	(* val flatten? *)
-	val prev : 'a behavior -> 'a -> 'a behavior
+	(* val prev : 'a behavior -> 'a -> 'a behavior *)
 	(* How do I implement this?
 	val fix : ('a behavior -> 'a behavior) -> 'a behavior
 	*)
@@ -35,50 +35,45 @@ end
 (* Make a behavior, given a SAType. *)
 module Make (M : SAType) : Behavior = struct
 	open Time
+	module Tm = M.Make( T.Float)
 
-	type 'a wrapped = 'a * time
 	type 'a sa_mod = (module SAType.S with type sa = M.sa and type data = 'a and type t = 'a M.thunk)
-	type 'a behavior = ('a wrapped) sa_mod * ('a wrapped) M.thunk
-
-	(*
-	module type WrapFunctor = functor (S : 'a sa_mod) -> ('a wrapped) sa_mod
-	module Wrap : WrapFunctor = functor (S : 'a sa_mod) -> struct
-
-	end
-	*)
-
-	let makeWrap (type a) (module S : a sa_mod) : (a wrapped) sa_mod = 
-		(module struct
-
-		end)
+	type 'a behavior = 'a sa_mod * 'a M.thunk * time M.thunk
 
 	let const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c : t) : t behavior = 
 		let module R = M.Make( H) in
-		let r = R.const (c, get_time ()) in
-		(module R), r
+		let r = R.const c in
+		let t = Tm.const (get_time ()) in
+		(module R), r, t
 	
-	let app (type a) (type b) (((module F), f) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a) : a behavior) : b behavior = 
+	let app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior = 
 		let module R = M.Make( B) in
-		let r = R.thunk (fun () -> 
-			let f', tf = F.force f in
-			let a', ta = A.force a in
-			let t = min_time [ tf; ta] in
-			f' a', t
-		)
-		in
-		(module R), r
+		let r = R.thunk (fun () -> (F.force f) (A.force a)) in
+		let t = Tm.thunk (fun () -> min_time [ Tm.force tf; Tm.force ta]) in
+		(module R), r, t
 	
 	(* Contains the previous value of the behavior. Takes on the default value until the behavior changes. *)
+	(* TODO: Not pure... How do we fix this?
 	let prev (type a) (((module A), a, ta) : a behavior) (default : a) : a behavior =
+		(* TODO: Combine stores? Otherwise, might lead to race conditions?
 		let store = ref (default, get_time ()) in
+		*)
+		let valStore = ref default in
+		let tmStore = ref (get_time ()) in (* default time should time prev was called? *)
 		let r = A.thunk (fun () ->
-			let r', t' = !store in
-			store := (A.force a, ta);
+			let r' = !valStore in
+			valStore := A.force a;
 			r'
 		)
 		in
-		let t = snd !store in
+		let t = Tm.thunk (fun () ->
+			let t' = !tmStore in
+			tmStore := Tm.force ta;
+			t'
+		)
+		in
 		(module A), r, t
+	*)
 
 	let lift (type a) (type b) (f : a -> b) (module B : Hashtbl.SeededHashedType with type t = b) (a : a behavior) : b behavior =
 		let mF = T.makeFunction () in
@@ -100,21 +95,22 @@ module Make (M : SAType) : Behavior = struct
 		let f' = lift3 f mF a b c in
 		app f' (module E) d
 
-	(*
 	(* Take on the value of the most recently updated behavior. *)
-	let merge (type a) (((module A), a, ta) as ba : a behavior) (((module B), b, tb) as bb : a behavior) : a behavior =
+	let merge (type a) (((module A), a, ta) : a behavior) (( _, b, tb) : a behavior) : a behavior =
 		let r = A.thunk (fun () ->
-			let ((module A), a, ta) = A.force ba in
-			let ((module B), b, tb) = A.force bb in
-		
-		
-		if cmp_time a b then
-			bb
-		else
-			ba
+			let ta' = Tm.force ta in
+			let tb' = Tm.force tb in
+			(* !(ta >= tb) *)
+			A.force begin
+				if cmp_time tb' ta' then
+					b
+				else
+					a
+			end
 		)
 		in
-	*)
+		let t = Tm.thunk (fun () -> min_time [ Tm.force ta; Tm.force tb]) in
+		(module A), r, t
 
 	let force (type a) (((module A), a, _) : a behavior) : a =
 		A.force a
