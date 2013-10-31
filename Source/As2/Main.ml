@@ -63,49 +63,72 @@ let parse_channel : string -> in_channel -> Ast.cmd =
     ast
 
 let _ =
-  let db  = Interp.empty (20,10,20) in
+  let db  = Interp.empty (100,10,10) in
   let cur = Interp.cursor (1,(1,1)) db in
+  
+  let measure f = 
+    let module S = Adapton.Statistics in
+    let x, m = S.measure f
+    in
+    begin Printf.printf "time=%f, heap=%d, stack=%d, upd=%d, eval=%d, dirty=%d, clean=%d\n"
+        m.S.time' m.S.heap' m.S.stack' 
+        m.S.update' m.S.evaluate' m.S.dirty' m.S.clean' 
+      ;
+      x 
+    end
+  in
 
   (* REPL seed: *)
   let rec repl cur =
-    let (sht,_) = Interp.get_pos cur in
-    Interp.print_region (sht,((1,1),(10,20))) db stdout
-    ;
-    Printf.printf "= " ;
-    Ast.Pretty.pp_formula (Interp.get_frm cur) ;
-    Printf.printf "\n"
-    ;
-    Ast.Pretty.pp_pos (Interp.get_pos cur)
-    ;
-    Printf.printf "> %!" ;
-    let cmd' =
-      try
-        Some ( parse_channel "<stdin>" stdin )
-      with
-        | Error (_, (line, col, token)) ->
-            ( Printf.eprintf "line %d, character %d: syntax error at %s\n%!"
-                (* filename *) line col
-                ( if token = "\n"
-                  then "newline"
-                  else Printf.sprintf "`%s'" token ) ;
-              None
-            )
+    let handler () = begin
+      Printf.printf "= " ;
+      Ast.Pretty.pp_formula' (Interp.get_frm cur) ;
+      Printf.printf "\n"
+      ;
+      Ast.Pretty.pp_pos (Interp.get_pos cur)
+      ;
+      Printf.printf "> %!" ;
+      let cmd' =        
+        try
+          Some ( parse_channel "<stdin>" stdin )
+        with
+          | Error (_, (line, col, token)) ->
+              ( Printf.eprintf "line %d, character %d: syntax error at %s\n%!"
+                  (* filename *) line col
+                  ( if token = "\n"
+                    then "newline"
+                    else Printf.sprintf "`%s'" token ) ;
+                None
+              )
+      in
+      begin match cmd' with
+        | None -> ps "Oops! Try 'help' for reference information.\n" ; cur
+            
+        | Some (Ast.C_print) -> 
+            let (sht,_) = Interp.get_pos cur in
+            Interp.print_region (sht,((1,1),(10,10))) db stdout ;
+            cur
+
+        | Some (Ast.C_help) -> help () ; cur
+        | Some (Ast.C_exit) -> exit (1)
+            
+        | Some (Ast.C_scramble Ast.Sf_none)  -> Interp.scramble       cur ; cur
+        | Some (Ast.C_scramble Ast.Sf_dense) -> Interp.scramble_dense cur ; cur
+
+        | Some ((Ast.C_nav nc) as cmd) ->
+            ps "navigation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
+            (Interp.move nc cur)
+              
+        | Some ((Ast.C_mut mc) as cmd) ->
+            ps "mutation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
+            (Interp.write mc cur)
+      end
+    end
     in
-    begin match cmd' with
-      | None -> ps "Oops! Try 'help' for reference information.\n" ;
-      | Some (Ast.C_help) -> help ()
-      | Some (Ast.C_exit) -> exit (1) ;
-
-      | Some ((Ast.C_nav nc) as cmd) ->
-          ps "navigation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
-          repl (Interp.move nc cur)
-
-      | Some ((Ast.C_mut mc) as cmd) ->
-          ps "mutation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
-          repl (Interp.write mc cur)
-    end ;
-    ( repl cur )
+    let cur = measure handler in
+    (repl cur) (* repl is a tail-recursive loop. *)
   in
+  (* enter repl *)
   (repl cur)
 
 (* Not in use: FILE processing *)

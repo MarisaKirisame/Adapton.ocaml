@@ -24,7 +24,7 @@ open Lexing
 
 /* keywords */
 %token NEXT PREV GOTO ROW COL SHEET
-%token EXIT HELP
+%token EXIT HELP SCRAMBLE SCRAMBLE_D PRINT
 
 %token <int> LETTER
 %token <int> NAT
@@ -35,14 +35,18 @@ open Lexing
 %start cmd
 
 %type <Ast.cmd> cmd
+%type <Ast.formula'> frm
 
 %%
 
 cmd:
 | nav_cmd     { Ast.C_nav $1 }
 | mut_cmd DOT { Ast.C_mut $1 }
+| SCRAMBLE    { Ast.C_scramble (Ast.Sf_none) }
+| SCRAMBLE_D  { Ast.C_scramble (Ast.Sf_dense) }
 | EXIT        { Ast.C_exit }
 | HELP        { Ast.C_help }
+| PRINT       { Ast.C_print }
 ;
 
 mut_cmd:
@@ -80,20 +84,20 @@ region:
 ;
 
 frm:
-| frm_term ADD frm { Ast.F_binop(Ast.Bop_add,$1,$3) }
-| frm_term SUB frm { Ast.F_binop(Ast.Bop_sub,$1,$3) }
+| frm_term ADD frm { Ast.memo_frm (Ast.F_binop(Ast.Bop_add,$1,$3)) }
+| frm_term SUB frm { Ast.memo_frm (Ast.F_binop(Ast.Bop_sub,$1,$3)) }
 | frm_term         { $1 }
 ;
 frm_term:
-| frm_factor DIV frm_term { Ast.F_binop(Ast.Bop_div,$1,$3) }
-| frm_factor MUL frm_term { Ast.F_binop(Ast.Bop_mul,$1,$3) }
+| frm_factor DIV frm_term { Ast.memo_frm (Ast.F_binop(Ast.Bop_div,$1,$3)) }
+| frm_factor MUL frm_term { Ast.memo_frm (Ast.F_binop(Ast.Bop_mul,$1,$3)) }
 | frm_factor              { $1 }
 ;
 frm_factor:
-| const                     { Ast.F_const $1 }
-| coord                     { Ast.F_coord $1 }
-| LPAREN frm RPAREN         { Ast.F_paren $2 }
-| func LPAREN region RPAREN { Ast.F_func ($1, $3) }
+| const                     { Ast.memo_frm (Ast.F_const $1) }
+| coord                     { Ast.memo_frm (Ast.F_coord $1) }
+| LPAREN frm RPAREN         { Ast.memo_frm  (Ast.F_paren $2) }
+| func LPAREN region RPAREN { Ast.memo_frm (Ast.F_func ($1, $3)) }
 ;
 func:
 | SUM { Ast.Fn_sum }

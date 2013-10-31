@@ -68,6 +68,9 @@ rule token = parse
   | ("ROW"|"row") { ROW }
   | ("COL"|"col") { COL }
   | ("SHEET"|"sheet") { SHEET }
+  | ("SCRAMBLE"|"scramble") { SCRAMBLE }
+  | ("SCRAMBLED"|"scrambled") { SCRAMBLE_D }
+  | ("PRINT"|"print") { PRINT }
 
   (* meta-level commands *)
   | ("EXIT"|"exit"|"QUIT"|"quit") { EXIT }

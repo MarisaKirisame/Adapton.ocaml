@@ -22,15 +22,13 @@
    -- lazy lists -- are these needed / relevant here?
 *)
 
-module A = Adapton.PolySA.Make(Adapton.LazySABidi)
-
 module type INTERP = sig
   type cell
   type db
   type cur
 
   val empty : int * int * int -> db
-  val eval  : Ast.sht -> Ast.formula -> db -> Ast.const
+  val eval  : db -> Ast.sht -> Ast.formula' -> Ast.const Ast.A.thunk
 
   type 'a fold_body = ( cur -> 'a -> 'a )
 
@@ -44,9 +42,8 @@ module type INTERP = sig
   (* Cursor-based interaction: *)
   val cursor  : Ast.pos -> db -> cur
   val move    : Ast.nav_cmd -> cur -> cur
-  val get_frm : cur -> Ast.formula
+  val get_frm : cur -> Ast.formula'
   val get_pos : cur -> Ast.pos
-
 (*
   val load  : string -> db
   val save  : db -> string -> unit
@@ -54,6 +51,9 @@ module type INTERP = sig
 
   val read   : cur -> Ast.const
   val write  : Ast.mut_cmd -> cur -> cur
+
+  val scramble : cur -> unit
+  val scramble_dense : cur -> unit
 end
 
 module Interp : INTERP = struct
@@ -67,9 +67,9 @@ module Interp : INTERP = struct
     let equals c1 c2 = (c1 = c2)
   end
 
-  module M = Map.Make(Coord)
+  module Mp = Map.Make(Coord)
 
-  type cell = { mutable cell_frm : formula ; }
+  type cell = { cell_frm : formula' }
 
   (* these mutable field below for cells need not be instrumented by
      adapton bc the changes will only be monotonic (will only add new
@@ -77,7 +77,7 @@ module Interp : INTERP = struct
   type db = { nshts  : int ;
               ncols  : int ;
               nrows  : int ;
-              mutable cells : cell M.t ;
+              mutable cells : cell Mp.t ;
             }
 
   type cur = { db : db ;
@@ -88,7 +88,7 @@ module Interp : INTERP = struct
     { nshts = nshts ;
       ncols = ncols ;
       nrows = nrows ;
-      cells = M.empty ;
+      cells = Mp.empty ;
     }
 
 (*
@@ -105,8 +105,9 @@ module Interp : INTERP = struct
 
   (* get the formula at the cursor -- do a map lookup *)
   let get_frm cur =
-    try (M.find cur.pos cur.db.cells).cell_frm with
-      | Not_found -> F_const Undef
+    try (Mp.find cur.pos cur.db.cells).cell_frm with
+        (* TODO -- create the cell on demand. *)
+      | Not_found -> A.const (F_const Undef)
 
   let sht_of_reg (s,_) = s
   let sht_of_pos (s,_) = s
@@ -181,72 +182,92 @@ module Interp : INTERP = struct
       | Abs(s',(c,r)) -> (s',(c,r))
       | Lcl(c,r)      -> (s,(c,r))
 
+  
+  (* lookup and evaluate an absolute coordinate. *)
+  let lookup_cell : db -> pos -> cell = 
+    fun db pos ->
+      try (Mp.find pos db.cells) with
+        | Not_found -> begin
+            let undef_frm = A.const (F_const Undef) in
+            let undef_cell = { cell_frm = undef_frm } in
+            (* Monotonic side effect: 
+               create and remember a new formula, initially holding Undef. *)
+            db.cells <- Mp.add pos undef_cell db.cells ;
+            undef_cell
+          end
 
   (* -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- *)
   (* -- formula evaluation -- *)
-  (* ADAPTON: Memoize this function, as well as eval_rec (where the sheet remains fixed). *)
-  let rec eval sht frm db =
+  (* ADAPTON memoizes this function, based on the sheet and formula arguments. *)
+  let rec eval db = A.memo2 begin 
+    fun eval_memo sht (frm : formula') ->
+      
+      let to_app_form : 'a list -> ('a list -> 'a list)
+        = fun xs -> (fun xs_tail -> xs @ xs_tail)
+      in
+      
+      let snoc : ('a list -> 'a list) -> 'a -> ('a list -> 'a list)
+        = fun xs y -> (fun tl -> xs (y :: tl))
+      in
+      
+      (* lookup and evaluate an absolute coordinate. *)
+      let lookup_eval : pos -> const = 
+        fun pos ->
+          let frm = (lookup_cell db pos).cell_frm in 
+          A.force (eval_memo sht frm)
+      in
 
-    let to_app_form : 'a list -> ('a list -> 'a list)
-      = fun xs -> (fun xs_tail -> xs @ xs_tail)
-    in
-
-    let snoc : ('a list -> 'a list) -> 'a -> ('a list -> 'a list)
-      = fun xs y -> (fun tl -> xs (y :: tl))
-    in
-
-    (* lookup and evaluate an absolute coordinate. *)
-    let rec lookup : pos -> const =
-      fun ((s,lc) as pos) ->
-        let frm =
-          try (M.find pos db.cells).cell_frm with
-            | Not_found -> F_const Undef
-        in
-        if s <> sht then eval s frm db
-        else eval_rec frm
-
-    (* evaluate on same sheet *)
-    and eval_rec : formula -> const = function
-      | F_const c -> c
-      | F_paren f -> eval_rec f
-      | F_coord coord -> lookup (absolute sht coord)
-      | F_func(f,r) ->
-          let r = match r with
-            | R_lcl lr -> (sht,lr)
-            | R_abs reg -> reg
-          in
-          let cells = fold_region r db {
-            fold_row_begin = begin fun cur x -> x end ;
-            fold_row_end   = begin fun cur x -> x end ;
-            fold_cell      = begin fun cur cells -> snoc cells (eval_rec (get_frm cur)) end
-          } (to_app_form [])
-          in
-          begin match cells [] with
-            | []    -> Undef
-            | x::xs ->
-                (* ADAPTON: replace with Adapton Tree-Fold. *)
-                List.fold_right begin fun x y -> match f, x, y with
-                  | Fn_sum, Num x, Num y -> Num ( Num.add_num x y )
-                  | Fn_max, Num x, Num y -> Num ( if Num.gt_num x y then x else y )
-                  | Fn_min, Num x, Num y -> Num ( if Num.gt_num x y then y else x )
-                  | _     , Undef, _     -> Undef
-                  | _     , _,     Undef -> Undef
-                end xs x
+      (* evaluate given formula *)
+      match A.force frm with          
+        | F_const c -> c
+        | F_paren f -> A.force (eval_memo sht f)
+        | F_coord coord -> lookup_eval (absolute sht coord)
+        | F_func(f,r) ->
+            let r = match r with
+              | R_lcl lr -> (sht,lr)
+              | R_abs reg -> reg
+            in
+            let cells = fold_region r db {
+              fold_row_begin = begin fun cur x -> x end ;
+              fold_row_end   = begin fun cur x -> x end ;
+              fold_cell      = begin fun cur cells -> snoc cells (eval_memo sht (get_frm cur)) end
+            } (to_app_form [])
+            in
+            begin match cells [] with
+              | []    -> Undef
+              | x::xs ->
+                  let x = A.force x in
+                  List.fold_right begin fun x y -> 
+                    let x = A.force x in
+                    match f, x, y with
+                    | Fn_sum,  Num x, Num y -> Num ( Num.add_num x y )
+                    | Fn_max,  Num x, Num y -> Num ( if Num.gt_num x y then x else y )
+                    | Fn_min,  Num x, Num y -> Num ( if Num.gt_num x y then y else x )
+                    | _, Fail, _            -> Fail
+                    | _, _   , Fail         -> Fail 
+                    | _      , Undef, _     -> Undef
+                    | _      , _,     Undef -> Undef
+                  end xs x
+            end
+              
+        | F_binop(bop,f1,f2) -> begin
+            let c1 = A.force (eval_memo sht f1) in
+            let c2 = A.force (eval_memo sht f2) in
+            try
+              begin match bop, c1, c2 with
+                | Bop_add, Num n1, Num n2 -> Num (Num.add_num n1 n2)
+                | Bop_sub, Num n1, Num n2 -> Num (Num.sub_num n1 n2)
+                | Bop_div, Num n1, Num n2 -> Num (Num.div_num n1 n2)
+                | Bop_mul, Num n1, Num n2 -> Num (Num.mult_num n1 n2)
+                | _, Fail , _     -> Fail
+                | _, _    , Fail  -> Fail 
+                | _, Undef, x     -> Undef
+                | _, x    , Undef -> Undef
+              end
+            with
+              | Failure _ -> Fail
           end
-
-      | F_binop(bop,f1,f2) -> begin
-          let c1 = eval_rec f1 in
-          let c2 = eval_rec f2 in
-          begin match bop, c1, c2 with
-            | Bop_add, Num n1, Num n2 -> Num (Num.add_num n1 n2)
-            | Bop_sub, Num n1, Num n2 -> Num (Num.sub_num n1 n2)
-            | Bop_div, Num n1, Num n2 -> Num (Num.div_num n1 n2)
-            | Bop_mul, Num n1, Num n2 -> Num (Num.mult_num n1 n2)
-            | _, Undef, _     -> Undef
-            | _, _    , Undef -> Undef
-          end
-        end
-    in eval_rec frm
+  end
 
   (* -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- *)
   (* -- pretty printing -- *)
@@ -261,21 +282,79 @@ module Interp : INTERP = struct
             let frm = get_frm cur in
             ps "| " ;
             Printf.fprintf out "%10s"
-              (Pretty.string_of_const (eval (sht_of_reg reg) frm db)) ;
+              (Pretty.string_of_const (A.force(eval db (sht_of_reg reg) frm))) ;
             ps " |"
           end } ()
 
   let read cur =
-    eval (sht_of_pos cur.pos) (get_frm cur) cur.db
+    A.force (eval cur.db (sht_of_pos cur.pos) (get_frm cur))
 
   let write mutcmd cur =
     begin match mutcmd with
       | C_set frm -> begin
-          cur.db.cells <- M.add cur.pos { cell_frm=frm } cur.db.cells
+          let cell = lookup_cell cur.db cur.pos in
+          A.update_const cell.cell_frm (A.force frm)
         end
     end
     ; cur
 
+  let scramble cur =
+    let db = cur.db in
+    for s = 1 to db.nshts do
+      for r = 1 to db.ncols do
+        for c = 1 to db.nrows do
+          let cell = lookup_cell db (s,(c,r)) in
+          if s <= 1 || r <= 1 || c <= 1 then
+            A.update_const cell.cell_frm 
+              (Ast.F_const (Ast.Num (Num.num_of_int (Random.int 10000))))
+          else
+            let rnd max = (Random.int (max - 1)) + 1 in
+            let s1, s2 = rnd s, rnd s in
+            let c1, c2 = rnd db.ncols, rnd db.ncols in
+            let r1, r2 = rnd db.nrows, rnd db.nrows in
+            let b = match Random.int 4 with
+              | 0 -> Ast.Bop_add
+              | 1 -> Ast.Bop_sub 
+              | 2 -> Ast.Bop_div
+              | 3 -> Ast.Bop_mul
+              | _ -> invalid_arg "oops"
+            in
+            let f1 = Ast.F_coord (Abs (s1, (c1, r1))) in
+            let f2 = Ast.F_coord (Abs (s2, (c2, r2))) in
+            let f3 = Ast.F_binop (b, (memo_frm f1), (memo_frm f2)) in
+            A.update_const cell.cell_frm f3
+        done
+      done
+    done
+
+  let scramble_dense cur =
+    let db = cur.db in
+    for s = 1 to db.nshts do
+      for r = 1 to db.ncols do
+        for c = 1 to db.nrows do
+          let cell = lookup_cell db (s,(c,r)) in
+          if s <= 1 || r <= 1 || c <= 1 then
+            A.update_const cell.cell_frm 
+              (Ast.F_const (Ast.Num (Num.num_of_int (Random.int 10000))))
+          else
+            let rnd max = (Random.int (max - 1)) + 1 in
+            let c1, c2 = rnd db.ncols, rnd db.ncols in
+            let r1, r2 = rnd db.nrows, rnd db.nrows in
+            let b = match Random.int 4 with
+              | 0 -> Ast.Bop_add
+              | 1 -> Ast.Bop_sub 
+              | 2 -> Ast.Bop_div
+              | 3 -> Ast.Bop_mul
+              | _ -> invalid_arg "oops"
+            in
+            (* dense ==> use the previous sheet. *)
+            let f1 = Ast.F_coord (Abs (s - 1, (c1, r1))) in
+            let f2 = Ast.F_coord (Abs (s - 1, (c2, r2))) in
+            let f3 = Ast.F_binop (b, (memo_frm f1), (memo_frm f2)) in
+            A.update_const cell.cell_frm f3
+        done
+      done
+    done
 
 end
 

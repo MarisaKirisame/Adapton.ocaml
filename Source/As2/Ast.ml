@@ -1,3 +1,6 @@
+
+module A = Adapton.PolySA.Make(Adapton.LazySABidi)
+
 module Ast = struct
 
   type col = int
@@ -10,9 +13,13 @@ module Ast = struct
     | C_help | C_exit
     | C_nav of nav_cmd
     | C_mut of mut_cmd
+    | C_scramble of scramble_flags
+    | C_print
+
+  and scramble_flags = Sf_none | Sf_dense
 
   and mut_cmd =
-    | C_set of formula
+    | C_set of formula'
 
   and nav_cmd =
     | C_next of nav_thing
@@ -42,10 +49,12 @@ module Ast = struct
 
   and formula =
     | F_func of func * region
-    | F_binop of binop * formula * formula
+    | F_binop of binop * formula' * formula'
     | F_const of const
     | F_coord of coord
-    | F_paren of formula
+    | F_paren of formula'
+
+  and formula' = formula A.thunk
 
   and binop =
     | Bop_add
@@ -60,8 +69,15 @@ module Ast = struct
 
   and const =
     | Num   of Num.num (* ocaml standard library; arbitrary-precision numbers. *)
+    | Fail
     | Undef
 
+  (* hash-cons'd formulae: *)
+  let memo_frm : formula -> formula' = 
+    let f = 
+      A.memo begin fun f frm -> frm end
+    in
+    ( fun frm -> f frm )
 end
 include Ast
 
@@ -69,6 +85,7 @@ module Pretty = struct
 
   let string_of_const = function
     | Num n -> Num.string_of_num n
+    | Fail  -> "#fail"
     | Undef -> "#undef"
 
   let ps = print_string
@@ -78,6 +95,9 @@ module Pretty = struct
     | C_exit -> ps "exit"
     | C_nav c -> pp_nav_cmd c
     | C_mut c -> pp_mut_cmd c
+    | C_scramble Sf_none  -> ps "scramble"
+    | C_scramble Sf_dense -> ps "scrambled"
+    | C_print -> ps "print"
 
   (** - - Navigation / Focus - - **)
 
@@ -116,16 +136,20 @@ module Pretty = struct
   (** - - Formulas - - **)
 
   and pp_mut_cmd = function
-    | C_set f -> ps "=" ; pp_formula f ; ps "."
+    | C_set f -> ps "=" ; pp_formula' f ; ps "."
 
   and pp_formula = function
     | F_func (f,r) -> pp_func f ; ps "(" ; pp_region r ; ps ")"
-    | F_binop (b,f1,f2) -> ps "" ; pp_formula f1 ; ps " " ;
-        pp_binop b ; ps " " ; pp_formula f2 ; ps ""
+    | F_binop (b,f1,f2) -> ps "" ; pp_formula' f1 ; ps " " ;
+        pp_binop b ; ps " " ; pp_formula' f2 ; ps ""
     | F_const (Num n) -> ps (Num.string_of_num n)
     | F_const Undef -> ps "#undef"
+    | F_const Fail -> ps "#fail"
     | F_coord c -> pp_coord c
-    | F_paren f -> ps "(" ; pp_formula f ; ps ")"
+    | F_paren f -> ps "(" ; pp_formula' f ; ps ")"
+
+  and pp_formula' f = 
+    pp_formula ( A.force f )
 
   and pp_binop = function
     | Bop_add -> ps "+"
