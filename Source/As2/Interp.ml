@@ -78,18 +78,11 @@ module Interp : INTERP = struct
               ncols  : int ;
               nrows  : int ;
               mutable cells : cell Mp.t ;
+              mutable eval : sht -> formula -> const A.thunk ;
             }
 
   type cur = { db : db ;
                pos : pos ; }
-
-
-  let empty (nshts,ncols,nrows) =
-    { nshts = nshts ;
-      ncols = ncols ;
-      nrows = nrows ;
-      cells = Mp.empty ;
-    }
 
 (*
   let load filename =
@@ -270,6 +263,20 @@ module Interp : INTERP = struct
     in
     eval_memoized
 
+  exception Not_yet_back_patched
+
+  let empty (nshts,ncols,nrows) =
+    let db = 
+      { nshts = nshts ;
+        ncols = ncols ;
+        nrows = nrows ;
+        cells = Mp.empty ;
+        eval  = (fun _ _ -> raise Not_yet_back_patched) ;
+      }
+    in
+    db.eval <- eval db ;
+    db      
+
   (* -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- *)
   (* -- pretty printing -- *)
   let print_region : Ast.absolute_region -> db -> out_channel -> unit =
@@ -283,12 +290,12 @@ module Interp : INTERP = struct
             let frm = A.force (get_frm cur) in
             ps "| " ;
             Printf.fprintf out "%10s"
-              (Pretty.string_of_const (A.force(eval db (sht_of_reg reg) frm))) ;
+              (Pretty.string_of_const (A.force(db.eval (sht_of_reg reg) frm))) ;
             ps " |"
           end } ()
 
   let read cur =
-    A.force (eval cur.db (sht_of_pos cur.pos) (A.force (get_frm cur)))
+    A.force (cur.db.eval (sht_of_pos cur.pos) (A.force (get_frm cur)))
 
   let write mutcmd cur =
     begin match mutcmd with

@@ -120,7 +120,7 @@ include Ast
 module Pretty = struct
 
   let string_of_const = function
-    | Num n -> Num.string_of_num n
+    | Num n -> Num.approx_num_exp 10 n
     | Fail  -> "#fail"
     | Undef -> "#undef"
 
@@ -180,9 +180,7 @@ module Pretty = struct
         ps ("##"^(string_of_int (frm_hash 0 0 f))) ;
         ps "[" ; pp_formula' f1 ; ps " " ;
         pp_binop b ; ps " " ; pp_formula' f2 ; ps "]"
-    | F_const (Num n) -> ps (Num.string_of_num n)
-    | F_const Undef -> ps "#undef"
-    | F_const Fail -> ps "#fail"
+    | F_const c -> ps (string_of_const c)
     | F_coord c -> pp_coord c
     | F_paren f -> ps "(" ; pp_formula' f ; ps ")"
 
