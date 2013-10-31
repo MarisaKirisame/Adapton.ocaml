@@ -2,7 +2,7 @@
 let verbose_errors = ref false
 let print_passes = ref true
 
-let print_ast_db = ref true
+let print_ast_db = ref false
 
 let args = [
   ("--verbose",  Arg.Set verbose_errors, "give verbose (contextual) errors") ;
