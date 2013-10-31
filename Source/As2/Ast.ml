@@ -71,13 +71,49 @@ module Ast = struct
     | Num   of Num.num (* ocaml standard library; arbitrary-precision numbers. *)
     | Fail
     | Undef
+          
+  (* create an absolute coord *)
+  let absolute : sht -> coord -> pos
+    = fun s -> function
+      | Abs(s',(c,r)) -> (s',(c,r))
+      | Lcl(c,r)      -> (s,(c,r))
+
+  let frm_equal f1 f2 = match f1, f2 with
+    | F_func (f1, reg1), F_func (f2, reg2) -> f1 = f2 && reg1 = reg2
+    | F_binop (b1, f11, f12), F_binop (b2, f21, f22) -> 
+        b1 = b2 && (A.id f11 = A.id f21) && (A.id f12 = A.id f22)
+    | F_const (Num n1), F_const (Num n2) -> (Num.compare_num n1 n2) = 0
+    | F_const (Fail | Undef), _ -> false
+    | _, F_const (Fail | Undef) -> false
+    | F_coord c1, F_coord c2 -> c1 = c2
+    | F_paren f1, F_paren f2 -> f1 == f2
+    | _, _ -> false
+
+  let rec frm_hash _ x f = 
+    let my_hash x thing = 
+      Hashtbl.seeded_hash_param 1 100 x thing
+    in
+    match f with
+      | F_func (f, reg) -> 
+          let x = my_hash x f in
+          let x = my_hash x reg in
+        x
+    | F_binop (b, f1, f2) -> 
+        let x = my_hash x b in
+        let x = my_hash x (A.id f1) in
+        let x = my_hash x (A.id f2) in
+        x
+    | F_paren f        -> my_hash x f
+    | F_coord c        -> my_hash x f
+    | F_const (Num n1) -> my_hash x f
+    | F_const (Fail|Undef) -> Random.bits ()
 
   (* hash-cons'd formulae: *)
   let memo_frm : formula -> formula' = 
     let f = 
-      A.memo begin fun f frm -> frm end
-    in
-    ( fun frm -> f frm )
+      A.memo ~inp_equal:frm_equal ~inp_hash:frm_hash begin 
+        fun f frm -> frm end
+    in f
 end
 include Ast
 
@@ -140,8 +176,10 @@ module Pretty = struct
 
   and pp_formula = function
     | F_func (f,r) -> pp_func f ; ps "(" ; pp_region r ; ps ")"
-    | F_binop (b,f1,f2) -> ps "" ; pp_formula' f1 ; ps " " ;
-        pp_binop b ; ps " " ; pp_formula' f2 ; ps ""
+    | F_binop (b,f1,f2) as f -> 
+        ps ("##"^(string_of_int (frm_hash 0 0 f))) ;
+        ps "[" ; pp_formula' f1 ; ps " " ;
+        pp_binop b ; ps " " ; pp_formula' f2 ; ps "]"
     | F_const (Num n) -> ps (Num.string_of_num n)
     | F_const Undef -> ps "#undef"
     | F_const Fail -> ps "#fail"
@@ -149,7 +187,10 @@ module Pretty = struct
     | F_paren f -> ps "(" ; pp_formula' f ; ps ")"
 
   and pp_formula' f = 
-    pp_formula ( A.force f )
+    ps ("#"^(string_of_int ( A.id f ) )) ;
+    ps "[" ;
+    pp_formula ( A.force f ) ;
+    ps "]" ;
 
   and pp_binop = function
     | Bop_add -> ps "+"

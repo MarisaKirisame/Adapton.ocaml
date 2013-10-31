@@ -28,7 +28,7 @@ module type INTERP = sig
   type cur
 
   val empty : int * int * int -> db
-  val eval  : db -> Ast.sht -> Ast.formula' -> Ast.const Ast.A.thunk
+  val eval  : db -> Ast.sht -> Ast.formula -> Ast.const Ast.A.thunk
 
   type 'a fold_body = ( cur -> 'a -> 'a )
 
@@ -175,13 +175,6 @@ module Interp : INTERP = struct
           loop_rows cur x
       in
       loop_rows cur x
-
-  (* create an absolute coord *)
-  let absolute : sht -> coord -> pos
-    = fun s -> function
-      | Abs(s',(c,r)) -> (s',(c,r))
-      | Lcl(c,r)      -> (s,(c,r))
-
   
   (* lookup and evaluate an absolute coordinate. *)
   let lookup_cell : db -> pos -> cell = 
@@ -199,75 +192,83 @@ module Interp : INTERP = struct
   (* -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- *)
   (* -- formula evaluation -- *)
   (* ADAPTON memoizes this function, based on the sheet and formula arguments. *)
-  let rec eval db = A.memo2 begin 
-    fun eval_memo sht (frm : formula') ->
+  let eval db = 
+    let eval_memoized = A.memo2
+      ~inp2_equal:Ast.frm_equal
+      ~inp2_hash:Ast.frm_hash
+      begin fun eval_memo sht (frm : formula) ->
       
-      let to_app_form : 'a list -> ('a list -> 'a list)
-        = fun xs -> (fun xs_tail -> xs @ xs_tail)
-      in
-      
-      let snoc : ('a list -> 'a list) -> 'a -> ('a list -> 'a list)
-        = fun xs y -> (fun tl -> xs (y :: tl))
-      in
-      
-      (* lookup and evaluate an absolute coordinate. *)
-      let lookup_eval : pos -> const = 
-        fun pos ->
-          let frm = (lookup_cell db pos).cell_frm in 
-          A.force (eval_memo sht frm)
-      in
+        let to_app_form : 'a list -> ('a list -> 'a list)
+          = fun xs -> (fun xs_tail -> xs @ xs_tail)
+        in
+        
+        let snoc : ('a list -> 'a list) -> 'a -> ('a list -> 'a list)
+          = fun xs y -> (fun tl -> xs (y :: tl))
+        in
+        
+        (* lookup and evaluate an absolute coordinate. *)
+        let lookup_eval : pos -> const = 
+          fun pos ->
+            let frm = (lookup_cell db pos).cell_frm in           
+            A.force (eval_memo sht (A.force frm))
+        in
 
-      (* evaluate given formula *)
-      match A.force frm with          
-        | F_const c -> c
-        | F_paren f -> A.force (eval_memo sht f)
-        | F_coord coord -> lookup_eval (absolute sht coord)
-        | F_func(f,r) ->
-            let r = match r with
-              | R_lcl lr -> (sht,lr)
-              | R_abs reg -> reg
-            in
-            let cells = fold_region r db {
-              fold_row_begin = begin fun cur x -> x end ;
-              fold_row_end   = begin fun cur x -> x end ;
-              fold_cell      = begin fun cur cells -> snoc cells (eval_memo sht (get_frm cur)) end
-            } (to_app_form [])
-            in
-            begin match cells [] with
-              | []    -> Undef
-              | x::xs ->
-                  let x = A.force x in
-                  List.fold_right begin fun x y -> 
+        let eval_memo' sht frm = eval_memo sht (A.force frm)
+        in
+
+        (* evaluate given formula *)
+        match frm with
+          | F_const c -> c
+          | F_paren f -> A.force (eval_memo' sht f)
+          | F_coord coord -> lookup_eval (absolute sht coord)
+          | F_func(f,r) ->
+              let r = match r with
+                | R_lcl lr -> (sht,lr)
+                | R_abs reg -> reg
+              in
+              let cells = fold_region r db {
+                fold_row_begin = begin fun cur x -> x end ;
+                fold_row_end   = begin fun cur x -> x end ;
+                fold_cell      = begin fun cur cells -> snoc cells (eval_memo' sht (get_frm cur)) end
+              } (to_app_form [])
+              in
+              begin match cells [] with
+                | []    -> Undef
+                | x::xs ->
                     let x = A.force x in
-                    match f, x, y with
-                    | Fn_sum,  Num x, Num y -> Num ( Num.add_num x y )
-                    | Fn_max,  Num x, Num y -> Num ( if Num.gt_num x y then x else y )
-                    | Fn_min,  Num x, Num y -> Num ( if Num.gt_num x y then y else x )
-                    | _, Fail, _            -> Fail
-                    | _, _   , Fail         -> Fail 
-                    | _      , Undef, _     -> Undef
-                    | _      , _,     Undef -> Undef
-                  end xs x
-            end
-              
-        | F_binop(bop,f1,f2) -> begin
-            let c1 = A.force (eval_memo sht f1) in
-            let c2 = A.force (eval_memo sht f2) in
-            try
-              begin match bop, c1, c2 with
-                | Bop_add, Num n1, Num n2 -> Num (Num.add_num n1 n2)
-                | Bop_sub, Num n1, Num n2 -> Num (Num.sub_num n1 n2)
-                | Bop_div, Num n1, Num n2 -> Num (Num.div_num n1 n2)
-                | Bop_mul, Num n1, Num n2 -> Num (Num.mult_num n1 n2)
-                | _, Fail , _     -> Fail
-                | _, _    , Fail  -> Fail 
-                | _, Undef, x     -> Undef
-                | _, x    , Undef -> Undef
+                    List.fold_right begin fun x y -> 
+                      let x = A.force x in
+                      match f, x, y with
+                        | Fn_sum,  Num x, Num y -> Num ( Num.add_num x y )
+                        | Fn_max,  Num x, Num y -> Num ( if Num.gt_num x y then x else y )
+                        | Fn_min,  Num x, Num y -> Num ( if Num.gt_num x y then y else x )
+                        | _, Fail, _            -> Fail
+                        | _, _   , Fail         -> Fail 
+                        | _      , Undef, _     -> Undef
+                        | _      , _,     Undef -> Undef
+                    end xs x
               end
-            with
-              | Failure _ -> Fail
-          end
-  end
+                
+          | F_binop(bop,f1,f2) -> begin
+              let c1 = A.force (eval_memo' sht f1) in
+              let c2 = A.force (eval_memo' sht f2) in
+              try
+                begin match bop, c1, c2 with
+                  | Bop_add, Num n1, Num n2 -> Num (Num.add_num n1 n2)
+                  | Bop_sub, Num n1, Num n2 -> Num (Num.sub_num n1 n2)
+                  | Bop_div, Num n1, Num n2 -> Num (Num.div_num n1 n2)
+                  | Bop_mul, Num n1, Num n2 -> Num (Num.mult_num n1 n2)
+                  | _, Fail , _     -> Fail
+                  | _, _    , Fail  -> Fail 
+                  | _, Undef, x     -> Undef
+                  | _, x    , Undef -> Undef
+                end
+              with
+                | Failure _ -> Fail
+            end
+      end
+    in
+    eval_memoized
 
   (* -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- *)
   (* -- pretty printing -- *)
@@ -279,7 +280,7 @@ module Interp : INTERP = struct
         fold_row_end   = begin fun _ _   -> ps "\n" end ;
         fold_cell =
           begin fun cur _ ->
-            let frm = get_frm cur in
+            let frm = A.force (get_frm cur) in
             ps "| " ;
             Printf.fprintf out "%10s"
               (Pretty.string_of_const (A.force(eval db (sht_of_reg reg) frm))) ;
@@ -287,7 +288,7 @@ module Interp : INTERP = struct
           end } ()
 
   let read cur =
-    A.force (eval cur.db (sht_of_pos cur.pos) (get_frm cur))
+    A.force (eval cur.db (sht_of_pos cur.pos) (A.force (get_frm cur)))
 
   let write mutcmd cur =
     begin match mutcmd with
