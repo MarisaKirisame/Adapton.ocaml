@@ -17,7 +17,7 @@ export OCAMLPATH := $(CURDIR)
 
 .PHONY : all test clean repl check
 
-all : lib
+all : lib as2 frtime
 
 lib : check $(addprefix ocamlbuild//Adapton.,cmxa a cma cmi)
 
