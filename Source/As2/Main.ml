@@ -101,28 +101,52 @@ let _ =
                 None
               )
       in
-      begin match cmd' with
-        | None -> ps "Oops! Try 'help' for reference information.\n" ; cur
-            
-        | Some (Ast.C_print) -> 
+      let rec eval_cmd' cmd' cur =
+        match cmd' with
+          | None -> ps "Oops! Try 'help' for reference information.\n" ; cur
+          | Some cmd -> eval_cmd cmd cur
+      
+      and eval_cmd cmd cur = begin match cmd with
+        | Ast.C_print -> 
             let (sht,_) = Interp.get_pos cur in
+            ps "================================================\n" ;
             Interp.print_region (sht,((1,1),(10,10))) db stdout ;
+            ps "================================================\n" ;
             cur
 
-        | Some (Ast.C_help) -> help () ; cur
-        | Some (Ast.C_exit) -> exit (1)
+        | Ast.C_seq(c1,c2) -> 
+            let cur = eval_cmd c1 cur in
+            eval_cmd c2 cur
+        | Ast.C_repeat(f,c) -> begin
+            try
+              let cnt = Ast.A.force (Interp.eval cur (Ast.A.force f)) in
+              let n = match cnt with
+                | Ast.Num n -> Num.int_of_num n
+                | _ -> invalid_arg "repeat"
+              in
+              let rec loop i cur =
+                if i <= 0 then cur
+                else
+                  loop (i - 1) ( eval_cmd c cur )
+              in
+              loop n cur
+            with
+              | _ -> ps "repeat: Oops!\n" ; cur
+          end
+                  
+        | Ast.C_help -> help () ; cur
+        | Ast.C_exit -> exit (1)
             
-        | Some (Ast.C_scramble Ast.Sf_none)  -> Interp.scramble       cur ; cur
-        | Some (Ast.C_scramble Ast.Sf_dense) -> Interp.scramble_dense cur ; cur
-
-        | Some ((Ast.C_nav nc) as cmd) ->
+        | (Ast.C_nav nc) as cmd ->
             ps "navigation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
             (Interp.move nc cur)
-              
-        | Some ((Ast.C_mut mc) as cmd) ->
+                
+        | (Ast.C_mut mc) as cmd ->
             ps "mutation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
             (Interp.write mc cur)
       end
+      in
+      ( eval_cmd' cmd' cur )
     end
     in
     let cur = measure handler in
