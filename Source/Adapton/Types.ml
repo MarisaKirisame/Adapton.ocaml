@@ -97,3 +97,11 @@ module Seeds = struct
     let hash seed ( Seeds ( s, _ ) ) = Hashtbl.seeded_hash seed s
     let equal = (==)
 end
+
+(** Infer and make Function modules. *)
+let makeFunction (type a) (type b) () : (module Hashtbl.SeededHashedType with type t = a -> b) =
+    (module struct
+        type t = a -> b
+        let equal = (==)
+        let hash = Hashtbl.seeded_hash
+    end)
