@@ -28,7 +28,8 @@ module type INTERP = sig
   type cur
 
   val empty : int * int * int -> db
-  val eval  : db -> Ast.sht -> Ast.formula -> Ast.const Ast.A.thunk
+  val eval_ : db -> Ast.sht -> Ast.formula -> Ast.const Ast.A.thunk
+  val eval  : cur -> Ast.formula -> Ast.const Ast.A.thunk
 
   type 'a fold_body = ( cur -> 'a -> 'a )
 
@@ -52,8 +53,9 @@ module type INTERP = sig
   val read   : cur -> Ast.const
   val write  : Ast.mut_cmd -> cur -> cur
 
-  val scramble : cur -> unit
+  val scramble       : cur -> unit
   val scramble_dense : cur -> unit
+  val scramble_one   : cur -> unit
 end
 
 module Interp : INTERP = struct
@@ -185,7 +187,7 @@ module Interp : INTERP = struct
   (* -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- *)
   (* -- formula evaluation -- *)
   (* ADAPTON memoizes this function, based on the sheet and formula arguments. *)
-  let eval db = 
+  let eval_ db = 
     let eval_memoized = A.memo2
       ~inp2_equal:Ast.frm_equal
       ~inp2_hash:Ast.frm_hash
@@ -274,8 +276,10 @@ module Interp : INTERP = struct
         eval  = (fun _ _ -> raise Not_yet_back_patched) ;
       }
     in
-    db.eval <- eval db ;
+    db.eval <- eval_ db ;
     db      
+
+  let eval cur = cur.db.eval (sht_of_pos (get_pos cur))
 
   (* -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- *)
   (* -- pretty printing -- *)
@@ -297,14 +301,19 @@ module Interp : INTERP = struct
   let read cur =
     A.force (cur.db.eval (sht_of_pos cur.pos) (A.force (get_frm cur)))
 
-  let write mutcmd cur =
-    begin match mutcmd with
-      | C_set frm -> begin
-          let cell = lookup_cell cur.db cur.pos in
-          A.update_const cell.cell_frm (A.force frm)
-        end
-    end
-    ; cur
+  let scramble_one cur =
+    let db = cur.db in
+    let rnd max = (Random.int (max - 1)) + 1 in
+    let s = sht_of_pos (get_pos cur) in
+    let pos = 
+      let s = rnd s in
+      let c = rnd db.ncols in
+      let r = rnd db.nrows in
+      (s, (c,r))
+    in
+    let cell = lookup_cell db pos in
+    A.update_const cell.cell_frm 
+      (Ast.F_const (Ast.Num (Num.num_of_int (Random.int 10000))))    
 
   let scramble cur =
     let db = cur.db in
@@ -363,6 +372,18 @@ module Interp : INTERP = struct
         done
       done
     done
+
+  let write mutcmd cur =
+    begin match mutcmd with
+      | C_set frm -> begin
+          let cell = lookup_cell cur.db cur.pos in
+          A.update_const cell.cell_frm (A.force frm)
+        end
+      | Ast.C_scramble Ast.Sf_sparse -> scramble cur 
+      | Ast.C_scramble Ast.Sf_dense  -> scramble_dense cur
+      | Ast.C_scramble Ast.Sf_one    -> scramble_one   cur
+    end
+    ; cur
 
 end
 

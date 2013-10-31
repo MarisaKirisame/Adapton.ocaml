@@ -62,6 +62,9 @@ rule token = parse
   | ("MIN"|"min") { MIN }
 
   (* Keywords *)
+  | ("do"|"DO") { DO }
+  | ("done"|"DONE") { DONE }
+  | ("repeat"|"REPEAT") { REPEAT }
   | ("NEXT"|"next") { NEXT }
   | ("PREV"|"prev") { PREV }
   | ("GOTO"|"goto") { GOTO }
@@ -70,6 +73,7 @@ rule token = parse
   | ("SHEET"|"sheet") { SHEET }
   | ("SCRAMBLE"|"scramble") { SCRAMBLE }
   | ("SCRAMBLED"|"scrambled") { SCRAMBLE_D }
+  | ("SCRAMBLE1"|"scramble1") { SCRAMBLE_1 }
   | ("PRINT"|"print") { PRINT }
 
   (* meta-level commands *)

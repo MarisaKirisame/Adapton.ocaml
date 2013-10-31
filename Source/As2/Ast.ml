@@ -13,13 +13,18 @@ module Ast = struct
     | C_help | C_exit
     | C_nav of nav_cmd
     | C_mut of mut_cmd
-    | C_scramble of scramble_flags
     | C_print
+    | C_seq of cmd * cmd
+    | C_repeat of formula' * cmd
 
-  and scramble_flags = Sf_none | Sf_dense
+  and scramble_flags = 
+    | Sf_sparse 
+    | Sf_dense 
+    | Sf_one
 
   and mut_cmd =
     | C_set of formula'
+    | C_scramble of scramble_flags
 
   and nav_cmd =
     | C_next of nav_thing
@@ -79,15 +84,14 @@ module Ast = struct
       | Lcl(c,r)      -> (s,(c,r))
 
   let frm_equal f1 f2 = match f1, f2 with
-    | F_func (f1, reg1), F_func (f2, reg2) -> f1 = f2 && reg1 = reg2
-    | F_binop (b1, f11, f12), F_binop (b2, f21, f22) -> 
-        b1 = b2 && (A.id f11 = A.id f21) && (A.id f12 = A.id f22)
-    | F_const (Num n1), F_const (Num n2) -> (Num.compare_num n1 n2) = 0
-    | F_const (Fail | Undef), _ -> false
-    | _, F_const (Fail | Undef) -> false
-    | F_coord c1, F_coord c2 -> c1 = c2
-    | F_paren f1, F_paren f2 -> f1 == f2
-    | _, _ -> false
+    | F_func (f1, reg1),      F_func (f2, reg2)      -> f1 = f2 && reg1 = reg2
+    | F_binop (b1, f11, f12), F_binop (b2, f21, f22) -> b1 = b2 && (A.id f11 = A.id f21) && (A.id f12 = A.id f22)
+    | F_const (Num n1),       F_const (Num n2)       -> (Num.compare_num n1 n2) = 0
+    | F_const (Fail | Undef), _                      -> false
+    | _,                      F_const (Fail | Undef) -> false
+    | F_coord c1,             F_coord c2             -> c1 = c2
+    | F_paren f1,             F_paren f2             -> A.id f1 = A.id f2
+    | _,                      _                      -> false
 
   let rec frm_hash _ x f = 
     let my_hash x thing = 
@@ -131,9 +135,13 @@ module Pretty = struct
     | C_exit -> ps "exit"
     | C_nav c -> pp_nav_cmd c
     | C_mut c -> pp_mut_cmd c
-    | C_scramble Sf_none  -> ps "scramble"
-    | C_scramble Sf_dense -> ps "scrambled"
     | C_print -> ps "print"
+    | C_seq (c1, c2) -> pp_cmd c1 ; ps "; " ; pp_cmd c2
+    | C_repeat (f, c) -> 
+        ps "repeat " ; 
+        pp_formula' f ; ps " do " ; 
+        pp_cmd c ; 
+        ps " done"
 
   (** - - Navigation / Focus - - **)
 
@@ -173,6 +181,9 @@ module Pretty = struct
 
   and pp_mut_cmd = function
     | C_set f -> ps "=" ; pp_formula' f ; ps "."
+    | C_scramble Sf_sparse -> ps "scramble"
+    | C_scramble Sf_dense  -> ps "scrambled"
+    | C_scramble Sf_one    -> ps "scramble1"
 
   and pp_formula = function
     | F_func (f,r) -> pp_func f ; ps "(" ; pp_region r ; ps ")"

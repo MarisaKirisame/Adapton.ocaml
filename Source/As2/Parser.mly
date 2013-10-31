@@ -24,7 +24,8 @@ open Lexing
 
 /* keywords */
 %token NEXT PREV GOTO ROW COL SHEET
-%token EXIT HELP SCRAMBLE SCRAMBLE_D PRINT
+%token EXIT HELP SCRAMBLE SCRAMBLE_D SCRAMBLE_1 PRINT
+%token REPEAT DO DONE
 
 %token <int> LETTER
 %token <int> NAT
@@ -42,15 +43,23 @@ open Lexing
 cmd:
 | nav_cmd     { Ast.C_nav $1 }
 | mut_cmd DOT { Ast.C_mut $1 }
-| SCRAMBLE    { Ast.C_scramble (Ast.Sf_none) }
-| SCRAMBLE_D  { Ast.C_scramble (Ast.Sf_dense) }
 | EXIT        { Ast.C_exit }
 | HELP        { Ast.C_help }
 | PRINT       { Ast.C_print }
 ;
 
+imp_cmd:
+| REPEAT frm DO imp_cmd DONE { Ast.C_repeat ($2, $4) }
+| mut_cmd SEMI imp_cmd { Ast.C_seq ( Ast.C_mut $1, $3 ) }
+| nav_cmd SEMI imp_cmd { Ast.C_seq ( Ast.C_nav $1, $3 ) }
+| mut_cmd { Ast.C_mut $1 }
+| nav_cmd { Ast.C_nav $1 }
+
 mut_cmd:
-| EQUALS frm { Ast.C_set $2 }
+| EQUALS frm  { Ast.C_set $2 }
+| SCRAMBLE    { Ast.C_scramble (Ast.Sf_sparse) }
+| SCRAMBLE_D  { Ast.C_scramble (Ast.Sf_dense) }
+| SCRAMBLE_1  { Ast.C_scramble (Ast.Sf_one) }
 
 nav_cmd:
 | NEXT nav_thing { Ast.C_next $2 }
