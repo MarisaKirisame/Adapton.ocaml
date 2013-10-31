@@ -23,6 +23,8 @@ lib : check $(addprefix ocamlbuild//Adapton.,cmxa a cma cmi)
 
 as2 : check ocamlbuild//runas2.native
 
+frtime : check $(addprefix ocamlbuild//Frtime.,cmxa a cma cmi)
+
 test : check ounit//runtestadapton.d.byte
 
 .PRECIOUS : $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py
