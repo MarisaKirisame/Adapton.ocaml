@@ -23,10 +23,10 @@ module type Behavior = sig
 	(* val appf? implement without flatten? *)
 
 	val filter : ('a -> bool) -> 'a behavior -> 'a behavior
-	val merge : 'a behavior -> 'a behavior -> 'a behavior
 
 	TODO: more...?
 	*)
+	val merge : 'a behavior -> 'a behavior -> 'a behavior
 
 	(* Extractors. *)
 	val force : 'a behavior -> 'a
@@ -36,20 +36,37 @@ end
 module Make (M : SAType) : Behavior = struct
 	open Time
 
+	type 'a wrapped = 'a * time
 	type 'a sa_mod = (module SAType.S with type sa = M.sa and type data = 'a and type t = 'a M.thunk)
-	type 'a behavior = 'a sa_mod * 'a M.thunk * time
+	type 'a behavior = ('a wrapped) sa_mod * ('a wrapped) M.thunk
+
+	(*
+	module type WrapFunctor = functor (S : 'a sa_mod) -> ('a wrapped) sa_mod
+	module Wrap : WrapFunctor = functor (S : 'a sa_mod) -> struct
+
+	end
+	*)
+
+	let makeWrap (type a) (module S : a sa_mod) : (a wrapped) sa_mod = 
+		(module struct
+
+		end)
 
 	let const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c : t) : t behavior = 
 		let module R = M.Make( H) in
-		let r = R.const c in
-		let t = get_time () in
-		(module R), r, t
+		let r = R.const (c, get_time ()) in
+		(module R), r
 	
-	let app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior = 
+	let app (type a) (type b) (((module F), f) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a) : a behavior) : b behavior = 
 		let module R = M.Make( B) in
-		let r = R.thunk (fun () -> (F.force f) (A.force a)) in
-		let t = min_time [ tf; ta] in
-		(module R), r, t
+		let r = R.thunk (fun () -> 
+			let f', tf = F.force f in
+			let a', ta = A.force a in
+			let t = min_time [ tf; ta] in
+			f' a', t
+		)
+		in
+		(module R), r
 	
 	(* Contains the previous value of the behavior. Takes on the default value until the behavior changes. *)
 	let prev (type a) (((module A), a, ta) : a behavior) (default : a) : a behavior =
@@ -82,6 +99,22 @@ module Make (M : SAType) : Behavior = struct
 		let mF = T.makeFunction () in
 		let f' = lift3 f mF a b c in
 		app f' (module E) d
+
+	(*
+	(* Take on the value of the most recently updated behavior. *)
+	let merge (type a) (((module A), a, ta) as ba : a behavior) (((module B), b, tb) as bb : a behavior) : a behavior =
+		let r = A.thunk (fun () ->
+			let ((module A), a, ta) = A.force ba in
+			let ((module B), b, tb) = A.force bb in
+		
+		
+		if cmp_time a b then
+			bb
+		else
+			ba
+		)
+		in
+	*)
 
 	let force (type a) (((module A), a, _) : a behavior) : a =
 		A.force a
