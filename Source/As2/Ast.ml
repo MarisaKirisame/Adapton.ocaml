@@ -158,7 +158,7 @@ module Pretty = struct
   and pp_coord = function
     | Lcl lc -> pp_local_coord lc
     | Abs (s,lc) ->
-        ps "Sheet" ; ps (string_of_int s) ; ps "!" ;
+        ps "sheet" ; ps (string_of_int s) ; ps "!" ;
         pp_local_coord lc
 
   and pp_local_region = fun (lc1,lc2) ->
@@ -177,18 +177,26 @@ module Pretty = struct
   and pp_formula = function
     | F_func (f,r) -> pp_func f ; ps "(" ; pp_region r ; ps ")"
     | F_binop (b,f1,f2) as f -> 
-        ps ("##"^(string_of_int (frm_hash 0 0 f))) ;
-        ps "[" ; pp_formula' f1 ; ps " " ;
-        pp_binop b ; ps " " ; pp_formula' f2 ; ps "]"
+        if !Global.print_ast_db 
+        then          
+          ps ("##"^(string_of_int (frm_hash 0 0 f))^"[")
+        else () 
+        ;
+        pp_formula' f1 ; ps " " ;
+        pp_binop b ; ps " " ; pp_formula' f2 ; 
+        if !Global.print_ast_db then ps "]" else () 
     | F_const c -> ps (string_of_const c)
     | F_coord c -> pp_coord c
     | F_paren f -> ps "(" ; pp_formula' f ; ps ")"
 
   and pp_formula' f = 
-    ps ("#"^(string_of_int ( A.id f ) )) ;
-    ps "[" ;
+    if !Global.print_ast_db then 
+      ps ("#"^(string_of_int ( A.id f ) )^"[")
+    else
+      () 
+    ;
     pp_formula ( A.force f ) ;
-    ps "]" ;
+    if !Global.print_ast_db then ps "]" else () 
 
   and pp_binop = function
     | Bop_add -> ps "+"

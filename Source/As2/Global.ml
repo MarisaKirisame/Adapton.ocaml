@@ -2,8 +2,11 @@
 let verbose_errors = ref false
 let print_passes = ref true
 
+let print_ast_db = ref false
+
 let args = [
   ("--verbose",  Arg.Set verbose_errors, "give verbose (contextual) errors") ;
+  ("--ast-db",  Arg.Set print_ast_db, "give verbose debugging information in formulae") ;
 ]
 
 let cur_filename = ref ""
