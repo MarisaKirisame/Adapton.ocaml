@@ -89,7 +89,7 @@ module Ast = struct
     | F_paren f1, F_paren f2 -> f1 == f2
     | _, _ -> false
 
-  let rec frm_hash _ x f = 
+  let rec frm_hash x f =
     let my_hash x thing = 
       Hashtbl.seeded_hash_param 1 100 x thing
     in
@@ -179,7 +179,7 @@ module Pretty = struct
     | F_binop (b,f1,f2) as f -> 
         if !Global.print_ast_db 
         then          
-          ps ("##"^(string_of_int (frm_hash 0 0 f))^"[")
+          ps ("##"^(string_of_int (frm_hash 0 f))^"[")
         else () 
         ;
         pp_formula' f1 ; ps " " ;

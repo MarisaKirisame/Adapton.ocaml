@@ -17,7 +17,7 @@ module Make (M : Signatures.SAType) = struct
 
     let force (type a) (m, (module S) : a thunk) = S.force m
 
-    let default_hash seed x = Hashtbl.seeded_hash_param 1 100 x
+    let default_hash seed x = Hashtbl.seeded_hash_param 1 100 seed x
 
     let default_equal = (==)
 
@@ -42,7 +42,7 @@ module Make (M : Signatures.SAType) = struct
         let module S = M.Make (struct type t = a let equal = equal end) in
         fun f ->
             let f memo = f (fun a -> (memo a, (module S) : a thunk)) in
-            let memo = S.memo (module struct type t = inp let seed = Random.bits () let hash = inp_hash seed let equal = inp_equal end) f in
+            let memo = S.memo (module struct type t = inp let hash = inp_hash let equal = inp_equal end) f in
             fun a -> (memo a, (module S))
 
     let memo2 (type inp1) (type inp2) (type a)
@@ -54,8 +54,8 @@ module Make (M : Signatures.SAType) = struct
         fun f ->
             let f memo2 = f (fun a b -> (memo2 a b, (module S) : a thunk)) in
             let memo2 = S.memo2
-                (module struct type t = inp1 let seed = Random.bits () let hash = inp1_hash seed let equal = inp1_equal end)
-                (module struct type t = inp2 let seed = Random.bits () let hash = inp2_hash seed let equal = inp2_equal end)
+                (module struct type t = inp1 let hash = inp1_hash let equal = inp1_equal end)
+                (module struct type t = inp2 let hash = inp2_hash let equal = inp2_equal end)
                 f
             in
             fun a b -> (memo2 a b, (module S))
@@ -70,9 +70,9 @@ module Make (M : Signatures.SAType) = struct
         fun f ->
             let f memo3 = f (fun a b c -> (memo3 a b c, (module S) : a thunk)) in
             let memo3 = S.memo3
-                (module struct type t = inp1 let seed = Random.bits () let hash = inp1_hash seed let equal = inp1_equal end)
-                (module struct type t = inp2 let seed = Random.bits () let hash = inp2_hash seed let equal = inp2_equal end)
-                (module struct type t = inp3 let seed = Random.bits () let hash = inp3_hash seed let equal = inp3_equal end)
+                (module struct type t = inp1 let hash = inp1_hash let equal = inp1_equal end)
+                (module struct type t = inp2 let hash = inp2_hash let equal = inp2_equal end)
+                (module struct type t = inp3 let hash = inp3_hash let equal = inp3_equal end)
                 f
             in
             fun a b c -> (memo3 a b c, (module S))
@@ -88,10 +88,10 @@ module Make (M : Signatures.SAType) = struct
         fun f ->
             let f memo4 = f (fun a b c d -> (memo4 a b c d, (module S) : a thunk)) in
             let memo4 = S.memo4
-                (module struct type t = inp1 let seed = Random.bits () let hash = inp1_hash seed let equal = inp1_equal end)
-                (module struct type t = inp2 let seed = Random.bits () let hash = inp2_hash seed let equal = inp2_equal end)
-                (module struct type t = inp3 let seed = Random.bits () let hash = inp3_hash seed let equal = inp3_equal end)
-                (module struct type t = inp4 let seed = Random.bits () let hash = inp4_hash seed let equal = inp4_equal end)
+                (module struct type t = inp1 let hash = inp1_hash let equal = inp1_equal end)
+                (module struct type t = inp2 let hash = inp2_hash let equal = inp2_equal end)
+                (module struct type t = inp3 let hash = inp3_hash let equal = inp3_equal end)
+                (module struct type t = inp4 let hash = inp4_hash let equal = inp4_equal end)
                 f
             in
             fun a b c d -> (memo4 a b c d, (module S))
