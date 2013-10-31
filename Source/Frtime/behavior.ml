@@ -27,32 +27,41 @@ module type Behavior = sig
 
 	TODO: more...?
 	*)
+
+	(* Extractors. *)
+	val force : 'a behavior -> 'a
 end
 
 (* Make a behavior, given a SAType. *)
 module Make (M : SAType) : Behavior = struct
+	open Time
+
 	type 'a sa_mod = (module SAType.S with type sa = M.sa and type data = 'a and type t = 'a M.thunk)
-	type 'a behavior = 'a sa_mod * 'a M.thunk (* Add a time component of event that propogates? *)
+	type 'a behavior = 'a sa_mod * 'a M.thunk * time
 
 	let const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c : t) : t behavior = 
 		let module R = M.Make( H) in
 		let r = R.const c in
-		(module R), r
+		let t = get_time () in
+		(module R), r, t
 	
-	let app (type a) (type b) (((module F), f) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a) : a behavior) : b behavior = 
+	let app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior = 
 		let module R = M.Make( B) in
 		let r = R.thunk (fun () -> (F.force f) (A.force a)) in
-		(module R), r
+		let t = min_time [ tf; ta] in
+		(module R), r, t
 	
-	let prev (type a) (((module A), a) : a behavior) (default : a) : a behavior =
-		let store = ref default in
+	(* Contains the previous value of the behavior. Takes on the default value until the behavior changes. *)
+	let prev (type a) (((module A), a, ta) : a behavior) (default : a) : a behavior =
+		let store = ref (default, get_time ()) in
 		let r = A.thunk (fun () ->
-			let r' = !store in
-			store := A.force a;
+			let r', t' = !store in
+			store := (A.force a, ta);
 			r'
 		)
 		in
-		(module A), r
+		let t = snd !store in
+		(module A), r, t
 
 	let lift (type a) (type b) (f : a -> b) (module B : Hashtbl.SeededHashedType with type t = b) (a : a behavior) : b behavior =
 		let mF = T.makeFunction () in
@@ -74,6 +83,8 @@ module Make (M : SAType) : Behavior = struct
 		let f' = lift3 f mF a b c in
 		app f' (module E) d
 
+	let force (type a) (((module A), a, _) : a behavior) : a =
+		A.force a
 end
 
 (*
