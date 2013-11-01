@@ -1,5 +1,6 @@
 
 open Adapton.Signatures
+open Time
 module T = Adapton.Types
 
 module type Behavior = sig
@@ -8,6 +9,7 @@ module type Behavior = sig
 	(* Core combinators. *)
 	val const : (module Hashtbl.SeededHashedType with type t = 'a ) -> 'a -> 'a behavior
 	val app : ('a->'b) behavior -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
+	(* TODO:val memo_app ... *)
 	(* val flatten? *)
 	(* val prev : 'a behavior -> 'a -> 'a behavior *)
 	(* How do I implement this?
@@ -18,10 +20,16 @@ module type Behavior = sig
 	(* val appf? implement without flatten? *)
 
 	val filter : ('a -> bool) -> 'a behavior -> 'a behavior
+	when
 
-	TODO: more...? when
+	TODO: more...?
+
+	timer - seconds
+
 	*)
 	val merge : 'a behavior -> 'a behavior -> 'a behavior
+	val ifb : bool behavior -> 'a behavior -> 'a behavior -> 'a behavior
+	(* TODO: val memo_ifb : bool behavior -> 'a behavior -> 'a behavior -> 'a behavior*)
 
 	(* Derived combinators. *)
 	val lift : ('a -> 'b) -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
@@ -29,14 +37,18 @@ module type Behavior = sig
 	val lift3 : ('a -> 'b -> 'c -> 'd) -> (module Hashtbl.SeededHashedType with type t = 'd ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior
 	val lift4 : ('a -> 'b -> 'c -> 'd -> 'e) -> (module Hashtbl.SeededHashedType with type t = 'e ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior -> 'e behavior
 
+	(* Alarm. *)
+	val seconds : unit -> time behavior
+
 	(* Extractors. *)
 	val force : 'a behavior -> 'a
 end
 
 (* Make a behavior, given a SAType. *)
 module Make (M : SAType) : Behavior = struct
-	open Time
-	module Tm = M.Make( T.Float)
+	module Tm = TimeType(M)
+	module S = Sys
+	module U = Unix
 
 	type 'a sa_mod = (module SAType.S with type sa = M.sa and type data = 'a and type t = 'a M.thunk)
 	type 'a behavior = 'a sa_mod * 'a M.thunk * time M.thunk
@@ -129,7 +141,61 @@ module Make (M : SAType) : Behavior = struct
 		in
 		(module A), r, t
 	*)
-		
+
+	let ifb (type a) (((module G), g, tg) : bool behavior) (((module A), a, ta) : a behavior) ((_, b, tb) : a behavior) : a behavior = 
+		let r = A.thunk (fun () ->
+			A.force begin
+				if G.force g then
+					a
+				else
+					b
+			end
+		)
+		in
+		let t = Tm.thunk (fun () -> max_time [ Tm.force tg; Tm.force ta; Tm.force tb]) in
+		(module A), r, t
+
+	(*
+	let memo_ifb (type a) (((module G), g, tg) : bool behavior) (((module A), a, ta) : a behavior) ((_, b, tb) : a behavior) : a behavior = 
+		let memo_a = A.memo (module A) (fun a' -> a') in
+		let memo_b = A.memo (module A) (fun a' -> a') in
+		let r = A.thunk (fun () ->
+			if G.force g then
+				memo_a (A.force a)
+			else
+				memo_b (A.force b)
+		)
+		in
+		let t = Tm.thunk (fun () -> max_time [ Tm.force tg; Tm.force ta; Tm.force tb]) in
+		(module A), r, t
+	*)
+
+	
+	let cell = ref None
+	let seconds () : time behavior = 
+		let c = !cell in
+		match c with
+		| None ->
+			let r = Tm.const (get_time ()) in
+			let handle = S.Signal_handle (fun s ->
+				if s <> S.sigalrm then (
+					Printf.printf "Error: FRP seconds handler called for non alarm signal.\n";
+					()
+				) else (
+					Tm.update_const r (get_time ());
+					ignore (U.alarm 1);
+					()
+				)
+			)
+			in
+			S.set_signal S.sigalrm handle;
+			ignore (U.alarm 1);
+			(*let beh = (module Tm : (time sa_mod)), r, r in*)
+			let beh = (module Tm : SAType.S with type sa = M.sa and type data = time and type t = time M.thunk), r, r in
+			cell := Some beh;
+			beh
+		| Some c' ->
+			c'
 
 	let force (type a) (((module A), a, _) : a behavior) : a =
 		A.force a
