@@ -14,19 +14,20 @@ module type Behavior = sig
 	val fix : ('a behavior -> 'a behavior) -> 'a behavior
 	*)
 
-	(* Derived combinators. *)
-	val lift : ('a -> 'b) -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
-	val lift2 : ('a -> 'b -> 'c) -> (module Hashtbl.SeededHashedType with type t = 'c ) -> 'a behavior -> 'b behavior-> 'c behavior
-	val lift3 : ('a -> 'b -> 'c -> 'd) -> (module Hashtbl.SeededHashedType with type t = 'd ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior
-	val lift4 : ('a -> 'b -> 'c -> 'd -> 'e) -> (module Hashtbl.SeededHashedType with type t = 'e ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior -> 'e behavior
 	(*
 	(* val appf? implement without flatten? *)
 
 	val filter : ('a -> bool) -> 'a behavior -> 'a behavior
 
-	TODO: more...?
+	TODO: more...? when
 	*)
 	val merge : 'a behavior -> 'a behavior -> 'a behavior
+
+	(* Derived combinators. *)
+	val lift : ('a -> 'b) -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
+	val lift2 : ('a -> 'b -> 'c) -> (module Hashtbl.SeededHashedType with type t = 'c ) -> 'a behavior -> 'b behavior-> 'c behavior
+	val lift3 : ('a -> 'b -> 'c -> 'd) -> (module Hashtbl.SeededHashedType with type t = 'd ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior
+	val lift4 : ('a -> 'b -> 'c -> 'd -> 'e) -> (module Hashtbl.SeededHashedType with type t = 'e ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior -> 'e behavior
 
 	(* Extractors. *)
 	val force : 'a behavior -> 'a
@@ -49,13 +50,14 @@ module Make (M : SAType) : Behavior = struct
 	let app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior = 
 		let module R = M.Make( B) in
 		let r = R.thunk (fun () -> (F.force f) (A.force a)) in
-		let t = Tm.thunk (fun () -> min_time [ Tm.force tf; Tm.force ta]) in
+		let t = Tm.thunk (fun () -> max_time [ Tm.force tf; Tm.force ta]) in
 		(module R), r, t
 	
 	(* Contains the previous value of the behavior. Takes on the default value until the behavior changes. *)
 	(* TODO: Not pure... How do we fix this?
 	let prev (type a) (((module A), a, ta) : a behavior) (default : a) : a behavior =
 		(* TODO: Combine stores? Otherwise, might lead to race conditions?
+		Need to keep track of times, to see if force causes store to update.
 		let store = ref (default, get_time ()) in
 		*)
 		let valStore = ref default in
@@ -100,17 +102,34 @@ module Make (M : SAType) : Behavior = struct
 		let r = A.thunk (fun () ->
 			let ta' = Tm.force ta in
 			let tb' = Tm.force tb in
-			(* !(ta >= tb) *)
 			A.force begin
-				if cmp_time tb' ta' then
+				(* ta < tb -> !(ta >= tb) *)
+				if cmp_time ta' tb' then
 					b
 				else
 					a
 			end
 		)
 		in
-		let t = Tm.thunk (fun () -> min_time [ Tm.force ta; Tm.force tb]) in
+		let t = Tm.thunk (fun () -> max_time [ Tm.force ta; Tm.force tb]) in (* TODO: switch to a tmStore? *)
 		(module A), r, t
+
+	(*
+	(* Only pass on events that satisfy the predicate. add a default? *)
+	let filter (type a) (pred : a -> bool) (((module A), a, ta) : a behavior) : a behavior =
+		let t = Tm.const (Tm.force ta) in
+		let r = A.thunk (fun () ->
+			let a' = A.force a in
+			if pred a' then
+				Tm.update_const t (Tm.force ta);
+				a'
+			else
+				...
+		)
+		in
+		(module A), r, t
+	*)
+		
 
 	let force (type a) (((module A), a, _) : a behavior) : a =
 		A.force a
