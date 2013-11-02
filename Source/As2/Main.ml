@@ -125,77 +125,76 @@ let repl_handler cmd' () = begin
   ( eval_cmd' cmd' cur )
 end
 
-let _ =
-  (* REPL = Read-Eval-Print Loop *)
-  let rec repl cur =
-    Printf.printf "= " ;
-    Ast.Pretty.pp_formula' (Interp.get_frm cur) ;
-    Printf.printf "\n"
-    ;
-    Ast.Pretty.pp_pos (Interp.get_pos cur)
-    ;
-    Printf.printf "> %!" ;
-    let cmd' =        
-      try
-        Some ( parse_channel "<stdin>" stdin )
-      with
-        | Error (_, (line, col, token)) ->
-            ( Printf.eprintf "line %d, character %d: syntax error at %s\n%!"
-                (* filename *) line col
-                ( if token = "\n"
-                  then "newline"
-                  else Printf.sprintf "`%s'" token ) ;
-              None
-            )
-    in
-    let cur = measure (repl_handler cmd') in
-    (repl cur) (* repl is a tail-recursive loop. *)
-  in
-  (* enter repl *)
-  (repl cur)
-
-(* Not in use: FILE processing *)
-
-let process_file : string -> Ast.cmd = fun filename ->
-  let _ = Global.cur_filename := filename in
-  let input =
-    if filename = "-"
-    then stdin
-    else open_in filename
-  in
-  let cmd =
-    try parse_channel filename input
+(* REPL = Read-Eval-Print Loop *)
+let rec repl cur =
+  Printf.printf "= " ;
+  Ast.Pretty.pp_formula' (Interp.get_frm cur) ;
+  Printf.printf "\n"
+  ;
+  Ast.Pretty.pp_pos (Interp.get_pos cur)
+  ;
+  Printf.printf "> %!" ;
+  let cmd' =        
+    try
+      Some ( parse_channel "<stdin>" stdin )
     with
       | Error (_, (line, col, token)) ->
-          ( Printf.eprintf "File %s, line %d, character %d: syntax error at %s\n%!"
-              filename line col
+          ( Printf.eprintf "line %d, character %d: syntax error at %s\n%!"
+              (* filename *) line col
               ( if token = "\n"
                 then "newline"
                 else Printf.sprintf "`%s'" token ) ;
-            exit (-1) )
+            None
+          )
   in
-  Ast.Pretty.pp_cmd cmd ;
-  cmd
+  let cur = measure (repl_handler cmd') in
+  (repl cur) (* repl is a tail-recursive loop. *)
+in
+(* enter repl *)
+(repl cur)
 
-let run () =
-  if false then
-    let input_files : string list ref = ref [] in
-    if !Global.print_passes then Printf.eprintf "parsing input files...\n%!" ;
-    let _ = Arg.parse Global.args
-      (fun filename -> input_files := filename :: !input_files)
-      "usage: m3pc [options] [input files]"
-    in
-    if !input_files = [] then (
-      Printf.eprintf "no input files given!\n" ;
-      exit (-1);
-    );
-    let _ = List.map process_file (List.rev (!input_files)) in
-    (** TODO -- emit/do something! **)
-    ()
-    ;
-    if !Global.print_passes then
-      Printf.eprintf "done.\n%!"
-    else ()
+(* Not in use: FILE processing *)
+
+(* let process_file : string -> Ast.cmd = fun filename -> *)
+(*   let _ = Global.cur_filename := filename in *)
+(*   let input = *)
+(*     if filename = "-" *)
+(*     then stdin *)
+(*     else open_in filename *)
+(*   in *)
+(*   let cmd = *)
+(*     try parse_channel filename input *)
+(*     with *)
+(*       | Error (_, (line, col, token)) -> *)
+(*           ( Printf.eprintf "File %s, line %d, character %d: syntax error at %s\n%!" *)
+(*               filename line col *)
+(*               ( if token = "\n" *)
+(*                 then "newline" *)
+(*                 else Printf.sprintf "`%s'" token ) ; *)
+(*             exit (-1) ) *)
+(*   in *)
+(*   Ast.Pretty.pp_cmd cmd ; *)
+(*   cmd *)
+
+(* let run () = *)
+(*   if false then *)
+(*     let input_files : string list ref = ref [] in *)
+(*     if !Global.print_passes then Printf.eprintf "parsing input files...\n%!" ; *)
+(*     let _ = Arg.parse Global.args *)
+(*       (fun filename -> input_files := filename :: !input_files) *)
+(*       "usage: m3pc [options] [input files]" *)
+(*     in *)
+(*     if !input_files = [] then ( *)
+(*       Printf.eprintf "no input files given!\n" ; *)
+(*       exit (-1); *)
+(*     ); *)
+(*     let _ = List.map process_file (List.rev (!input_files)) in *)
+(*     (\** TODO -- emit/do something! **\) *)
+(*     () *)
+(*     ; *)
+(*     if !Global.print_passes then *)
+(*       Printf.eprintf "done.\n%!" *)
+(*     else () *)
 
 
 
