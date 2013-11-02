@@ -176,12 +176,12 @@ let test n cur =
   let num_changes = 10 in
   let module S = Adapton.Statistics in
   let cmd = parse_string 
-    (Printf.sprintf "scrambled; goto %d!a1 ; print ; repeat %d do scramble1 ; print done ." 
+    (Printf.sprintf "scrambled; goto %d!a1 ; print ; repeat %d do scramble1 ; print done ."
        sht_to_demand
        num_changes)
   in
   let _, m = measure (fun _ -> eval_cmd cmd cur) in
-  let out = open_out_gen [Open_append] 0 "stats.csv" in
+  let out = open_out_gen [Open_append] 0 (!Global.stats_out) in
   output_string out (Printf.sprintf "%d, %d, %f, %d, %d, %d, %d, %d, %d\n"
                        sht_to_demand
                        num_changes

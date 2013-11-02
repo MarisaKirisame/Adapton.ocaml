@@ -8,6 +8,7 @@ let func           = ref F_repl
 let verbose_errors = ref false
 let print_passes   = ref true
 let print_ast_db   = ref false
+let stats_out      = ref "as2-stats.out"
 
 let rec args = [
   ("--help",       Arg.Unit begin fun _ -> Arg.usage args "blah" ; exit 0 end, "print this help message" ) ;
@@ -17,6 +18,7 @@ let rec args = [
   ("--Random.self_init", Arg.Unit begin fun _ -> Random.self_init () end, "initialize the Random module's number generator" ) ;
   ("--stats-test", Arg.Int begin fun n -> func := F_stats_test n end,
    "functionality/mode: run a predefined script, of a given size and record statisitics") ;
+  ("--stats-out", Arg.String begin fun s -> stats_out := s end, "write out stats to the given file" ) ;
 ]
 
 let cur_filename = ref ""

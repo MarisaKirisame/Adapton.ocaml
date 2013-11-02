@@ -323,7 +323,6 @@ module Interp : INTERP = struct
     let rnd max = (Random.int (max - 1)) + 1 in
     let s = sht_of_pos (get_pos cur) in
     let pos = 
-      Printf.printf "%d %d %d\n" s db.ncols db.nrows ;
       let s = rnd s in
       let c = rnd db.ncols in
       let r = rnd db.nrows in
