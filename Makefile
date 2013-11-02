@@ -23,7 +23,7 @@ lib : check $(addprefix ocamlbuild//Adapton.,cmxa a cma cmi)
 
 as2 : check ocamlbuild//runas2.native 
 
-as2-test : check ocamlbuild//runas2testlazybidi.native ocamlbuild//runas2testnonsaeager.native ocamlbuild//runas2testeagersatotalorder.native
+as2-test : check ocamlbuild//runas2testlazysabidi.native ocamlbuild//runas2testnonsaeager.native ocamlbuild//runas2testeagersatotalorder.native
 
 frtime : check $(addprefix ocamlbuild//Frtime.,cmxa a cma cmi)
 
