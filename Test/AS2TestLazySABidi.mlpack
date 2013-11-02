@@ -1,7 +1,7 @@
-AS2TestLazySABidi/As2Adapton.ml
-AS2TestLazySABidi/Ast.ml
-AS2TestLazySABidi/Global.ml
-AS2TestLazySABidi/Interp.ml
-AS2TestLazySABidi/Lexer.mll
-AS2TestLazySABidi/Main.ml
-AS2TestLazySABidi/Parser.mly
+AS2TestLazySABidi/As2Adapton
+AS2TestLazySABidi/Ast
+AS2TestLazySABidi/Global
+AS2TestLazySABidi/Interp
+AS2TestLazySABidi/Lexer
+AS2TestLazySABidi/Main
+AS2TestLazySABidi/Parser
