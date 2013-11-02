@@ -1,1 +1,1 @@
-../Parser.mly
+../../Source/As2/Parser.mly
