@@ -3,6 +3,9 @@ exception Internal_error
 
 let ps = print_string
 
+let db  = Interp.empty (100,10,10)
+let cur = Interp.cursor (1,(1,1)) db
+
 let help () =
   ps "=========================================================================\n" ;
   ps "AS2 HELP:                                                                \n" ;
@@ -61,95 +64,91 @@ let parse_channel : string -> in_channel -> Ast.cmd =
           end
     in
     ast
+ 
+let measure f = 
+  let module S = Adapton.Statistics in
+  let x, m = S.measure f
+  in
+  begin Printf.printf "time=%f, heap=%d, stack=%d, upd=%d, eval=%d, dirty=%d, clean=%d\n"
+      m.S.time' m.S.heap' m.S.stack' 
+      m.S.update' m.S.evaluate' m.S.dirty' m.S.clean' 
+    ;
+    x 
+  end
+
+let repl_handler cmd' () = begin
+  let rec eval_cmd' cmd' cur =
+    match cmd' with
+      | None -> ps "Oops! Try 'help' for reference information.\n" ; cur
+      | Some cmd -> eval_cmd cmd cur
+          
+  and eval_cmd cmd cur = begin match cmd with
+    | Ast.C_print -> 
+        let (sht,_) = Interp.get_pos cur in
+        ps "================================================\n" ;
+        Interp.print_region (sht,((1,1),(10,10))) db stdout ;
+        ps "================================================\n" ;
+        cur
+          
+    | Ast.C_seq(c1,c2) -> 
+        let cur = eval_cmd c1 cur in
+        eval_cmd c2 cur
+    | Ast.C_repeat(f,c) -> begin
+        try
+          let cnt = Ast.A.force (Interp.eval cur (Ast.A.force f)) in
+          let n = match cnt with
+            | Ast.Num n -> Num.int_of_num n
+            | _ -> invalid_arg "repeat"
+          in
+          let rec loop i cur =
+            if i <= 0 then cur
+            else
+              loop (i - 1) ( eval_cmd c cur )
+          in
+          loop n cur
+        with
+          | _ -> ps "repeat: Oops!\n" ; cur
+      end
+        
+    | Ast.C_help -> help () ; cur
+    | Ast.C_exit -> exit (1)
+        
+    | (Ast.C_nav nc) as cmd ->
+        ps "navigation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
+        (Interp.move nc cur)
+          
+    | (Ast.C_mut mc) as cmd ->
+        ps "mutation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
+        (Interp.write mc cur)
+  end
+  in
+  ( eval_cmd' cmd' cur )
+end
 
 let _ =
-  let db  = Interp.empty (100,10,10) in
-  let cur = Interp.cursor (1,(1,1)) db in
-  
-  let measure f = 
-    let module S = Adapton.Statistics in
-    let x, m = S.measure f
-    in
-    begin Printf.printf "time=%f, heap=%d, stack=%d, upd=%d, eval=%d, dirty=%d, clean=%d\n"
-        m.S.time' m.S.heap' m.S.stack' 
-        m.S.update' m.S.evaluate' m.S.dirty' m.S.clean' 
-      ;
-      x 
-    end
-  in
-
-  (* REPL seed: *)
+  (* REPL = Read-Eval-Print Loop *)
   let rec repl cur =
-    let handler () = begin
-      Printf.printf "= " ;
-      Ast.Pretty.pp_formula' (Interp.get_frm cur) ;
-      Printf.printf "\n"
-      ;
-      Ast.Pretty.pp_pos (Interp.get_pos cur)
-      ;
-      Printf.printf "> %!" ;
-      let cmd' =        
-        try
-          Some ( parse_channel "<stdin>" stdin )
-        with
-          | Error (_, (line, col, token)) ->
-              ( Printf.eprintf "line %d, character %d: syntax error at %s\n%!"
-                  (* filename *) line col
-                  ( if token = "\n"
-                    then "newline"
-                    else Printf.sprintf "`%s'" token ) ;
-                None
-              )
-      in
-      let rec eval_cmd' cmd' cur =
-        match cmd' with
-          | None -> ps "Oops! Try 'help' for reference information.\n" ; cur
-          | Some cmd -> eval_cmd cmd cur
-      
-      and eval_cmd cmd cur = begin match cmd with
-        | Ast.C_print -> 
-            let (sht,_) = Interp.get_pos cur in
-            ps "================================================\n" ;
-            Interp.print_region (sht,((1,1),(10,10))) db stdout ;
-            ps "================================================\n" ;
-            cur
-
-        | Ast.C_seq(c1,c2) -> 
-            let cur = eval_cmd c1 cur in
-            eval_cmd c2 cur
-        | Ast.C_repeat(f,c) -> begin
-            try
-              let cnt = Ast.A.force (Interp.eval cur (Ast.A.force f)) in
-              let n = match cnt with
-                | Ast.Num n -> Num.int_of_num n
-                | _ -> invalid_arg "repeat"
-              in
-              let rec loop i cur =
-                if i <= 0 then cur
-                else
-                  loop (i - 1) ( eval_cmd c cur )
-              in
-              loop n cur
-            with
-              | _ -> ps "repeat: Oops!\n" ; cur
-          end
-                  
-        | Ast.C_help -> help () ; cur
-        | Ast.C_exit -> exit (1)
-            
-        | (Ast.C_nav nc) as cmd ->
-            ps "navigation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
-            (Interp.move nc cur)
-                
-        | (Ast.C_mut mc) as cmd ->
-            ps "mutation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
-            (Interp.write mc cur)
-      end
-      in
-      ( eval_cmd' cmd' cur )
-    end
+    Printf.printf "= " ;
+    Ast.Pretty.pp_formula' (Interp.get_frm cur) ;
+    Printf.printf "\n"
+    ;
+    Ast.Pretty.pp_pos (Interp.get_pos cur)
+    ;
+    Printf.printf "> %!" ;
+    let cmd' =        
+      try
+        Some ( parse_channel "<stdin>" stdin )
+      with
+        | Error (_, (line, col, token)) ->
+            ( Printf.eprintf "line %d, character %d: syntax error at %s\n%!"
+                (* filename *) line col
+                ( if token = "\n"
+                  then "newline"
+                  else Printf.sprintf "`%s'" token ) ;
+              None
+            )
     in
-    let cur = measure handler in
+    let cur = measure (repl_handler cmd') in
     (repl cur) (* repl is a tail-recursive loop. *)
   in
   (* enter repl *)
