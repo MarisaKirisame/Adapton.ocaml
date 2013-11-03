@@ -170,22 +170,28 @@ module Make (M : SAType) : Behavior = struct
 		let t = Tm.thunk (fun () -> max_time [ Tm.force t'; Tm.force ta; Tm.force tb; Tm.force tc; Tm.force td]) in
 		(module R), r, t
 
-
 	(* Take on the value of the most recently updated behavior. *)
 	let merge (type a) (((module A), a, ta) : a behavior) (( _, b, tb) : a behavior) : a behavior =
+		(* Precompute force to satisfy requirement and maintain consistency. *)
+		ignore (A.force a);
+		ignore (A.force b);
+		let t = Tm.const (max_time [ Tm.force ta; Tm.force tb]) in
 		let r = A.thunk (fun () ->
 			let ta' = Tm.force ta in
 			let tb' = Tm.force tb in
 			A.force begin
 				(* ta < tb -> !(ta >= tb) *)
-				if cmp_time ta' tb' then
+				if cmp_time ta' tb' then (
+					Tm.update_const t tb';
 					b
-				else
+				) else (
+					Tm.update_const t ta';
 					a
+				)
 			end
 		)
 		in
-		let t = Tm.thunk (fun () -> max_time [ Tm.force ta; Tm.force tb]) in (* TODO: switch to a tmStore? *)
+		(*let t = Tm.thunk (fun () -> max_time [ Tm.force ta; Tm.force tb]) in (* TODO: switch to a tmStore? *)*)
 		(module A), r, t
 
 	(*
