@@ -1,5 +1,5 @@
 
-module A = Adapton.PolySA.Make(Adapton.LazySABidi)
+module A = As2Adapton
 
 module Ast = struct
 
@@ -93,9 +93,16 @@ module Ast = struct
     | F_paren f1,             F_paren f2             -> A.id f1 = A.id f2
     | _,                      _                      -> false
 
+(*
+seeded_hash (seeded_hash seed "F_const") "Fail"
+seeded_hash (seeded_hash (seeded_hash (seeded_hash seed "F_const") "Num")) n
+*)
+
+  open Hashtbl
+
   let rec frm_hash x f = 
     let my_hash x thing = 
-      Hashtbl.seeded_hash_param 1 100 x thing
+      seeded_hash_param 10 100 x thing
     in
     match f with
       | F_func (f, reg) -> 
@@ -109,8 +116,9 @@ module Ast = struct
         x
     | F_paren f        -> my_hash x f
     | F_coord c        -> my_hash x f
-    | F_const (Num n1) -> my_hash x f
-    | F_const (Fail|Undef) -> Random.bits ()
+    | F_const (Num n)  -> my_hash x n
+    | F_const Fail     -> my_hash x "F"
+    | F_const Undef    -> my_hash x "U"
 
   (* hash-cons'd formulae: *)
   let memo_frm : formula -> formula' = 

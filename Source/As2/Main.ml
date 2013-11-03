@@ -3,6 +3,9 @@ exception Internal_error
 
 let ps = print_string
 
+let db_init  = Interp.empty (100,10,10)
+let cur_init = Interp.cursor (1,(1,1)) db_init
+
 let help () =
   ps "=========================================================================\n" ;
   ps "AS2 HELP:                                                                \n" ;
@@ -62,141 +65,184 @@ let parse_channel : string -> in_channel -> Ast.cmd =
     in
     ast
 
-let _ =
-  let db  = Interp.empty (100,10,10) in
-  let cur = Interp.cursor (1,(1,1)) db in
-  
-  let measure f = 
-    let module S = Adapton.Statistics in
-    let x, m = S.measure f
+let parse_string : string -> Ast.cmd =
+  fun input ->
+    let lexbuf = Lexing.from_string input in
+    let pos = lexbuf.Lexing.lex_curr_p in
+    let _ =
+      lexbuf.Lexing.lex_curr_p <-
+        { pos with
+            Lexing.pos_fname = "<string>" ;
+            Lexing.pos_lnum = 1 ;
+        }
     in
-    begin Printf.printf "time=%f, heap=%d, stack=%d, upd=%d, eval=%d, dirty=%d, clean=%d\n"
-        m.S.time' m.S.heap' m.S.stack' 
-        m.S.update' m.S.evaluate' m.S.dirty' m.S.clean' 
-      ;
-      x 
-    end
-  in
-
-  (* REPL seed: *)
-  let rec repl cur =
-    let handler () = begin
-      Printf.printf "= " ;
-      Ast.Pretty.pp_formula' (Interp.get_frm cur) ;
-      Printf.printf "\n"
-      ;
-      Ast.Pretty.pp_pos (Interp.get_pos cur)
-      ;
-      Printf.printf "> %!" ;
-      let cmd' =        
-        try
-          Some ( parse_channel "<stdin>" stdin )
-        with
-          | Error (_, (line, col, token)) ->
-              ( Printf.eprintf "line %d, character %d: syntax error at %s\n%!"
-                  (* filename *) line col
-                  ( if token = "\n"
-                    then "newline"
-                    else Printf.sprintf "`%s'" token ) ;
-                None
-              )
-      in
-      let rec eval_cmd' cmd' cur =
-        match cmd' with
-          | None -> ps "Oops! Try 'help' for reference information.\n" ; cur
-          | Some cmd -> eval_cmd cmd cur
-      
-      and eval_cmd cmd cur = begin match cmd with
-        | Ast.C_print -> 
-            let (sht,_) = Interp.get_pos cur in
-            ps "================================================\n" ;
-            Interp.print_region (sht,((1,1),(10,10))) db stdout ;
-            ps "================================================\n" ;
-            cur
-
-        | Ast.C_seq(c1,c2) -> 
-            let cur = eval_cmd c1 cur in
-            eval_cmd c2 cur
-        | Ast.C_repeat(f,c) -> begin
-            try
-              let cnt = Ast.A.force (Interp.eval cur (Ast.A.force f)) in
-              let n = match cnt with
-                | Ast.Num n -> Num.int_of_num n
-                | _ -> invalid_arg "repeat"
-              in
-              let rec loop i cur =
-                if i <= 0 then cur
-                else
-                  loop (i - 1) ( eval_cmd c cur )
-              in
-              loop n cur
-            with
-              | _ -> ps "repeat: Oops!\n" ; cur
+    let _ = Global.set_lexbuf lexbuf in
+    let ast : Ast.cmd =
+      try Parser.cmd Lexer.token lexbuf
+      with
+        | exn -> begin
+            let curr = lexbuf.Lexing.lex_curr_p in
+            let line = curr.Lexing.pos_lnum in
+            let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
+            let tok = Lexing.lexeme lexbuf in
+            raise (Error (exn, (line, cnum, tok)))
           end
-                  
-        | Ast.C_help -> help () ; cur
-        | Ast.C_exit -> exit (1)
-            
-        | (Ast.C_nav nc) as cmd ->
-            ps "navigation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
-            (Interp.move nc cur)
-                
-        | (Ast.C_mut mc) as cmd ->
-            ps "mutation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
-            (Interp.write mc cur)
-      end
-      in
-      ( eval_cmd' cmd' cur )
-    end
     in
-    let cur = measure handler in
-    (repl cur) (* repl is a tail-recursive loop. *)
+    ast
+ 
+let measure f = 
+  let module S = Adapton.Statistics in
+  let x, m = S.measure f
   in
-  (* enter repl *)
-  (repl cur)
+  begin Printf.printf "time=%f, heap=%d, stack=%d, upd=%d, eval=%d, dirty=%d, clean=%d\n"
+      m.S.time' m.S.heap' m.S.stack' 
+      m.S.update' m.S.evaluate' m.S.dirty' m.S.clean' 
+    ;
+    ( x , m )
+  end
 
-(* Not in use: FILE processing *)
+let rec eval_cmd' cmd' cur =
+  match cmd' with
+    | None -> ps "Oops! Try 'help' for reference information.\n" ; cur
+    | Some cmd -> eval_cmd cmd cur
+        
+and eval_cmd cmd cur = begin match cmd with
+  | Ast.C_print -> 
+      let (sht,_) = Interp.get_pos cur in
+      ps "================================================\n" ;
+      Interp.print_region (sht,((1,1),(10,10))) (Interp.get_db cur) stdout ;
+      ps "================================================\n" ;
+      cur        
+  | Ast.C_seq(c1,c2) -> 
+      let cur = eval_cmd c1 cur in
+      eval_cmd c2 cur
+  | Ast.C_repeat(f,c) -> begin
+      try
+        let cnt = Ast.A.force (Interp.eval cur (Ast.A.force f)) in
+        let n = match cnt with
+          | Ast.Num n -> Num.int_of_num n
+          | _ -> invalid_arg "repeat"
+        in
+        let rec loop i cur =
+          if i <= 0 then cur
+          else
+            loop (i - 1) ( eval_cmd c cur )
+        in
+        loop n cur
+      with
+        | _ -> ps "repeat: Oops!\n" ; cur
+    end      
+  | Ast.C_help -> help () ; cur
+  | Ast.C_exit -> exit (1)      
+  | (Ast.C_nav nc) as cmd ->
+      ps "navigation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
+      (Interp.move nc cur)
 
-let process_file : string -> Ast.cmd = fun filename ->
-  let _ = Global.cur_filename := filename in
-  let input =
-    if filename = "-"
-    then stdin
-    else open_in filename
-  in
-  let cmd =
-    try parse_channel filename input
+  | (Ast.C_mut mc) as cmd ->
+      ps "mutation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
+      (Interp.write mc cur)
+end
+  
+let repl_handler cmd' cur () = 
+  ( eval_cmd' cmd' cur )
+
+(* REPL = Read-Eval-Print Loop *)
+let rec repl cur =
+  Printf.printf "= " ;
+  Ast.Pretty.pp_formula' (Interp.get_frm cur) ;
+  Printf.printf "\n"
+  ;
+  Ast.Pretty.pp_pos (Interp.get_pos cur)
+  ;
+  Printf.printf "> %!" ;
+  let cmd' =        
+    try
+      Some ( parse_channel "<stdin>" stdin )
     with
       | Error (_, (line, col, token)) ->
-          ( Printf.eprintf "File %s, line %d, character %d: syntax error at %s\n%!"
-              filename line col
+          ( Printf.eprintf "line %d, character %d: syntax error at %s\n%!"
+              (* filename *) line col
               ( if token = "\n"
                 then "newline"
                 else Printf.sprintf "`%s'" token ) ;
-            exit (-1) )
+            None
+          )
   in
-  Ast.Pretty.pp_cmd cmd ;
-  cmd
+  let cur, _ = measure (repl_handler cmd' cur) in
+  (repl cur) (* repl is a tail-recursive loop. *)
+
+let test n cur =
+  let sht_to_demand = n in
+  let num_changes = 10 in
+  let module S = Adapton.Statistics in
+  let cmd = parse_string 
+    (Printf.sprintf "scrambled; goto %d!a1 ; print ; repeat %d do scramble1 ; print done ." 
+       sht_to_demand
+       num_changes)
+  in
+  let _, m = measure (fun _ -> eval_cmd cmd cur) in
+  let out = open_out_gen [Open_append] 0 "stats.csv" in
+  output_string out (Printf.sprintf "%d, %d, %f, %d, %d, %d, %d, %d, %d\n"
+                       sht_to_demand
+                       num_changes
+                       m.S.time' m.S.heap' m.S.stack' 
+                       m.S.update' m.S.evaluate' m.S.dirty' m.S.clean') ;
+  flush out ;
+  close_out out ;
+  ()
 
 let run () =
-  if false then
-    let input_files : string list ref = ref [] in
-    if !Global.print_passes then Printf.eprintf "parsing input files...\n%!" ;
-    let _ = Arg.parse Global.args
-      (fun filename -> input_files := filename :: !input_files)
-      "usage: m3pc [options] [input files]"
-    in
-    if !input_files = [] then (
-      Printf.eprintf "no input files given!\n" ;
-      exit (-1);
-    );
-    let _ = List.map process_file (List.rev (!input_files)) in
-    (** TODO -- emit/do something! **)
-    ()
-    ;
-    if !Global.print_passes then
-      Printf.eprintf "done.\n%!"
-    else ()
+  let _ = Arg.parse Global.args
+    (fun filename -> invalid_arg "No input files.." )
+    "usage: runas2 [options]"
+  in  
+  match ! Global.func with
+    | Global.F_repl         -> repl cur_init
+    | Global.F_stats_test n -> test n cur_init
+
+
+(* Not in use: FILE processing *)
+
+(* let process_file : string -> Ast.cmd = fun filename -> *)
+(*   let _ = Global.cur_filename := filename in *)
+(*   let input = *)
+(*     if filename = "-" *)
+(*     then stdin *)
+(*     else open_in filename *)
+(*   in *)
+(*   let cmd = *)
+(*     try parse_channel filename input *)
+(*     with *)
+(*       | Error (_, (line, col, token)) -> *)
+(*           ( Printf.eprintf "File %s, line %d, character %d: syntax error at %s\n%!" *)
+(*               filename line col *)
+(*               ( if token = "\n" *)
+(*                 then "newline" *)
+(*                 else Printf.sprintf "`%s'" token ) ; *)
+(*             exit (-1) ) *)
+(*   in *)
+(*   Ast.Pretty.pp_cmd cmd ; *)
+(*   cmd *)
+
+(* let run () = *)
+(*   if false then *)
+(*     let input_files : string list ref = ref [] in *)
+(*     if !Global.print_passes then Printf.eprintf "parsing input files...\n%!" ; *)
+(*     let _ = Arg.parse Global.args *)
+(*       (fun filename -> input_files := filename :: !input_files) *)
+(*       "usage: m3pc [options] [input files]" *)
+(*     in *)
+(*     if !input_files = [] then ( *)
+(*       Printf.eprintf "no input files given!\n" ; *)
+(*       exit (-1); *)
+(*     ); *)
+(*     let _ = List.map process_file (List.rev (!input_files)) in *)
+(*     (\** TODO -- emit/do something! **\) *)
+(*     () *)
+(*     ; *)
+(*     if !Global.print_passes then *)
+(*       Printf.eprintf "done.\n%!" *)
+(*     else () *)
 
 
 

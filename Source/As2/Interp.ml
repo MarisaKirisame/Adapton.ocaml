@@ -50,6 +50,8 @@ module type INTERP = sig
   val save  : db -> string -> unit
 *)
 
+  val get_db : cur -> db
+
   val read   : cur -> Ast.const
   val write  : Ast.mut_cmd -> cur -> cur
 
@@ -85,6 +87,8 @@ module Interp : INTERP = struct
 
   type cur = { db : db ;
                pos : pos ; }
+
+  let get_db cur = cur.db
 
 (*
   let load filename =
@@ -301,19 +305,32 @@ module Interp : INTERP = struct
   let read cur =
     A.force (cur.db.eval (sht_of_pos cur.pos) (A.force (get_frm cur)))
 
-  let scramble_one cur =
+  let update_cell_frm cur cell frm =
+    if A.is_self_adjusting then
+      A.update_const cell.cell_frm frm
+    else
+      cur.db.cells <-
+        Mp.add cur.pos {cell_frm=(A.const frm)} cur.db.cells
+      
+  let random_const () = 
+    (Ast.F_const (Ast.Num (Num.num_of_int (Random.int 10000))))
+      
+  let scramble_cell cur cell =
+    update_cell_frm cur cell (random_const ())
+
+   let scramble_one cur =
     let db = cur.db in
     let rnd max = (Random.int (max - 1)) + 1 in
     let s = sht_of_pos (get_pos cur) in
     let pos = 
+      Printf.printf "%d %d %d\n" s db.ncols db.nrows ;
       let s = rnd s in
       let c = rnd db.ncols in
       let r = rnd db.nrows in
       (s, (c,r))
     in
     let cell = lookup_cell db pos in
-    A.update_const cell.cell_frm 
-      (Ast.F_const (Ast.Num (Num.num_of_int (Random.int 10000))))    
+    scramble_cell cur cell
 
   let scramble cur =
     let db = cur.db in
@@ -322,8 +339,7 @@ module Interp : INTERP = struct
         for c = 1 to db.nrows do
           let cell = lookup_cell db (s,(c,r)) in
           if s <= 1 || r <= 1 || c <= 1 then
-            A.update_const cell.cell_frm 
-              (Ast.F_const (Ast.Num (Num.num_of_int (Random.int 10000))))
+            scramble_cell {cur with pos=(s,(r,c))} cell
           else
             let rnd max = (Random.int (max - 1)) + 1 in
             let s1, s2 = rnd s, rnd s in
@@ -339,7 +355,7 @@ module Interp : INTERP = struct
             let f1 = Ast.F_coord (Abs (s1, (c1, r1))) in
             let f2 = Ast.F_coord (Abs (s2, (c2, r2))) in
             let f3 = Ast.F_binop (b, (memo_frm f1), (memo_frm f2)) in
-            A.update_const cell.cell_frm f3
+            update_cell_frm {cur with pos=(s,(r,c))} cell f3
         done
       done
     done
@@ -351,8 +367,7 @@ module Interp : INTERP = struct
         for c = 1 to db.nrows do
           let cell = lookup_cell db (s,(c,r)) in
           if s <= 1 || r <= 1 || c <= 1 then
-            A.update_const cell.cell_frm 
-              (Ast.F_const (Ast.Num (Num.num_of_int (Random.int 10000))))
+            scramble_cell {cur with pos=(s,(r,c))} cell
           else
             let rnd max = (Random.int (max - 1)) + 1 in
             let c1, c2 = rnd db.ncols, rnd db.ncols in
@@ -368,7 +383,7 @@ module Interp : INTERP = struct
             let f1 = Ast.F_coord (Abs (s - 1, (c1, r1))) in
             let f2 = Ast.F_coord (Abs (s - 1, (c2, r2))) in
             let f3 = Ast.F_binop (b, (memo_frm f1), (memo_frm f2)) in
-            A.update_const cell.cell_frm f3
+            update_cell_frm {cur with pos=(s,(r,c))} cell f3
         done
       done
     done
@@ -377,7 +392,7 @@ module Interp : INTERP = struct
     begin match mutcmd with
       | C_set frm -> begin
           let cell = lookup_cell cur.db cur.pos in
-          A.update_const cell.cell_frm (A.force frm)
+          update_cell_frm cur cell (A.force frm)
         end
       | Ast.C_scramble Ast.Sf_sparse -> scramble cur 
       | Ast.C_scramble Ast.Sf_dense  -> scramble_dense cur
