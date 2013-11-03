@@ -95,7 +95,7 @@ include T
 
 
 (** Functor to make constructors for lazy self-adjusting values of a specific type. *)
-module Make (R : Signatures.EqualsType)
+module Make (R : Hashtbl.SeededHashedType)
         : Signatures.SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk = struct
     include T
 
@@ -104,6 +104,9 @@ module Make (R : Signatures.EqualsType)
 
     (** Lazy self-adjusting values for a specific type. *)
     type t = R.t thunk
+
+    (** Module representing type [data]. *)
+    module Data = R
 
     (**/**) (* helper function to make a new thunk meta *)
     let make_meta () = { id=Types.Counter.next lazy_id_counter; dependents=Dependents.create 0 }

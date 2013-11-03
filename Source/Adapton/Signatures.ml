@@ -1,12 +1,5 @@
 (** Module types for {i Adapton}. *)
 
-(** {2 Equals-comparable values *)
-
-module type EqualsType = sig
-    type t
-    val equal : t -> t -> bool
-end
-
 (** {2 Self-adjusting values} *)
 
 (** Output module types of modules for self-adjusting values. *)
@@ -17,6 +10,7 @@ module rec SAType : sig
         type 'a thunk
         type data
         type t
+        module Data : Hashtbl.SeededHashedType with type t = data
         val is_self_adjusting : bool
         val is_lazy : bool
         val id : t -> int
@@ -43,7 +37,7 @@ module type SAType = sig
     val equal : 'a thunk -> 'a thunk -> bool
     val refresh : unit -> unit
     val force : 'a thunk -> 'a
-    module Make (R : EqualsType) : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk
+    module Make (R : Hashtbl.SeededHashedType) : SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk
     val tweak_gc : unit -> unit
 end
 

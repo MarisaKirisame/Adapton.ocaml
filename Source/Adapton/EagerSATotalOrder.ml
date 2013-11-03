@@ -113,7 +113,7 @@ include T
 
 
 (** Functor to make constructors and updaters for eager self-adjusting values of a specific type. *)
-module Make (R : Signatures.EqualsType)
+module Make (R : Hashtbl.SeededHashedType)
         : Signatures.SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk = struct
     include T
 
@@ -122,6 +122,9 @@ module Make (R : Signatures.EqualsType)
 
     (** Eager self-adjusting values for a specific type. *)
     type t = R.t thunk
+
+    (** Module representing type [data]. *)
+    module Data = R
 
     (**/**) (* helper functions *)
     let nop () = ()
