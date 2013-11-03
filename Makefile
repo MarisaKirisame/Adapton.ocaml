@@ -27,6 +27,8 @@ as2-test : check ocamlbuild//runas2testlazysabidi.native ocamlbuild//runas2testn
 
 frtime : check $(addprefix ocamlbuild//Frtime.,cmxa a cma cmi)
 
+frtime-test : check ocamlbuild//frtimetest.native
+
 test : check ounit//runtestadapton.d.byte
 
 .PRECIOUS : $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py
