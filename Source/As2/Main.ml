@@ -108,6 +108,10 @@ let rec eval_cmd' cmd' cur =
         
 and eval_cmd cmd cur = begin match cmd with
   | Ast.C_print -> 
+      (* Important: refresh signals to TotalOrder implementation that
+         we want to start re-evaluation now; return to "at the
+         beginning of time".  This is a no-op otherwise. *)
+      Ast.A.refresh () ;      
       let (sht,_) = Interp.get_pos cur in
       ps "================================================\n" ;
       Interp.print_region (sht,((1,1),(10,10))) (Interp.get_db cur) stdout ;
@@ -149,7 +153,7 @@ let repl_handler cmd' cur () =
 (* REPL = Read-Eval-Print Loop *)
 let rec repl cur =
   Printf.printf "= " ;
-  Ast.Pretty.pp_formula' (Interp.get_frm cur) ;
+  Ast.Pretty.pp_formula (Interp.get_frm cur) ;
   Printf.printf "\n"
   ;
   Ast.Pretty.pp_pos (Interp.get_pos cur)

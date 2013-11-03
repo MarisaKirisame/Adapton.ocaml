@@ -4,21 +4,28 @@ type func =
   | F_repl
   | F_stats_test of stats_test_param
 
+
 let func           = ref F_repl
 let verbose_errors = ref false
 let print_passes   = ref true
 let print_ast_db   = ref false
 let stats_out      = ref "as2-stats.out"
+let stateless_eval = ref true
 
 let rec args = [
   ("--help",       Arg.Unit begin fun _ -> Arg.usage args "blah" ; exit 0 end, "print this help message" ) ;
-  ("--verbose",    Arg.Set verbose_errors, "give verbose (contextual) errors") ;
-  ("--ast-db",     Arg.Set print_ast_db, "give verbose debugging information in formulae") ;
+
+  ("--stateless-eval",  Arg.Set stateless_eval, "use stateless evaluation semantics" ) ;
+  ("--stateful-eval",   Arg.Clear stateless_eval, "use stateful evaluation semantics" ) ;
+
   ("--repl",       Arg.Unit begin fun _ -> func := F_repl end, "functionality/mode: read-eval-print-loop (REPL)") ;
-  ("--Random.self_init", Arg.Unit begin fun _ -> Random.self_init () end, "initialize the Random module's number generator" ) ;
   ("--stats-test",        Arg.Int begin fun n -> func := F_stats_test (n, `No_switch) end, "functionality/mode: run a predefined script, of a given size and record statisitics") ;
   ("--stats-test-switch", Arg.Int begin fun n -> func := F_stats_test (n, `Switch) end,    "functionality/mode: run a predefined script (that switches), of a given size and record statisitics") ;
   ("--stats-out", Arg.String begin fun s -> stats_out := s end, "write out stats to the given file" ) ;
+
+  ("--Random.self_init", Arg.Unit begin fun _ -> Random.self_init () end, "initialize the Random module's number generator" ) ;  
+  ("--verbose",    Arg.Set verbose_errors, "give verbose (contextual) errors") ;
+  ("--ast-db",     Arg.Set print_ast_db, "give verbose debugging information in formulae") ;
 ]
 
 let cur_filename = ref ""

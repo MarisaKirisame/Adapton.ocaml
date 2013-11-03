@@ -43,8 +43,9 @@ module type INTERP = sig
   (* Cursor-based interaction: *)
   val cursor  : Ast.pos -> db -> cur
   val move    : Ast.nav_cmd -> cur -> cur
-  val get_frm : cur -> Ast.formula'
   val get_pos : cur -> Ast.pos
+  val get_frm : cur -> Ast.formula
+  val get_val : cur -> Ast.const
 (*
   val load  : string -> db
   val save  : db -> string -> unit
@@ -73,7 +74,10 @@ module Interp : INTERP = struct
 
   module Mp = Map.Make(Coord)
 
-  type cell = { cell_frm : formula' }
+  type cell = { cell_frm : formula A.thunk ;
+                cell_val : const   A.thunk ; 
+                (* Invariant: if ! Global.stateless_semantics then cell_val is Undef *)
+              }
 
   (* these mutable field below for cells need not be instrumented by
      adapton bc the changes will only be monotonic (will only add new
@@ -102,14 +106,32 @@ module Interp : INTERP = struct
 
   let get_pos cur = cur.pos
 
-  (* get the formula at the cursor -- do a map lookup *)
   let get_frm cur =
-    try (Mp.find cur.pos cur.db.cells).cell_frm with
-        (* TODO -- create the cell on demand. *)
-      | Not_found -> A.const (F_const Undef)
-
+    try A.force (Mp.find cur.pos cur.db.cells).cell_frm with
+      | Not_found -> F_const Undef
+          
   let sht_of_reg (s,_) = s
   let sht_of_pos (s,_) = s
+
+  let get_val' cur =    
+    try 
+      let cell = Mp.find cur.pos cur.db.cells in
+      if ! Global.stateless_eval then
+        cur.db.eval (sht_of_pos (get_pos cur)) (A.force cell.cell_frm)
+      else
+        cell.cell_val
+    with
+      | Not_found -> A.const Undef
+
+  let get_val cur =
+    try 
+      let cell = Mp.find cur.pos cur.db.cells in
+      if ! Global.stateless_eval then
+        A.force (cur.db.eval (sht_of_pos (get_pos cur)) (A.force cell.cell_frm))
+      else
+        A.force cell.cell_val
+    with
+      | Not_found -> Undef
 
   let pos_is_valid : pos -> db -> bool =
     fun (s,(c,r)) {nshts;ncols;nrows} ->
@@ -181,7 +203,8 @@ module Interp : INTERP = struct
       try (Mp.find pos db.cells) with
         | Not_found -> begin
             let undef_frm = A.const (F_const Undef) in
-            let undef_cell = { cell_frm = undef_frm } in
+            let undef_cell = { cell_frm = undef_frm ; 
+                               cell_val = A.const Undef } in
             (* Monotonic side effect: 
                create and remember a new formula, initially holding Undef. *)
             db.cells <- Mp.add pos undef_cell db.cells ;
@@ -207,9 +230,7 @@ module Interp : INTERP = struct
         
         (* lookup and evaluate an absolute coordinate. *)
         let lookup_eval : pos -> const = 
-          fun pos ->
-            let frm = (lookup_cell db pos).cell_frm in           
-            A.force (eval_memo sht (A.force frm))
+          fun pos -> A.force (lookup_cell db pos).cell_val
         in
 
         let eval_memo' sht frm = eval_memo sht (A.force frm)
@@ -228,7 +249,7 @@ module Interp : INTERP = struct
               let cells = fold_region r db {
                 fold_row_begin = begin fun cur x -> x end ;
                 fold_row_end   = begin fun cur x -> x end ;
-                fold_cell      = begin fun cur cells -> snoc cells (eval_memo' sht (get_frm cur)) end
+                fold_cell      = begin fun cur cells -> snoc cells (get_val' cur) end
               } (to_app_form [])
               in
               begin match cells [] with
@@ -286,7 +307,7 @@ module Interp : INTERP = struct
   let eval cur = cur.db.eval (sht_of_pos (get_pos cur))
 
   (* -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- *)
-  (* -- pretty printing -- *)
+  (* -- pretty printing -- *)    
   let print_region : Ast.absolute_region -> db -> out_channel -> unit =
     fun reg db out ->
       let ps = print_string in
@@ -295,22 +316,23 @@ module Interp : INTERP = struct
         fold_row_end   = begin fun _ _   -> ps "\n" end ;
         fold_cell =
           begin fun cur _ ->
-            let frm = A.force (get_frm cur) in
+            let c = get_val cur in
             ps "| " ;
-            Printf.fprintf out "%10s"
-              (Pretty.string_of_const (A.force(db.eval (sht_of_reg reg) frm))) ;
+            Printf.fprintf out "%10s" (Pretty.string_of_const c) ;
             ps " |"
           end } ()
 
-  let read cur =
-    A.force (cur.db.eval (sht_of_pos cur.pos) (A.force (get_frm cur)))
-
+  let read cur = get_val cur
+    
   let update_cell_frm cur cell frm =
-    if A.is_self_adjusting then
+    if A.is_self_adjusting then 
       A.update_const cell.cell_frm frm
     else
       cur.db.cells <-
-        Mp.add cur.pos {cell_frm=(A.const frm)} cur.db.cells
+        Mp.add cur.pos { cell_frm=(A.const frm);
+                         cell_val= if ! Global.stateless_eval 
+                         then A.const Undef else eval cur frm ;
+                       } cur.db.cells
       
   let random_const () = 
     (Ast.F_const (Ast.Num (Num.num_of_int (Random.int 10000))))
