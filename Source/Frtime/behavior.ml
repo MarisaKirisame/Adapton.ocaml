@@ -60,6 +60,7 @@ module Make (M : SAType) : Behavior = struct
 
 	type 'a sa_mod = (module SAType.S with type sa = M.sa and type data = 'a and type t = 'a M.thunk)
 	type 'a behavior = 'a sa_mod * 'a M.thunk * time M.thunk
+	(* Requirement: Always force 'a thunk before time thunk. *)
 
 	let const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c : t) : t behavior = 
 		let module R = M.Make( H) in
@@ -75,11 +76,8 @@ module Make (M : SAType) : Behavior = struct
 	
 	let memo_app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior = 
 		let module R = M.Make( B) in
-		let r = R.memo2 (module F) (module A) (fun memo f' a' ->
-			(*R.force (memo f' a')*)
-			(F.force f') (A.force a')
-		) f a
-		in
+		let memo = R.memo2 (module F) (module A) (fun _ (f' : a -> b) a' -> f' a') in
+		let r = R.thunk (fun () -> memo (F.force f) (A.force a)) in
 		let t = Tm.thunk (fun () -> max_time [ Tm.force tf; Tm.force ta]) in
 		(module R), r, t
 
