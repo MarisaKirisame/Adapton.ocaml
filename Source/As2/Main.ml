@@ -3,9 +3,6 @@ exception Internal_error
 
 let ps = print_string
 
-let db_init  = Interp.empty (100,10,10)
-let cur_init = Interp.cursor (1,(1,1)) db_init
-
 let help () =
   ps "=========================================================================\n" ;
   ps "AS2 HELP:                                                                \n" ;
@@ -217,6 +214,8 @@ let run () =
     (fun filename -> invalid_arg "No input files.." )
     "usage: runas2 [options]"
   in  
+  let db_init  = Interp.empty (!Global.num_sheets,10,10) in
+  let cur_init = Interp.cursor (1,(1,1)) db_init in
   match ! Global.func with
     | Global.F_repl -> repl cur_init
     | Global.F_stats_test (n, test_flags) -> test test_flags n cur_init

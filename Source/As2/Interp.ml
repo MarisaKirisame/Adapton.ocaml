@@ -314,15 +314,22 @@ module Interp : INTERP = struct
   let read cur = get_val cur
     
   let update_cell_frm cur cell frm =
-    if A.is_self_adjusting then 
-      A.update_const cell.cell_frm frm
+    if A.is_self_adjusting then (
+      A.update_const cell.cell_frm frm ;
+      A.update_thunk cell.cell_val begin fun _ ->
+        if (! Global.stateless_eval ) then
+          Undef
+        else
+          A.force (cur.db.eval (sht_of_pos cur.pos) frm)
+      end
+    )
     else
       cur.db.cells <-
         Mp.add cur.pos { 
           cell_frm=(A.const frm);
-          cell_val= 
+          cell_val=
             if ! Global.stateless_eval 
-            then A.const Undef 
+            then (A.const Undef) 
             else cur.db.eval (sht_of_pos cur.pos) frm ;
         } cur.db.cells
       
