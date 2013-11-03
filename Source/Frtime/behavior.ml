@@ -76,8 +76,8 @@ module Make (M : SAType) : Behavior = struct
 	
 	let memo_app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior = 
 		let module R = M.Make( B) in
-		let memo = R.memo2 (module F) (module A) (fun _ (f' : a -> b) a' -> f' a') in
-		let r = R.thunk (fun () -> memo (F.force f) (A.force a)) in
+		let memo = R.memo2 (module F.Data) (module A.Data) (fun _ (f' : a -> b) a' -> f' a') in
+		let r = R.thunk (fun () -> R.force (memo (F.force f) (A.force a))) in
 		let t = Tm.thunk (fun () -> max_time [ Tm.force tf; Tm.force ta]) in
 		(module R), r, t
 
@@ -187,7 +187,6 @@ module Make (M : SAType) : Behavior = struct
 		(module A), r, t
 	*)
 
-	
 	let seconds_store = ref None
 	let seconds () : time behavior = 
 		let c = !seconds_store in
