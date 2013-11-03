@@ -171,17 +171,29 @@ let rec repl cur =
   let cur, _ = measure (repl_handler cmd' cur) in
   (repl cur) (* repl is a tail-recursive loop. *)
 
-let test n cur =
+let test test_flags n cur =
   let sht_to_demand = n in
   let num_changes = 10 in
   let module S = Adapton.Statistics in
-  let cmd = parse_string 
-    (Printf.sprintf "scrambled; goto %d!a1 ; print ; repeat %d do scramble1 ; print done ." 
-       sht_to_demand
-       num_changes)
+  let cmd =
+    match test_flags with
+      | `No_switch ->
+          parse_string 
+          (Printf.sprintf "scrambled; goto %d!a1 ; print ; repeat %d do scramble1 ; print done ."
+             sht_to_demand
+             num_changes)
+
+      | `Switch ->
+          parse_string 
+            (Printf.sprintf "scrambled; goto %d!a1 ; print ; repeat %d do scramble1 ; goto %d!a1 ; print ; goto %d!a1 ; print done ."
+               sht_to_demand
+               num_changes
+               (sht_to_demand / 2)
+               sht_to_demand
+            )
   in
   let _, m = measure (fun _ -> eval_cmd cmd cur) in
-  let out = open_out_gen [Open_append] 0 "stats.csv" in
+  let out = open_out_gen [Open_append] 0 (!Global.stats_out) in
   output_string out (Printf.sprintf "%d, %d, %f, %d, %d, %d, %d, %d, %d\n"
                        sht_to_demand
                        num_changes
@@ -197,8 +209,8 @@ let run () =
     "usage: runas2 [options]"
   in  
   match ! Global.func with
-    | Global.F_repl         -> repl cur_init
-    | Global.F_stats_test n -> test n cur_init
+    | Global.F_repl -> repl cur_init
+    | Global.F_stats_test (n, test_flags) -> test test_flags n cur_init
 
 
 (* Not in use: FILE processing *)
