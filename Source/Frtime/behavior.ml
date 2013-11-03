@@ -45,11 +45,9 @@ module type Behavior = sig
 	val lift4 : ('a -> 'b -> 'c -> 'd -> 'e) -> (module Hashtbl.SeededHashedType with type t = 'e ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior -> 'e behavior
 
 	val memo_lift : ('a -> 'b) -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
-	(*
 	val memo_lift2 : ('a -> 'b -> 'c) -> (module Hashtbl.SeededHashedType with type t = 'c ) -> 'a behavior -> 'b behavior-> 'c behavior
 	val memo_lift3 : ('a -> 'b -> 'c -> 'd) -> (module Hashtbl.SeededHashedType with type t = 'd ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior
 	val memo_lift4 : ('a -> 'b -> 'c -> 'd -> 'e) -> (module Hashtbl.SeededHashedType with type t = 'e ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior -> 'e behavior
-	*)
 	
 	(* Alarm. *)
 	val seconds : unit -> time behavior
