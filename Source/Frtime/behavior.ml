@@ -37,7 +37,6 @@ module type Behavior = sig
 	*)
 	val merge : 'a behavior -> 'a behavior -> 'a behavior
 	val ifb : bool behavior -> 'a behavior -> 'a behavior -> 'a behavior
-	(* TODO: val memo_ifb : bool behavior -> 'a behavior -> 'a behavior -> 'a behavior*)
 
 	(* Derived combinators. *)
 	val lift : ('a -> 'b) -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
@@ -45,6 +44,13 @@ module type Behavior = sig
 	val lift3 : ('a -> 'b -> 'c -> 'd) -> (module Hashtbl.SeededHashedType with type t = 'd ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior
 	val lift4 : ('a -> 'b -> 'c -> 'd -> 'e) -> (module Hashtbl.SeededHashedType with type t = 'e ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior -> 'e behavior
 
+	val memo_lift : ('a -> 'b) -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
+	(*
+	val memo_lift2 : ('a -> 'b -> 'c) -> (module Hashtbl.SeededHashedType with type t = 'c ) -> 'a behavior -> 'b behavior-> 'c behavior
+	val memo_lift3 : ('a -> 'b -> 'c -> 'd) -> (module Hashtbl.SeededHashedType with type t = 'd ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior
+	val memo_lift4 : ('a -> 'b -> 'c -> 'd -> 'e) -> (module Hashtbl.SeededHashedType with type t = 'e ) -> 'a behavior -> 'b behavior-> 'c behavior -> 'd behavior -> 'e behavior
+	*)
+	
 	(* Alarm. *)
 	val seconds : unit -> time behavior
 
@@ -76,7 +82,7 @@ module Make (M : SAType) : Behavior = struct
 	
 	let memo_app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior = 
 		let module R = M.Make( B) in
-		let memo = R.memo2 (module F.Data) (module A.Data) (fun _ (f' : a -> b) a' -> f' a') in
+		let memo = R.memo2 (module F.Data) (module A.Data) (fun _ f' a' -> f' a') in
 		let r = R.thunk (fun () -> R.force (memo (F.force f) (A.force a))) in
 		let t = Tm.thunk (fun () -> max_time [ Tm.force tf; Tm.force ta]) in
 		(module R), r, t
@@ -126,6 +132,45 @@ module Make (M : SAType) : Behavior = struct
 		let f' = lift3 f mF a b c in
 		app f' (module E) d
 
+	let memo_lift (type a) (type b) (f : a -> b) (module B : Hashtbl.SeededHashedType with type t = b) ((module A), a, ta : a behavior) : b behavior =
+		let module R = M.Make( B) in
+		let memo = R.memo (module A.Data) (fun _ -> f) in
+		let r = R.thunk (fun () -> R.force (memo (A.force a))) in
+		let t' = Tm.const (get_time ()) in
+		let t = Tm.thunk (fun () -> max_time [ Tm.force t'; Tm.force ta]) in
+		(module R), r, t
+		
+	(* Can't be compositional here because memoizing on closures does not work. *)
+	let memo_lift2 (type a) (type b) (type c) (f : a -> b -> c) (module C : Hashtbl.SeededHashedType with type t = c) ((module A), a, ta : a behavior) ((module B), b, tb : b behavior) : c behavior =
+		let module R = M.Make( C) in
+		let memo = R.memo2 (module A.Data) (module B.Data) (fun _ -> f) in
+		let r = R.thunk (fun () -> R.force (memo (A.force a) (B.force b))) in
+		let t' = Tm.const (get_time ()) in
+		let t = Tm.thunk (fun () -> max_time [ Tm.force t'; Tm.force ta; Tm.force tb]) in
+		(module R), r, t
+		(*
+		let mF = T.makeFunction () in
+		let f' = memo_lift f mF a in
+		memo_app f' (module C) b
+		*)
+
+	let memo_lift3 (type a) (type b) (type c) (type d) (f : a -> b -> c -> d) (module D : Hashtbl.SeededHashedType with type t = d) ((module A), a, ta : a behavior) ((module B), b, tb : b behavior) ((module C), c, tc : c behavior) : d behavior =
+		let module R = M.Make( D) in
+		let memo = R.memo3 (module A.Data) (module B.Data) (module C.Data) (fun _ -> f) in
+		let r = R.thunk (fun () -> R.force (memo (A.force a) (B.force b) (C.force c))) in
+		let t' = Tm.const (get_time ()) in
+		let t = Tm.thunk (fun () -> max_time [ Tm.force t'; Tm.force ta; Tm.force tb; Tm.force tc]) in
+		(module R), r, t
+
+	let memo_lift4 (type a) (type b) (type c) (type d) (type e) (f : a -> b -> c -> d -> e) (module E : Hashtbl.SeededHashedType with type t = e) ((module A), a, ta : a behavior) ((module B), b, tb : b behavior) ((module C), c, tc : c behavior) ((module D), d, td : d behavior) : e behavior =
+		let module R = M.Make( E) in
+		let memo = R.memo4 (module A.Data) (module B.Data) (module C.Data) (module D.Data) (fun _ -> f) in
+		let r = R.thunk (fun () -> R.force (memo (A.force a) (B.force b) (C.force c) (D.force d))) in
+		let t' = Tm.const (get_time ()) in
+		let t = Tm.thunk (fun () -> max_time [ Tm.force t'; Tm.force ta; Tm.force tb; Tm.force tc; Tm.force td]) in
+		(module R), r, t
+
+
 	(* Take on the value of the most recently updated behavior. *)
 	let merge (type a) (((module A), a, ta) : a behavior) (( _, b, tb) : a behavior) : a behavior =
 		let r = A.thunk (fun () ->
@@ -172,21 +217,6 @@ module Make (M : SAType) : Behavior = struct
 		let t = Tm.thunk (fun () -> max_time [ Tm.force tg; Tm.force ta; Tm.force tb]) in
 		(module A), r, t
 
-	(*
-	let memo_ifb (type a) (((module G), g, tg) : bool behavior) (((module A), a, ta) : a behavior) ((_, b, tb) : a behavior) : a behavior = 
-		let memo_a = A.memo (module A) (fun a' -> a') in
-		let memo_b = A.memo (module A) (fun a' -> a') in
-		let r = A.thunk (fun () ->
-			if G.force g then
-				memo_a (A.force a)
-			else
-				memo_b (A.force b)
-		)
-		in
-		let t = Tm.thunk (fun () -> max_time [ Tm.force tg; Tm.force ta; Tm.force tb]) in
-		(module A), r, t
-	*)
-
 	let seconds_store = ref None
 	let seconds () : time behavior = 
 		let c = !seconds_store in
@@ -206,7 +236,6 @@ module Make (M : SAType) : Behavior = struct
 			in
 			S.set_signal S.sigalrm handle;
 			ignore (U.alarm 1);
-			(*let beh = (module Tm : (time sa_mod)), r, r in*)
 			let beh = (module Tm : SAType.S with type sa = M.sa and type data = time and type t = time M.thunk), r, r in
 			seconds_store := Some beh;
 			beh
@@ -217,38 +246,3 @@ module Make (M : SAType) : Behavior = struct
 		A.force a
 end
 
-(*
-module type Test = sig
-	type t
-	val eq : t -> t -> bool
-end
-
-module TestA = struct type t = int  let eq x y = x = y end
-module TestB = struct type t = float let eq x y = x = y end
-
-
-(*
-type 'b behavior = (module SA with type sa = ? and type 'a thunk = ?) * ?
-*)
-
-(*let const (type t) (module M : Test with type t = t) (v:t) = v*)
-(*let const (type t) (module M : Test with type t = t) (v:t) = (module M)*)
-let const (type t) (module H : SeededHashedType with type t = t) (v:t) : t behavior = (module M : Test with type t = t), v
-
-let i = const (module TestA) 4
-let f = const (module TestB) 4.4
-
-let b_eq (type a) (x:a behavior) (y:a behavior) = 
-	let (module A) = (fst x) in
-	A.eq (snd x) (snd y) 
-module type HSHT = Hashtbl.SeededHashedType
-
-class ['a] behavior = object
-	val m : (module SAType.S with type t = 'a)
-	val v : m.t thunk
-end
-
-let const (module C : HSHT) c = (*(module C : HSHT) * c*)
-	let (module M : )
-	
-*)
