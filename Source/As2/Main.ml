@@ -111,11 +111,14 @@ and eval_cmd cmd cur = begin match cmd with
       (* Important: refresh signals to TotalOrder implementation that
          we want to start re-evaluation now; return to "at the
          beginning of time".  This is a no-op otherwise. *)
-      Ast.A.refresh () ;      
+      if Ast.A.is_self_adjusting then
+        Ast.A.refresh () 
+      else () ; 
       let (sht,_) = Interp.get_pos cur in
       ps "================================================\n" ;
       Interp.print_region (sht,((1,1),(10,10))) (Interp.get_db cur) stdout ;
       ps "================================================\n" ;
+      flush stdout ;
       cur        
   | Ast.C_seq(c1,c2) -> 
       let cur = eval_cmd c1 cur in
@@ -139,12 +142,14 @@ and eval_cmd cmd cur = begin match cmd with
   | Ast.C_help -> help () ; cur
   | Ast.C_exit -> exit (1)      
   | (Ast.C_nav nc) as cmd ->
-      ps "navigation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
+      ps "read: navigation command: `" ; Ast.Pretty.pp_cmd cmd ; ps "'\n" ;
       (Interp.move nc cur)
 
   | (Ast.C_mut mc) as cmd ->
-      ps "mutation command: " ; Ast.Pretty.pp_cmd cmd ; ps "\n" ;
-      (Interp.write mc cur)
+      ps "read: mutation command: `" ; Ast.Pretty.pp_cmd cmd ; ps "'\n" ;
+      let cur = Interp.write mc cur in
+      (* ps ">> " ; ps (Ast.Pretty.string_of_const (Interp.get_val cur)) ; ps "\n" ; *)
+      cur
 end
   
 let repl_handler cmd' cur () = 

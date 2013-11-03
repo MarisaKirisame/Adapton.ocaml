@@ -113,25 +113,17 @@ module Interp : INTERP = struct
   let sht_of_reg (s,_) = s
   let sht_of_pos (s,_) = s
 
-  let get_val' cur =    
+  let get_val_ eval cur =
     try 
       let cell = Mp.find cur.pos cur.db.cells in
       if ! Global.stateless_eval then
-        cur.db.eval (sht_of_pos (get_pos cur)) (A.force cell.cell_frm)
+        eval (sht_of_pos (get_pos cur)) (A.force cell.cell_frm)
       else
         cell.cell_val
     with
       | Not_found -> A.const Undef
 
-  let get_val cur =
-    try 
-      let cell = Mp.find cur.pos cur.db.cells in
-      if ! Global.stateless_eval then
-        A.force (cur.db.eval (sht_of_pos (get_pos cur)) (A.force cell.cell_frm))
-      else
-        A.force cell.cell_val
-    with
-      | Not_found -> Undef
+  let get_val cur = A.force (get_val_ cur.db.eval cur)
 
   let pos_is_valid : pos -> db -> bool =
     fun (s,(c,r)) {nshts;ncols;nrows} ->
@@ -226,21 +218,17 @@ module Interp : INTERP = struct
         
         let snoc : ('a list -> 'a list) -> 'a -> ('a list -> 'a list)
           = fun xs y -> (fun tl -> xs (y :: tl))
-        in
-        
-        (* lookup and evaluate an absolute coordinate. *)
-        let lookup_eval : pos -> const = 
-          fun pos -> A.force (lookup_cell db pos).cell_val
-        in
+        in        
 
-        let eval_memo' sht frm = eval_memo sht (A.force frm)
+        let eval_memo_ sht frm = 
+          eval_memo sht (A.force frm)
         in
 
         (* evaluate given formula *)
         match frm with
           | F_const c -> c
-          | F_paren f -> A.force (eval_memo' sht f)
-          | F_coord coord -> lookup_eval (absolute sht coord)
+          | F_paren f -> A.force (eval_memo_ sht f)
+          | F_coord coord -> A.force (get_val_ eval_memo {pos=(absolute sht coord); db=db})
           | F_func(f,r) ->
               let r = match r with
                 | R_lcl lr -> (sht,lr)
@@ -249,7 +237,8 @@ module Interp : INTERP = struct
               let cells = fold_region r db {
                 fold_row_begin = begin fun cur x -> x end ;
                 fold_row_end   = begin fun cur x -> x end ;
-                fold_cell      = begin fun cur cells -> snoc cells (get_val' cur) end
+                fold_cell      = begin fun cur cells -> 
+                  snoc cells (get_val_ eval_memo cur) end
               } (to_app_form [])
               in
               begin match cells [] with
@@ -270,8 +259,8 @@ module Interp : INTERP = struct
               end
                 
           | F_binop(bop,f1,f2) -> begin
-              let c1 = A.force (eval_memo' sht f1) in
-              let c2 = A.force (eval_memo' sht f2) in
+              let c1 = A.force (eval_memo_ sht f1) in
+              let c2 = A.force (eval_memo_ sht f2) in
               try
                 begin match bop, c1, c2 with
                   | Bop_add, Num n1, Num n2 -> Num (Num.add_num n1 n2)
@@ -329,10 +318,13 @@ module Interp : INTERP = struct
       A.update_const cell.cell_frm frm
     else
       cur.db.cells <-
-        Mp.add cur.pos { cell_frm=(A.const frm);
-                         cell_val= if ! Global.stateless_eval 
-                         then A.const Undef else eval cur frm ;
-                       } cur.db.cells
+        Mp.add cur.pos { 
+          cell_frm=(A.const frm);
+          cell_val= 
+            if ! Global.stateless_eval 
+            then A.const Undef 
+            else cur.db.eval (sht_of_pos cur.pos) frm ;
+        } cur.db.cells
       
   let random_const () = 
     (Ast.F_const (Ast.Num (Num.num_of_int (Random.int 10000))))
