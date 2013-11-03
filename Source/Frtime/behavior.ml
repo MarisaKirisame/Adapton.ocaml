@@ -9,6 +9,7 @@ module type Behavior = sig
 	(* Core combinators. *)
 	val const : (module Hashtbl.SeededHashedType with type t = 'a ) -> 'a -> 'a behavior
 	val app : ('a->'b) behavior -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
+	val memo_app : ('a->'b) behavior -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
 	(* TODO:val memo_app ... *)
 	(* val flatten? *)
 	(* val prev : 'a behavior -> 'a -> 'a behavior *)
@@ -22,9 +23,16 @@ module type Behavior = sig
 	val filter : ('a -> bool) -> 'a behavior -> 'a behavior
 	when
 
-	TODO: more...?
+	TODO: 
+		memo_app
+		ifb -> switch? ifb (thunkified)
 
-	timer - seconds
+	
+	more...?
+		? update_const/trigger ?
+
+
+
 
 	*)
 	val merge : 'a behavior -> 'a behavior -> 'a behavior
@@ -65,6 +73,17 @@ module Make (M : SAType) : Behavior = struct
 		let t = Tm.thunk (fun () -> max_time [ Tm.force tf; Tm.force ta]) in
 		(module R), r, t
 	
+	let memo_app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior = 
+		let module R = M.Make( B) in
+		let r = R.memo2 (module F) (module A) (fun memo f' a' ->
+			(*R.force (memo f' a')*)
+			(F.force f') (A.force a')
+		) f a
+		in
+		let t = Tm.thunk (fun () -> max_time [ Tm.force tf; Tm.force ta]) in
+		(module R), r, t
+
+		
 	(* Contains the previous value of the behavior. Takes on the default value until the behavior changes. *)
 	(* TODO: Not pure... How do we fix this?
 	let prev (type a) (((module A), a, ta) : a behavior) (default : a) : a behavior =
@@ -171,9 +190,9 @@ module Make (M : SAType) : Behavior = struct
 	*)
 
 	
-	let cell = ref None
+	let seconds_store = ref None
 	let seconds () : time behavior = 
-		let c = !cell in
+		let c = !seconds_store in
 		match c with
 		| None ->
 			let r = Tm.const (get_time ()) in
@@ -192,7 +211,7 @@ module Make (M : SAType) : Behavior = struct
 			ignore (U.alarm 1);
 			(*let beh = (module Tm : (time sa_mod)), r, r in*)
 			let beh = (module Tm : SAType.S with type sa = M.sa and type data = time and type t = time M.thunk), r, r in
-			cell := Some beh;
+			seconds_store := Some beh;
 			beh
 		| Some c' ->
 			c'
