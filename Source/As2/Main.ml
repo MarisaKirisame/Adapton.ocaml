@@ -179,7 +179,7 @@ let rec repl cur =
 
 let test test_flags n cur =
   let sht_to_demand = n in
-  let num_changes = 10 in
+  let num_changes = ! Global.num_changes in
   let module S = Adapton.Statistics in
   let cmd =
     match test_flags with

@@ -251,10 +251,10 @@ module Interp : INTERP = struct
                         | Fn_sum,  Num x, Num y -> Num ( Num.add_num x y )
                         | Fn_max,  Num x, Num y -> Num ( if Num.gt_num x y then x else y )
                         | Fn_min,  Num x, Num y -> Num ( if Num.gt_num x y then y else x )
-                        | _, Fail, _            -> Fail
-                        | _, _   , Fail         -> Fail 
-                        | _      , Undef, _     -> Undef
-                        | _      , _,     Undef -> Undef
+                        | _,       Fail,  _     -> Fail
+                        | _,       _   ,  Fail  -> Fail 
+                        | _,       Undef, _     -> Undef
+                        | _,       _,     Undef -> Undef
                     end xs x
               end
                 
@@ -267,10 +267,10 @@ module Interp : INTERP = struct
                   | Bop_sub, Num n1, Num n2 -> Num (Num.sub_num n1 n2)
                   | Bop_div, Num n1, Num n2 -> Num (Num.div_num n1 n2)
                   | Bop_mul, Num n1, Num n2 -> Num (Num.mult_num n1 n2)
-                  | _, Fail , _     -> Fail
-                  | _, _    , Fail  -> Fail 
-                  | _, Undef, x     -> Undef
-                  | _, x    , Undef -> Undef
+                  | _,       Fail,   _      -> Fail
+                  | _,       _,      Fail   -> Fail 
+                  | _,       Undef,  _      -> Undef
+                  | _,       _,      Undef  -> Undef
                 end
               with
                 | Failure _ -> Fail
