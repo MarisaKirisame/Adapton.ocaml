@@ -8,6 +8,7 @@ module type Behavior = sig
 
 	(* Core combinators. *)
 	val const : (module Hashtbl.SeededHashedType with type t = 'a ) -> 'a -> 'a behavior
+	val memo_const : (module Hashtbl.SeededHashedType with type t = 'a ) -> 'a -> 'a behavior
 	val app : ('a->'b) behavior -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
 	val memo_app : ('a->'b) behavior -> (module Hashtbl.SeededHashedType with type t = 'b ) -> 'a behavior -> 'b behavior
 	(* TODO:val memo_app ... *)
@@ -72,7 +73,61 @@ module Make (M : SAType) : Behavior = struct
 		let r = R.const c in
 		let t = Tm.const (get_time ()) in
 		(module R), r, t
+
+	(* Universal type hackery. 
+	https://ocaml.janestreet.com/?q=node/18
+	*)
+	module Univ : sig
+		type t
+		val embed: unit -> ('a -> t) * (t -> 'a option)
+	end = struct 
+		type t = exn
+
+		let embed (type s) () =
+			let module M = struct exception E of s end in
+			(fun x -> M.E x), (function M.E x -> Some x | _ -> None)
+	end
 	
+	let memo_const_store = ref [] (*Hashtbl.create 10*)
+	let memo_const (type t) (module H : Hashtbl.SeededHashedType with type t = t) : t -> t behavior = 
+		let module R = M.Make( H) in
+		let memo = 
+			let (of_memo_t, to_memo_t) = Univ.embed () in
+			let rec helper = function
+			| [] ->
+				let m = R.memo (module R.Data) (fun _ c' -> c') in
+				let m' = ref (of_memo_t m) in
+				memo_const_store := m'::!memo_const_store;
+				Printf.printf "memo_const: making new..\n%!";
+				m
+			| h::t ->
+				let m = to_memo_t !h in
+				match m with
+				| None ->
+					Printf.printf "memo_const: not this one\n%!";
+					helper t
+				| Some m' ->
+					Printf.printf "memo_const: found!\n%!";
+					m'
+			in
+			helper !memo_const_store
+		in	
+		(*
+		let memo = 
+			let mod_r = (module R : SAType.S with type sa = M.sa and type data = t and type t = t M.thunk) in
+			try
+				Hashtbl.find memo_const_store mod_r
+			with
+			| Not_found -> 
+				let m = R.memo (module R.Data) (fun _ c' -> c') in
+				Hashtbl.add memo_const_store mod_r m
+		in
+		*)
+		(*let r = memo c in*)
+		let t = Tm.const (get_time ()) in
+		fun (c : t) ->
+			(module R), memo c, t
+		
 	let app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior = 
 		let module R = M.Make( B) in
 		let r = R.thunk (fun () -> (F.force f) (A.force a)) in

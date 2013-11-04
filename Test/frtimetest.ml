@@ -26,5 +26,17 @@ let rec loop i =
 	(*Unix.sleep 1;*)
 	loop (i+1)
 
-let _ = loop 0
+let testUniv () = 
+	let id x = x in
+	(*let module F = T.makeFunction () in*)
+	assert (B.memo_const (module T.Bool) true == B.memo_const (module T.Bool) true);
+	assert (B.memo_const (T.makeFunction ()) id == B.memo_const (T.makeFunction ()) id);
+	assert (B.memo_const (T.makeFunction ()) id != B.memo_const (T.makeFunction ()) (fun x -> x));
+	()
+
+let _ = 
+	assert (oddCase != evenCase);
+	assert (evenCase == evenCase);
+	testUniv ();
+	loop 0
 
