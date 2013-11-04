@@ -54,6 +54,7 @@ module type Behavior = sig
 
 	(* Extractors. *)
 	val force : 'a behavior -> 'a
+	val id : 'a behavior -> int
 end
 
 (* Make a behavior, given a SAType. *)
@@ -248,5 +249,9 @@ module Make (M : SAType) : Behavior = struct
 
 	let force (type a) (((module A), a, _) : a behavior) : a =
 		A.force a
+	
+	(* Returns the id of the underlying thunk. *)
+	let id (type a) ((module A), a, _ : a behavior) : int = 
+		A.id a
 end
 
