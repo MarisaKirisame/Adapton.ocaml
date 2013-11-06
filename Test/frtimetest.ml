@@ -17,15 +17,51 @@ let evenCase = B.const (T.makeFunction ()) (fun i -> Printf.printf "even!\n%!")
 let ifb = B.ifb oddGuard oddCase evenCase
 let branched = B.app ifb (module T.Unit) ellapsed
 
-let rec loop i = 
-	(if false then
-		print_time ()
-	else
-		ignore (B.force branched)
-	);
+let rec loop () = 
+	(*print_time ()l*)
+	B.force branched;
 	(*Unix.sleep 1;*)
-	loop (i+1)
+	loop ()
 
+let _ = 
+	assert (oddCase != evenCase);
+	assert (evenCase == evenCase);
+	(*testUniv ();*)
+	loop ()
+
+(*
+module Orbiter = struct
+	open Num
+
+	type satellite = {
+		mass : num;
+		altitude0 : num;
+		vel_x0 : num;
+		vel_y0 : num
+	}
+
+	type earth = {
+		mass : num
+	}
+
+	let run () = 
+		let t : Tm.time B.behavior = B.time () in
+		let elapsed : float B.behavior = 
+			let store = ref (Tm.to_seconds (B.force t)) in
+			B.lift (fun t' -> (Tm.to_seconds t') -. !store) (module T.Float) t
+		in
+		let earth : earth = { mass = (Int 5972) */ ((Int 10) **/ (Int 21)) } in
+		ignore (earth);
+		ignore (elapsed);
+		()
+
+end
+
+let _ = Orbiter.run ()
+*)
+
+
+(*
 let testUniv () = 
 	let id x = x in
 	(*let module F = T.makeFunction () in*)
@@ -33,10 +69,4 @@ let testUniv () =
 	assert (B.memo_const (T.makeFunction ()) id == B.memo_const (T.makeFunction ()) id);
 	assert (B.memo_const (T.makeFunction ()) id != B.memo_const (T.makeFunction ()) (fun x -> x));
 	()
-
-let _ = 
-	assert (oddCase != evenCase);
-	assert (evenCase == evenCase);
-	testUniv ();
-	loop 0
-
+*)
