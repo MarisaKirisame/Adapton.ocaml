@@ -25,6 +25,8 @@ as2 : check ocamlbuild//runas2.native
 
 as2-test : check ocamlbuild//runas2testlazysabidi.native ocamlbuild//runas2testnonsaeager.native ocamlbuild//runas2testeagersatotalorder.native
 
+fas2 : check ocamlbuild//runfas2.native 
+
 frtime : check $(addprefix ocamlbuild//Frtime.,cmxa a cma cmi)
 
 frtime-test : check ocamlbuild//frtimetest.native
