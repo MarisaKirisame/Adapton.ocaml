@@ -2,7 +2,6 @@
 type time = float
 
 let to_seconds (t : time) : float = t
-let from_seconds (s : float) : time = s
 
 let get_time = Unix.gettimeofday
 
