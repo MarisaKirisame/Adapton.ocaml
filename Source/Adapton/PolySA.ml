@@ -97,26 +97,4 @@ module Make (M : Signatures.SAType) = struct
             fun a b c d -> (memo4 a b c d, (module S))
 
     let tweak_gc = M.tweak_gc
-
-    module Basic : sig
-        type 'a aref
-        val aref : 'a -> 'a aref
-        val get : 'a aref -> 'a
-        val set : 'a aref -> 'a -> unit
-
-        type 'a athunk
-        val force : 'a athunk -> 'a
-        val thunk : (unit -> 'a) -> 'a athunk
-        val memo : ('fn -> 'arg -> 'a) -> ('arg -> 'a athunk as 'fn)
-    end = struct
-        type 'a aref = 'a thunk
-        let aref x = const x
-        let get m = force m
-        let set m x = update_const m x
-
-        type 'a athunk = 'a thunk
-        let force m = force m
-        let thunk f = thunk f
-        let memo f = memo f
-    end
 end
