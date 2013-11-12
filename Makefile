@@ -4,7 +4,7 @@ ifeq ($(shell uname),Darwin)
 	# bump stack size to 4GiB
 	OCAMLBUILD_DARWIN_FLAGS := -lflag -cclib -lflag -Wl,-stack_size,0x100000000
 endif
-OCAMLBUILD_FLAGS = -j 0 -tags "warn_error_A,debug" $(OCAMLBUILD_DARWIN_FLAGS)
+OCAMLBUILD_FLAGS = -j 0 -tags "warn_error_A,debug" -pkg num $(OCAMLBUILD_DARWIN_FLAGS)
 OCAMLBUILD_DOCDIR = Documents/API
 OCAMLBUILD_PRODUCTDIR = _product
 OUNIT_FLAGS = -verbose
@@ -17,9 +17,17 @@ export OCAMLPATH := $(CURDIR)
 
 .PHONY : all test clean repl check
 
-all : lib
+all : lib as2 frtime
 
 lib : check $(addprefix ocamlbuild//Adapton.,cmxa a cma cmi)
+
+as2 : check ocamlbuild//runas2.native 
+
+as2-test : check ocamlbuild//runas2testlazysabidi.native ocamlbuild//runas2testnonsaeager.native ocamlbuild//runas2testeagersatotalorder.native
+
+frtime : check $(addprefix ocamlbuild//Frtime.,cmxa a cma cmi)
+
+frtime-test : check ocamlbuild//frtimetest.native
 
 test : check ounit//runtestadapton.d.byte
 

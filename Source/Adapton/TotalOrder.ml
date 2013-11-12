@@ -121,7 +121,7 @@ end = struct
 
     (** Add a new total-order element after the given element. *)
     let add_next ts =
-        if not (is_valid ts or is_initial ts) then invalid_arg "TotalOrder.add_next";
+        if not (is_valid ts || is_initial ts) then invalid_arg "TotalOrder.add_next";
 
         let parent = ts.parent in
         let ts' = if ts.next != null then begin

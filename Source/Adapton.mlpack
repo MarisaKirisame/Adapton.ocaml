@@ -1,4 +1,5 @@
 Adapton/All
+Adapton/BasicSA
 Adapton/Default
 Adapton/EagerSATotalOrder
 Adapton/Exceptions
@@ -7,6 +8,7 @@ Adapton/LazySparseArray
 Adapton/MemoN
 Adapton/NonSAEager
 Adapton/NonSALazy
+Adapton/PolySA
 Adapton/PrioritySet
 Adapton/SAArrayMappedTrie
 Adapton/SAList

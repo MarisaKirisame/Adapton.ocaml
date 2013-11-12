@@ -76,6 +76,12 @@ module Tuple4 (A : Hashtbl.SeededHashedType) (B : Hashtbl.SeededHashedType) (C :
     let equal ( a, b, c, d as x ) ( a', b', c', d' as x' ) = x == x' || A.equal a a' && B.equal b b' && C.equal c c' && D.equal d d'
 end
 
+module Unit = struct
+    type t = unit
+    let hash seed () = seed
+    let equal = (==)
+end
+
 (** Counter. *)
 module Counter = struct
     type t = int ref
@@ -97,3 +103,11 @@ module Seeds = struct
     let hash seed ( Seeds ( s, _ ) ) = Hashtbl.seeded_hash seed s
     let equal = (==)
 end
+
+(** Infer and make Function modules. *)
+let makeFunction (type a) (type b) () : (module Hashtbl.SeededHashedType with type t = a -> b) =
+    (module struct
+        type t = a -> b
+        let equal = (==)
+        let hash = Hashtbl.seeded_hash
+    end)
