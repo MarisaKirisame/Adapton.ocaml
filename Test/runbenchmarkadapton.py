@@ -7,13 +7,15 @@ from itertools import chain, imap, izip, product, cycle
 runbenchmarkadapton_native = "%s%s%s" % ( os.path.splitext(__file__)[0], os.path.extsep, "native" )
 
 
-def driver(( module, task, size, take, edit, monotonic, seed )):
+def driver(( module, task, size, repeat, take, edit, monotonic, seed )):
     driver_start_time = time.time()
     rng = random.Random(seed)
     results = OrderedDict((
-        ( "module", module ), ( "task", task ), ( "size", size ), ( "take", take ), ( "edit", edit ), ( "monotonic", monotonic ), ( "seed", seed ) ))
+        ( "module", module ), ( "task", task ),
+        ( "size", size ), ( "repeat", repeat), ( "take", take ), ( "edit", edit ), ( "monotonic", monotonic ),
+        ( "seed", seed ) ))
     try:
-        cmd = [ runbenchmarkadapton_native, "-m", "%s" % ( module, ), "-t", str(task), "-I", str(size), "-T", str(take), "-E", str(edit) ]
+        cmd = [ runbenchmarkadapton_native, "-m", "%s" % ( module, ), "-t", str(task), "-I", str(size), "-R", str(repeat), "-T", str(take), "-E", str(edit) ]
         if monotonic:
             cmd.append("-M")
         cmd.extend(( "-S", str(seed) ))
@@ -75,6 +77,9 @@ if __name__ == "__main__":
     benchmark.add_argument("-I", "--input-sizes", metavar="SIZE",
         help="run benchmarks with input size (default: 100000 10000 1000 100 50000 5000 500 50 200000 20000 2000 200 20)",
         nargs="+", default=( 100000, 10000, 1000, 100, 50000, 5000, 500, 50, 20000, 2000, 200, 20 ), type=int)
+    benchmark.add_argument("-R", "--repeat-count", metavar="REPEAT",
+        help="repeat the computation on the same input %(metavar)s times per cycle (default: 1)",
+        default=1, type=int)
     benchmark.add_argument("-T", "--take-counts", metavar="TAKE", help="take only the first %(metavar)s elements of each output (default: 1)",
         nargs="+", default=( 1, ), type=int)
     benchmark.add_argument("-E", "--edit-count", metavar="COUNT", help="average self-adjusting benchmarks over %(metavar)s edits ",
@@ -207,7 +212,7 @@ if __name__ == "__main__":
                 results = []
                 try:
                     # don't use pool.apply_async, it triggers http://bugs.python.org/issue10332
-                    for result in pool.imap_unordered(driver, ( ( module, task, size, take, args.edit_count, args.monotonic, seed )
+                    for result in pool.imap_unordered(driver, ( ( module, task, size, args.repeat_count, take, args.edit_count, args.monotonic, seed )
                             for take in args.take_counts
                             for size in args.input_sizes
                             for seed in args.random_seeds

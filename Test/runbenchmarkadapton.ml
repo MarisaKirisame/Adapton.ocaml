@@ -48,8 +48,9 @@ let tasks = [
 
 let opt_sa = ref (fst (List.hd Adapton.All.sa_list))
 let opt_task = ref "filter"
-let opt_edit_count = ref 1
 let opt_input_size = ref 1
+let opt_repeat_count = ref 1
+let opt_edit_count = ref 1
 let opt_take_count = ref 1
 let opt_random_seed = ref 1
 let opt_monotonic = ref false
@@ -149,8 +150,8 @@ let exptree (module SA : Adapton.Signatures.SAType) rng =
     Printf.eprintf "%t\n%!" header;
     begin try
         let take, setup_stats = measure begin fun () ->
-            let y = E.eval x in
-            let take () = ignore (F.force y) in
+            let ys = Array.init !opt_repeat_count (fun _ -> E.eval x) in
+            let take () = Array.iter (fun y -> ignore (F.force y)) ys in
             take ();
             take
         end in
@@ -276,6 +277,7 @@ let _ =
         ( "-m", Arg.Symbol ( (fst (List.split Adapton.All.sa_list)), (fun s -> opt_sa := s) ), "list module" );
         ( "-t", Arg.Symbol ( (fst (List.split tasks)), (fun s -> opt_task := s) ), "list task" );
         ( "-I", Arg.Set_int opt_input_size, "size input size" );
+        ( "-R", Arg.Set_int opt_repeat_count, "count repeat count" );
         ( "-T", Arg.Set_int opt_take_count, "count take count" );
         ( "-E", Arg.Set_int opt_edit_count, "count edit count" );
         ( "-S", Arg.Set_int opt_random_seed, "seed random seed" );
@@ -330,14 +332,14 @@ let _ =
         let take, setup_stats = measure begin fun () ->
             let take = match task with
                 | `List task ->
-                    let ys = task xs in
-                    (fun () -> ignore (SAFloatList.take ys !opt_take_count))
+                    let yss = Array.init !opt_repeat_count (fun _ -> task xs) in
+                    (fun () -> Array.iter (fun ys -> ignore (SAFloatList.take ys !opt_take_count)) yss)
                 | `One task ->
-                    let y = task xs in
-                    (fun () -> ignore (SAFloatList.SAData.force y))
+                    let ys = Array.init !opt_repeat_count (fun _ -> task xs) in
+                    (fun () -> Array.iter (fun y -> ignore (SAFloatList.SAData.force y)) ys)
                 | `Flip task ->
-                    let ys = task xs b in
-                    (fun () -> ignore (SAFloatList.take ys !opt_take_count))
+                    let yss = Array.init !opt_repeat_count (fun _ -> task xs b) in
+                    (fun () -> Array.iter (fun ys -> ignore (SAFloatList.take ys !opt_take_count)) yss)
                 | `ExpTree ->
                     failwith "exptree"
             in
