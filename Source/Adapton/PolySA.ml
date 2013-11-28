@@ -1,4 +1,9 @@
-(** Functor that provides a polymorphic API for a self-adjusting module. *)
+(** Functor that provides a polymorphic API for a self-adjusting module.
+
+    Note that thunk constructors will provide conservative hash as well as equality functions by default (to compare
+    thunk values as well as memoization keys). These functions are too conservative for types other than [int] and
+    ['a thunk], so custom hash and equality functions should be provided for most types.
+*)
 
 module Make (M : Signatures.SAType) = struct
     type 'a thunk = 'a M.thunk * (module Signatures.SAType.S with type sa = M.sa and type data = 'a and type t = 'a M.thunk)
@@ -17,7 +22,9 @@ module Make (M : Signatures.SAType) = struct
 
     let force (type a) (m, (module S) : a thunk) = S.force m
 
-    let default_hash seed x = Hashtbl.seeded_hash_param 1 100 seed x
+    let default_hash seed x =
+        (* the various thunk types are carefully laid out such that the following will hash the thunk ID only *)
+        Hashtbl.seeded_hash_param 1 100 seed x
 
     let default_equal = (==)
 

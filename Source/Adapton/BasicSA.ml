@@ -1,4 +1,12 @@
-(** Functor that provides a basic polymorphic API for a self-adjusting module. *)
+(** Functor that provides a basic polymorphic API for a self-adjusting module.
+
+    Instead of providing ['a thunk], this provides two types: ['a aref], which are input thunks that can only hold
+    values but is updateable by the outer program, and ['a athunk], which can hold computations, but cannot be updated
+    by the outer program.
+
+    These should only be used with [int], ['a aref] or ['a athunk], due to the use of conservative hash as well as
+    equality functions internally.
+*)
 
 module Make (M : Signatures.SAType) : sig
     type 'a aref
