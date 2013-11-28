@@ -25,10 +25,10 @@ module Make (M : Signatures.SAType) = struct
         let module S = M.Make (struct type t = a let hash = hash let equal = equal end) in
         fun x -> (S.const x, (module S))
 
-    let update_const (type a)  (m, (module S) : a thunk) x =
+    let update_const (type a) (m, (module S) : a thunk) x =
         S.update_const m x
 
-    let thunk (type a) ?(hash=default_hash)  ?(equal=default_equal) : (unit -> a) -> a thunk =
+    let thunk (type a) ?(hash=default_hash) ?(equal=default_equal) : (unit -> a) -> a thunk =
         let module S = M.Make (struct type t = a let hash = hash let equal = equal end) in
         fun f -> (S.thunk f, (module S))
 
