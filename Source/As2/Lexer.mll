@@ -1,6 +1,5 @@
 {
   open Lexing
-  open Parser
 
   let incr_linenum lexbuf =
     let pos = lexbuf.Lexing.lex_curr_p in
@@ -9,6 +8,9 @@
           Lexing.pos_lnum = pos.Lexing.pos_lnum + 1;
           Lexing.pos_bol = pos.Lexing.pos_cnum;
       }
+
+  module Make (Ast : Ast.S) (Parser : module type of Parser.Make (Ast)) = struct
+    open Parser
 }
 
 let letter = ['a'-'z' 'A'-'Z']
@@ -100,3 +102,7 @@ and nested_comment level = parse
                 nested_comment (level-1) lexbuf }
   | eol { incr_linenum lexbuf ; nested_comment level lexbuf }
   | _   { nested_comment level lexbuf }
+
+{
+  end
+}

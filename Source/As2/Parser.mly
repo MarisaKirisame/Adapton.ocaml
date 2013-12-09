@@ -1,3 +1,5 @@
+%parameter < Ast : Ast.S >
+
 %{
 
 open Printf

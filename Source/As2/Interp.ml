@@ -22,7 +22,7 @@
    -- lazy lists -- are these needed / relevant here?
 *)
 
-module type INTERP = sig
+module type INTERP = functor (Ast : Ast.S) -> sig
   type cell
   type db
   type cur
@@ -61,7 +61,7 @@ module type INTERP = sig
   val scramble_one   : cur -> unit
 end
 
-module Interp : INTERP = struct
+module Make : INTERP = functor (Ast : Ast.S) -> struct
   open Ast
 
   exception NYI
@@ -421,5 +421,3 @@ module Interp : INTERP = struct
     ; cur
 
 end
-
-include Interp

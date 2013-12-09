@@ -1,224 +1,248 @@
-exception Error of exn * (int * int * string)
-exception Internal_error
+module Make (SA : Adapton.Signatures.SAType) = struct
+  module Ast = Ast.Make (SA)
+  module Parser = Parser.Make (Ast)
+  module Interp = Interp.Make (Ast)
+  module Lexer = Lexer.Make (Ast) (Parser)
 
-let ps = print_string
+  exception Error of exn * (int * int * string)
+  exception Internal_error
 
-let help () =
-  ps "=========================================================================\n" ;
-  ps "AS2 HELP:                                                                \n" ;
-  ps "-------------------------------------------------------------------------\n" ;
-  ps "Commands:                                                                \n" ;
-  ps " 'help'            -- this help                                          \n" ;
-  ps " 'exit'            -- use excel instead                                  \n" ;
-  ps "                                                                         \n" ;
-  ps " = frm .           -- set formula of current cell to frm                 \n" ;
-  ps "                      Note: start with equals; terminate with a dot.     \n" ;
-  ps "                                                                         \n" ;
-  ps " 'goto' coord      -- goto a specific (sheet), row and column            \n" ;
-  ps " 'next' nav-thing  -- next col/row/sheet                                 \n" ;
-  ps " 'prev' nav-thing  -- prev col/row/sheet                                 \n" ;
-  ps "                                                                         \n" ;
-  ps "-------------------------------------------------------------------------\n" ;
-  ps "Formula & Coordinate Syntax                                              \n" ;
-  ps "                                                                         \n" ;
-  ps " Nav. thing   nav-thing ::= 'row' | 'col' | 'sheet'                      \n" ;
-  ps "                                                                         \n" ;
-  ps " Formulae     frm       ::= func ( reg )                                 \n" ;
-  ps "                         | frm binop frm | num | coord | ( frm )         \n" ;
-  ps "                                                                         \n" ;
-  ps " Functions    func      ::= 'sum' | 'max' | 'min'                        \n" ;
-  ps " Binops       binop     ::= + | - | / | *                                \n" ;
-  ps " Regions      reg       ::= lr | 'sheet' num ! lr                        \n" ;
-  ps " Coordinates  coord     ::= lc | 'sheet' num ! lc                        \n" ;
-  ps " Local coord  lc        ::= letters num                                  \n" ;
-  ps " Local region lr        ::= lc : lc                                      \n" ;
-  ps "-------------------------------------------------------------------------\n" ;
-  ps " All keywords, above in quotes, are also valid in all caps               \n" ;
-  ps "-------------------------------------------------------------------------\n" ;
-  ()
+  let ps = print_string
 
-let parse_channel : string -> in_channel -> Ast.cmd =
-  fun filename channel ->
-    let lexbuf = Lexing.from_channel channel in
-    let pos = lexbuf.Lexing.lex_curr_p in
-    let _ =
-      lexbuf.Lexing.lex_curr_p <-
-        { pos with
-            Lexing.pos_fname = filename ;
-            Lexing.pos_lnum = 1 ;
-        }
-    in
-    let _ = Global.set_lexbuf lexbuf in
-    let ast : Ast.cmd =
-      try Parser.cmd Lexer.token lexbuf
-      with
-        | exn -> begin
-            let curr = lexbuf.Lexing.lex_curr_p in
-            let line = curr.Lexing.pos_lnum in
-            let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
-            let tok = Lexing.lexeme lexbuf in
-            raise (Error (exn, (line, cnum, tok)))
-          end
-    in
-    ast
+  let help () =
+    ps "=========================================================================\n" ;
+    ps "AS2 HELP:                                                                \n" ;
+    ps "-------------------------------------------------------------------------\n" ;
+    ps "Commands:                                                                \n" ;
+    ps " 'help'            -- this help                                          \n" ;
+    ps " 'exit'            -- use excel instead                                  \n" ;
+    ps "                                                                         \n" ;
+    ps " = frm .           -- set formula of current cell to frm                 \n" ;
+    ps "                      Note: start with equals; terminate with a dot.     \n" ;
+    ps "                                                                         \n" ;
+    ps " 'goto' coord      -- goto a specific (sheet), row and column            \n" ;
+    ps " 'next' nav-thing  -- next col/row/sheet                                 \n" ;
+    ps " 'prev' nav-thing  -- prev col/row/sheet                                 \n" ;
+    ps "                                                                         \n" ;
+    ps "-------------------------------------------------------------------------\n" ;
+    ps "Formula & Coordinate Syntax                                              \n" ;
+    ps "                                                                         \n" ;
+    ps " Nav. thing   nav-thing ::= 'row' | 'col' | 'sheet'                      \n" ;
+    ps "                                                                         \n" ;
+    ps " Formulae     frm       ::= func ( reg )                                 \n" ;
+    ps "                         | frm binop frm | num | coord | ( frm )         \n" ;
+    ps "                                                                         \n" ;
+    ps " Functions    func      ::= 'sum' | 'max' | 'min'                        \n" ;
+    ps " Binops       binop     ::= + | - | / | *                                \n" ;
+    ps " Regions      reg       ::= lr | 'sheet' num ! lr                        \n" ;
+    ps " Coordinates  coord     ::= lc | 'sheet' num ! lc                        \n" ;
+    ps " Local coord  lc        ::= letters num                                  \n" ;
+    ps " Local region lr        ::= lc : lc                                      \n" ;
+    ps "-------------------------------------------------------------------------\n" ;
+    ps " All keywords, above in quotes, are also valid in all caps               \n" ;
+    ps "-------------------------------------------------------------------------\n" ;
+    ()
 
-let parse_string : string -> Ast.cmd =
-  fun input ->
-    let lexbuf = Lexing.from_string input in
-    let pos = lexbuf.Lexing.lex_curr_p in
-    let _ =
-      lexbuf.Lexing.lex_curr_p <-
-        { pos with
-            Lexing.pos_fname = "<string>" ;
-            Lexing.pos_lnum = 1 ;
-        }
+  let parse_channel : string -> in_channel -> Ast.cmd =
+    fun filename channel ->
+      let lexbuf = Lexing.from_channel channel in
+      let pos = lexbuf.Lexing.lex_curr_p in
+      let _ =
+        lexbuf.Lexing.lex_curr_p <-
+          { pos with
+              Lexing.pos_fname = filename ;
+              Lexing.pos_lnum = 1 ;
+          }
+      in
+      let _ = Global.set_lexbuf lexbuf in
+      let ast : Ast.cmd =
+        try Parser.cmd Lexer.token lexbuf
+        with
+          | exn -> begin
+              let curr = lexbuf.Lexing.lex_curr_p in
+              let line = curr.Lexing.pos_lnum in
+              let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
+              let tok = Lexing.lexeme lexbuf in
+              raise (Error (exn, (line, cnum, tok)))
+            end
+      in
+      ast
+
+  let parse_string : string -> Ast.cmd =
+    fun input ->
+      let lexbuf = Lexing.from_string input in
+      let pos = lexbuf.Lexing.lex_curr_p in
+      let _ =
+        lexbuf.Lexing.lex_curr_p <-
+          { pos with
+              Lexing.pos_fname = "<string>" ;
+              Lexing.pos_lnum = 1 ;
+          }
+      in
+      let _ = Global.set_lexbuf lexbuf in
+      let ast : Ast.cmd =
+        try Parser.cmd Lexer.token lexbuf
+        with
+          | exn -> begin
+              let curr = lexbuf.Lexing.lex_curr_p in
+              let line = curr.Lexing.pos_lnum in
+              let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
+              let tok = Lexing.lexeme lexbuf in
+              raise (Error (exn, (line, cnum, tok)))
+            end
+      in
+      ast
+
+  let measure f =
+    let module S = Adapton.Statistics in
+    let x, m = S.measure f
     in
-    let _ = Global.set_lexbuf lexbuf in
-    let ast : Ast.cmd =
-      try Parser.cmd Lexer.token lexbuf
-      with
-        | exn -> begin
-            let curr = lexbuf.Lexing.lex_curr_p in
-            let line = curr.Lexing.pos_lnum in
-            let cnum = curr.Lexing.pos_cnum - curr.Lexing.pos_bol in
-            let tok = Lexing.lexeme lexbuf in
-            raise (Error (exn, (line, cnum, tok)))
-          end
-    in
-    ast
- 
-let measure f = 
-  let module S = Adapton.Statistics in
-  let x, m = S.measure f
-  in
-  begin Printf.printf "time=%f, heap=%d, stack=%d, upd=%d, eval=%d, dirty=%d, clean=%d\n"
-      m.S.time' m.S.heap' m.S.stack' 
-      m.S.update' m.S.evaluate' m.S.dirty' m.S.clean' 
-    ;
-    ( x , m )
+    begin Printf.printf "time=%f, heap=%d, stack=%d, upd=%d, eval=%d, dirty=%d, clean=%d\n"
+        m.S.time' m.S.heap' m.S.stack'
+        m.S.update' m.S.evaluate' m.S.dirty' m.S.clean'
+      ;
+      ( x , m )
+    end
+
+  let rec eval_cmd' cmd' cur =
+    match cmd' with
+      | None -> ps "Oops! Try 'help' for reference information.\n" ; cur
+      | Some cmd -> eval_cmd cmd cur
+
+  and eval_cmd cmd cur = begin match cmd with
+    | Ast.C_print ->
+        (* Important: refresh signals to TotalOrder implementation that
+           we want to start re-evaluation now; return to "at the
+           beginning of time".  This is a no-op otherwise. *)
+        if Ast.A.is_self_adjusting then
+          Ast.A.refresh ()
+        else () ;
+        let (sht,_) = Interp.get_pos cur in
+        ps "================================================\n" ;
+        Interp.print_region (sht,((1,1),(10,10))) (Interp.get_db cur) stdout ;
+        ps "================================================\n" ;
+        flush stdout ;
+        cur
+    | Ast.C_seq(c1,c2) ->
+        let cur = eval_cmd c1 cur in
+        eval_cmd c2 cur
+    | Ast.C_repeat(f,c) -> begin
+        try
+          let cnt = Ast.A.force (Interp.eval cur (Ast.A.force f)) in
+          let n = match cnt with
+            | Ast.Num n -> Num.int_of_num n
+            | _ -> invalid_arg "repeat"
+          in
+          let rec loop i cur =
+            if i <= 0 then cur
+            else
+              loop (i - 1) ( eval_cmd c cur )
+          in
+          loop n cur
+        with
+          | _ -> ps "repeat: Oops!\n" ; cur
+      end
+    | Ast.C_help -> help () ; cur
+    | Ast.C_exit -> exit (1)
+    | (Ast.C_nav nc) as cmd ->
+        ps "read: navigation command: `" ; Ast.Pretty.pp_cmd cmd ; ps "'\n" ;
+        (Interp.move nc cur)
+
+    | (Ast.C_mut mc) as cmd ->
+        ps "read: mutation command: `" ; Ast.Pretty.pp_cmd cmd ; ps "'\n" ;
+        let cur = Interp.write mc cur in
+        (* ps ">> " ; ps (Ast.Pretty.string_of_const (Interp.get_val cur)) ; ps "\n" ; *)
+        cur
   end
 
-let rec eval_cmd' cmd' cur =
-  match cmd' with
-    | None -> ps "Oops! Try 'help' for reference information.\n" ; cur
-    | Some cmd -> eval_cmd cmd cur
-        
-and eval_cmd cmd cur = begin match cmd with
-  | Ast.C_print -> 
-      (* Important: refresh signals to TotalOrder implementation that
-         we want to start re-evaluation now; return to "at the
-         beginning of time".  This is a no-op otherwise. *)
-      if Ast.A.is_self_adjusting then
-        Ast.A.refresh () 
-      else () ; 
-      let (sht,_) = Interp.get_pos cur in
-      ps "================================================\n" ;
-      Interp.print_region (sht,((1,1),(10,10))) (Interp.get_db cur) stdout ;
-      ps "================================================\n" ;
-      flush stdout ;
-      cur        
-  | Ast.C_seq(c1,c2) -> 
-      let cur = eval_cmd c1 cur in
-      eval_cmd c2 cur
-  | Ast.C_repeat(f,c) -> begin
+  let repl_handler cmd' cur () =
+    ( eval_cmd' cmd' cur )
+
+  (* REPL = Read-Eval-Print Loop *)
+  let rec repl cur =
+    Printf.printf "= " ;
+    Ast.Pretty.pp_formula (Interp.get_frm cur) ;
+    Printf.printf "\n"
+    ;
+    Ast.Pretty.pp_pos (Interp.get_pos cur)
+    ;
+    Printf.printf "> %!" ;
+    let cmd' =
       try
-        let cnt = Ast.A.force (Interp.eval cur (Ast.A.force f)) in
-        let n = match cnt with
-          | Ast.Num n -> Num.int_of_num n
-          | _ -> invalid_arg "repeat"
-        in
-        let rec loop i cur =
-          if i <= 0 then cur
-          else
-            loop (i - 1) ( eval_cmd c cur )
-        in
-        loop n cur
+        Some ( parse_channel "<stdin>" stdin )
       with
-        | _ -> ps "repeat: Oops!\n" ; cur
-    end      
-  | Ast.C_help -> help () ; cur
-  | Ast.C_exit -> exit (1)      
-  | (Ast.C_nav nc) as cmd ->
-      ps "read: navigation command: `" ; Ast.Pretty.pp_cmd cmd ; ps "'\n" ;
-      (Interp.move nc cur)
-
-  | (Ast.C_mut mc) as cmd ->
-      ps "read: mutation command: `" ; Ast.Pretty.pp_cmd cmd ; ps "'\n" ;
-      let cur = Interp.write mc cur in
-      (* ps ">> " ; ps (Ast.Pretty.string_of_const (Interp.get_val cur)) ; ps "\n" ; *)
-      cur
-end
-  
-let repl_handler cmd' cur () = 
-  ( eval_cmd' cmd' cur )
-
-(* REPL = Read-Eval-Print Loop *)
-let rec repl cur =
-  Printf.printf "= " ;
-  Ast.Pretty.pp_formula (Interp.get_frm cur) ;
-  Printf.printf "\n"
-  ;
-  Ast.Pretty.pp_pos (Interp.get_pos cur)
-  ;
-  Printf.printf "> %!" ;
-  let cmd' =        
-    try
-      Some ( parse_channel "<stdin>" stdin )
-    with
-      | Error (_, (line, col, token)) ->
-          ( Printf.eprintf "line %d, character %d: syntax error at %s\n%!"
-              (* filename *) line col
-              ( if token = "\n"
-                then "newline"
-                else Printf.sprintf "`%s'" token ) ;
-            None
-          )
-  in
-  let cur, _ = measure (repl_handler cmd' cur) in
-  (repl cur) (* repl is a tail-recursive loop. *)
-
-let test test_flags n cur =
-  let sht_to_demand = n in
-  let num_changes = ! Global.num_changes in
-  let module S = Adapton.Statistics in
-  let cmd =
-    match test_flags with
-      | `No_switch ->
-          parse_string 
-          (Printf.sprintf "scrambled; goto %d!a1 ; print ; repeat %d do scramble1 ; print done ."
-             sht_to_demand
-             num_changes)
-
-      | `Switch ->
-          parse_string 
-            (Printf.sprintf "scrambled; goto %d!a1 ; print ; repeat %d do scramble1 ; goto %d!a1 ; print ; goto %d!a1 ; print done ."
-               sht_to_demand
-               num_changes
-               (sht_to_demand / 2)
-               sht_to_demand
+        | Error (_, (line, col, token)) ->
+            ( Printf.eprintf "line %d, character %d: syntax error at %s\n%!"
+                (* filename *) line col
+                ( if token = "\n"
+                  then "newline"
+                  else Printf.sprintf "`%s'" token ) ;
+              None
             )
-  in
-  let _, m = measure (fun _ -> eval_cmd cmd cur) in
-  let out = open_out_gen [Open_append] 0 (!Global.stats_out) in
-  output_string out (Printf.sprintf "%d, %d, %f, %d, %d, %d, %d, %d, %d\n"
-                       sht_to_demand
-                       num_changes
-                       m.S.time' m.S.heap' m.S.stack' 
-                       m.S.update' m.S.evaluate' m.S.dirty' m.S.clean') ;
-  flush out ;
-  close_out out ;
-  ()
+    in
+    let cur, _ = measure (repl_handler cmd' cur) in
+    (repl cur) (* repl is a tail-recursive loop. *)
+
+  let test test_flags n cur =
+    let sht_to_demand = n in
+    let num_changes = ! Global.num_changes in
+    let module S = Adapton.Statistics in
+    let cmd =
+      match test_flags with
+        | `No_switch ->
+            parse_string
+            (Printf.sprintf "scrambled; goto %d!a1 ; print ; repeat %d do scramble1 ; print done ."
+               sht_to_demand
+               num_changes)
+
+        | `Switch ->
+            parse_string
+              (Printf.sprintf "scrambled; goto %d!a1 ; print ; repeat %d do scramble1 ; goto %d!a1 ; print ; goto %d!a1 ; print done ."
+                 sht_to_demand
+                 num_changes
+                 (sht_to_demand / 2)
+                 sht_to_demand
+              )
+    in
+    let _, m = measure (fun _ -> eval_cmd cmd cur) in
+    let out = open_out_gen [Open_append] 0 (!Global.stats_out) in
+    output_string out (Printf.sprintf "%d, %d, %f, %d, %d, %d, %d, %d, %d\n"
+                         sht_to_demand
+                         num_changes
+                         m.S.time' m.S.heap' m.S.stack'
+                         m.S.update' m.S.evaluate' m.S.dirty' m.S.clean') ;
+    flush out ;
+    close_out out ;
+    ()
+
+  let run () =
+    let db_init  = Interp.empty (!Global.num_sheets,10,10) in
+    let cur_init = Interp.cursor (1,(1,1)) db_init in
+    match ! Global.func with
+      | Global.F_repl -> repl cur_init
+      | Global.F_stats_test (n, test_flags) -> test test_flags n cur_init
+end
+
+module type S = sig
+  val run : unit -> unit
+end
+
+let as2_list = List.map begin fun ( name, sa ) ->
+    ( name, (module Make ((val sa : Adapton.Signatures.SAType)) : S) )
+end Adapton.All.sa_list
 
 let run () =
-  let _ = Arg.parse Global.args
+  let as2 = ref (snd (List.hd as2_list)) in
+  let args = Global.args @ [
+    ( "--adapton-module", Arg.Symbol ( fst (List.split as2_list), fun s -> as2 := List.assoc s as2_list ),
+      " use specific Adapton module (default: " ^ (fst (List.hd as2_list)) ^ ")" )
+  ] in
+  let _ = Arg.parse args
     (fun filename -> invalid_arg "No input files.." )
     "usage: runas2 [options]"
-  in  
-  let db_init  = Interp.empty (!Global.num_sheets,10,10) in
-  let cur_init = Interp.cursor (1,(1,1)) db_init in
-  match ! Global.func with
-    | Global.F_repl -> repl cur_init
-    | Global.F_stats_test (n, test_flags) -> test test_flags n cur_init
+  in
+  let module As2 = (val (!as2)) in
+  As2.run ()
 
 
 (* Not in use: FILE processing *)
@@ -263,6 +287,3 @@ let run () =
 (*     if !Global.print_passes then *)
 (*       Printf.eprintf "done.\n%!" *)
 (*     else () *)
-
-
-

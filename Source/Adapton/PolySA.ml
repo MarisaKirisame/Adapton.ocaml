@@ -5,6 +5,44 @@
     ['a thunk], so custom hash and equality functions should be provided for most types.
 *)
 
+module type S = sig
+    type 'a thunk
+    val is_self_adjusting : bool
+    val is_lazy : bool
+    val id : 'a thunk -> int
+    val hash : 'a thunk -> int
+    val equal : 'a thunk -> 'a thunk -> bool
+    val refresh : unit -> unit
+    val force : 'a thunk -> 'a
+    val const : ?hash:(int -> 'a -> int) -> ?equal:('a -> 'a -> bool) -> 'a -> 'a thunk
+    val update_const : 'a thunk -> 'a -> unit
+    val thunk : ?hash:(int -> 'a -> int) -> ?equal:('a -> 'a -> bool) -> (unit -> 'a) -> 'a thunk
+    val update_thunk : 'a thunk -> (unit -> 'a) -> unit
+    val memo :
+        ?inp_hash:(int -> 'inp -> int) -> ?inp_equal:('inp -> 'inp -> bool)
+        -> ?hash:(int -> 'a -> int) -> ?equal:('a -> 'a -> bool)
+        -> ('memo -> 'inp -> 'a) -> ('inp -> 'a thunk as 'memo)
+    val memo2 :
+        ?inp1_hash:(int -> 'inp1 -> int) -> ?inp1_equal:('inp1 -> 'inp1 -> bool)
+        -> ?inp2_hash:(int -> 'inp2 -> int) -> ?inp2_equal:('inp2 -> 'inp2 -> bool)
+        -> ?hash:(int -> 'a -> int) -> ?equal:('a -> 'a -> bool)
+        -> ('memo -> 'inp1 -> 'inp2 -> 'a) -> ('inp1 -> 'inp2 -> 'a thunk as 'memo)
+    val memo3 :
+        ?inp1_hash:(int -> 'inp1 -> int) -> ?inp1_equal:('inp1 -> 'inp1 -> bool)
+        -> ?inp2_hash:(int -> 'inp2 -> int) -> ?inp2_equal:('inp2 -> 'inp2 -> bool)
+        -> ?inp3_hash:(int -> 'inp3 -> int) -> ?inp3_equal:('inp3 -> 'inp3 -> bool)
+        -> ?hash:(int -> 'a -> int) -> ?equal:('a -> 'a -> bool)
+        -> ('memo -> 'inp1 -> 'inp2 -> 'inp3 -> 'a) -> ('inp1 -> 'inp2 -> 'inp3 -> 'a thunk as 'memo)
+    val memo4 :
+        ?inp1_hash:(int -> 'inp1 -> int) -> ?inp1_equal:('inp1 -> 'inp1 -> bool)
+        -> ?inp2_hash:(int -> 'inp2 -> int) -> ?inp2_equal:('inp2 -> 'inp2 -> bool)
+        -> ?inp3_hash:(int -> 'inp3 -> int) -> ?inp3_equal:('inp3 -> 'inp3 -> bool)
+        -> ?inp4_hash:(int -> 'inp4 -> int) -> ?inp4_equal:('inp4 -> 'inp4 -> bool)
+        -> ?hash:(int -> 'a -> int) -> ?equal:('a -> 'a -> bool)
+        -> ('memo -> 'inp1 -> 'inp2 -> 'inp3 -> 'inp4 -> 'a) -> ('inp1 -> 'inp2 -> 'inp3 -> 'inp4 -> 'a thunk as 'memo)
+    val tweak_gc : unit -> unit
+end
+
 module Make (M : Signatures.SAType) = struct
     type 'a thunk = 'a M.thunk * (module Signatures.SAType.S with type sa = M.sa and type data = 'a and type t = 'a M.thunk)
 

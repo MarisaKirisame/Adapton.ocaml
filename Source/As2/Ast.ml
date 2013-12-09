@@ -1,7 +1,106 @@
 
-module A = As2Adapton
+module type S = sig
+  module A : Adapton.PolySA.S
 
-module Ast = struct
+  type col = int
+  type row = int
+  type sht = int
+
+  (** -- commands -- **)
+
+  type cmd =
+    | C_help | C_exit
+    | C_nav of nav_cmd
+    | C_mut of mut_cmd
+    | C_seq of cmd * cmd
+    | C_print
+    | C_repeat of formula' * cmd
+
+  and scramble_flags =
+    | Sf_sparse
+    | Sf_dense
+    | Sf_one
+
+  and mut_cmd =
+    | C_set of formula'
+    | C_scramble of scramble_flags
+
+  and nav_cmd =
+    | C_next of nav_thing
+    | C_prev of nav_thing
+    | C_goto of coord
+
+  and nav_thing = Nav_row | Nav_col | Nav_sht
+
+  (** - - Coordinates, Regions - - **)
+
+  and local_coord = col * row
+  and absolute_coord = sht * local_coord
+  and pos = absolute_coord
+      (* pos is nice short-hand; pos is a "cononical form" for
+         coordinates within the interpreter. *)
+  and coord =
+    | Lcl of local_coord
+    | Abs of absolute_coord
+
+  and local_region = local_coord * local_coord
+  and absolute_region = sht * local_region
+  and region =
+    | R_lcl of local_region
+    | R_abs of absolute_region
+
+  (** - - Formulas - - **)
+
+  and formula =
+    | F_func of func * region
+    | F_binop of binop * formula' * formula'
+    | F_const of const
+    | F_coord of coord
+    | F_paren of formula'
+
+  and formula' = formula A.thunk
+
+  and binop =
+    | Bop_add
+    | Bop_sub
+    | Bop_div
+    | Bop_mul
+
+  and func =
+    | Fn_sum
+    | Fn_max
+    | Fn_min
+
+  and const =
+    | Num   of Num.num (* ocaml standard library; arbitrary-precision numbers. *)
+    | Fail
+    | Undef
+
+  val absolute : sht -> coord -> pos
+  val frm_equal : formula -> formula -> bool
+  val frm_hash : int -> formula -> int
+  val memo_frm : formula -> formula'
+
+  module Pretty : sig
+    val string_of_const : const -> string
+    val pp_cmd : cmd -> unit
+    val pp_nav_cmd : nav_cmd -> unit
+    val pp_nav_thing : nav_thing -> unit
+    val pp_local_coord : local_coord -> unit
+    val pp_pos : pos -> unit
+    val pp_coord : coord -> unit
+    val pp_local_region : local_region -> unit
+    val pp_region : region -> unit
+    val pp_mut_cmd : mut_cmd -> unit
+    val pp_formula : formula -> unit
+    val pp_formula' : formula' -> unit
+    val pp_binop : binop -> unit
+    val pp_func : func -> unit
+  end
+end
+
+module Make (SA : Adapton.Signatures.SAType) : S with module A = Adapton.PolySA.Make (SA) = struct
+  module A = Adapton.PolySA.Make (SA)
 
   type col = int
   type row = int
@@ -126,105 +225,104 @@ seeded_hash (seeded_hash (seeded_hash (seeded_hash seed "F_const") "Num")) n
       A.memo ~inp_equal:frm_equal ~inp_hash:frm_hash begin 
         fun f frm -> frm end
     in f
-end
-include Ast
 
-module Pretty = struct
+  module Pretty = struct
 
-  let string_of_const = function
-    | Num n -> Num.approx_num_exp 10 n
-    | Fail  -> "#fail"
-    | Undef -> "#undef"
+    let string_of_const = function
+      | Num n -> Num.approx_num_exp 10 n
+      | Fail  -> "#fail"
+      | Undef -> "#undef"
 
-  let ps = print_string
+    let ps = print_string
 
-  let rec pp_cmd = function
-    | C_help -> ps "help"
-    | C_exit -> ps "exit"
-    | C_nav c -> pp_nav_cmd c
-    | C_mut c -> pp_mut_cmd c
-    | C_print -> ps "print"
-    | C_seq (c1, c2) -> pp_cmd c1 ; ps "; " ; pp_cmd c2
-    | C_repeat (f, c) -> 
-        ps "repeat " ; 
-        pp_formula' f ; ps " do " ; 
-        pp_cmd c ; 
-        ps " done"
+    let rec pp_cmd = function
+      | C_help -> ps "help"
+      | C_exit -> ps "exit"
+      | C_nav c -> pp_nav_cmd c
+      | C_mut c -> pp_mut_cmd c
+      | C_print -> ps "print"
+      | C_seq (c1, c2) -> pp_cmd c1 ; ps "; " ; pp_cmd c2
+      | C_repeat (f, c) ->
+          ps "repeat " ;
+          pp_formula' f ; ps " do " ;
+          pp_cmd c ;
+          ps " done"
 
-  (** - - Navigation / Focus - - **)
+    (** - - Navigation / Focus - - **)
 
-  and pp_nav_cmd = function
-    | C_next nt -> ps "next " ; pp_nav_thing nt
-    | C_prev nt -> ps "prev " ; pp_nav_thing nt
-    | C_goto c -> ps "goto " ; pp_coord c
+    and pp_nav_cmd = function
+      | C_next nt -> ps "next " ; pp_nav_thing nt
+      | C_prev nt -> ps "prev " ; pp_nav_thing nt
+      | C_goto c -> ps "goto " ; pp_coord c
 
-  and pp_nav_thing = function
-    | Nav_row -> ps "row"
-    | Nav_col -> ps "col"
-    | Nav_sht -> ps "sheet"
+    and pp_nav_thing = function
+      | Nav_row -> ps "row"
+      | Nav_col -> ps "col"
+      | Nav_sht -> ps "sheet"
 
-  (** - - Coordinates, Regions - - **)
+    (** - - Coordinates, Regions - - **)
 
-  and pp_local_coord = fun (col,row) ->
-    ps (String.make 1 (Char.chr ((Char.code 'A') + col - 1))) ;
-    (* ps "[" ; ps (string_of_int col) ; ps "]" ; *)
-    ps (string_of_int row)
+    and pp_local_coord = fun (col,row) ->
+      ps (String.make 1 (Char.chr ((Char.code 'A') + col - 1))) ;
+      (* ps "[" ; ps (string_of_int col) ; ps "]" ; *)
+      ps (string_of_int row)
 
-  and pp_pos (s,lc) = pp_coord (Abs(s,lc))
-  and pp_coord = function
-    | Lcl lc -> pp_local_coord lc
-    | Abs (s,lc) ->
-        ps "sheet" ; ps (string_of_int s) ; ps "!" ;
-        pp_local_coord lc
+    and pp_pos (s,lc) = pp_coord (Abs(s,lc))
+    and pp_coord = function
+      | Lcl lc -> pp_local_coord lc
+      | Abs (s,lc) ->
+          ps "sheet" ; ps (string_of_int s) ; ps "!" ;
+          pp_local_coord lc
 
-  and pp_local_region = fun (lc1,lc2) ->
-    pp_local_coord lc1 ; ps ":" ;
-    pp_local_coord lc2
+    and pp_local_region = fun (lc1,lc2) ->
+      pp_local_coord lc1 ; ps ":" ;
+      pp_local_coord lc2
 
-  and pp_region = function
-  | R_lcl lr -> pp_local_region lr
-  | R_abs (s,lr) ->  ps (string_of_int s) ; pp_local_region lr
+    and pp_region = function
+    | R_lcl lr -> pp_local_region lr
+    | R_abs (s,lr) ->  ps (string_of_int s) ; pp_local_region lr
 
-  (** - - Formulas - - **)
+    (** - - Formulas - - **)
 
-  and pp_mut_cmd = function
-    | C_set f -> ps "=" ; pp_formula' f ; ps "."
-    | C_scramble Sf_sparse -> ps "scramble"
-    | C_scramble Sf_dense  -> ps "scrambled"
-    | C_scramble Sf_one    -> ps "scramble1"
+    and pp_mut_cmd = function
+      | C_set f -> ps "=" ; pp_formula' f ; ps "."
+      | C_scramble Sf_sparse -> ps "scramble"
+      | C_scramble Sf_dense  -> ps "scrambled"
+      | C_scramble Sf_one    -> ps "scramble1"
 
-  and pp_formula = function
-    | F_func (f,r) -> pp_func f ; ps "(" ; pp_region r ; ps ")"
-    | F_binop (b,f1,f2) as f -> 
-        if !Global.print_ast_db 
-        then          
-          ps ("##"^(string_of_int (frm_hash 0 f))^"[")
-        else () 
-        ;
-        pp_formula' f1 ; ps " " ;
-        pp_binop b ; ps " " ; pp_formula' f2 ; 
-        if !Global.print_ast_db then ps "]" else () 
-    | F_const c -> ps (string_of_const c)
-    | F_coord c -> pp_coord c
-    | F_paren f -> ps "(" ; pp_formula' f ; ps ")"
+    and pp_formula = function
+      | F_func (f,r) -> pp_func f ; ps "(" ; pp_region r ; ps ")"
+      | F_binop (b,f1,f2) as f ->
+          if !Global.print_ast_db
+          then
+            ps ("##"^(string_of_int (frm_hash 0 f))^"[")
+          else ()
+          ;
+          pp_formula' f1 ; ps " " ;
+          pp_binop b ; ps " " ; pp_formula' f2 ;
+          if !Global.print_ast_db then ps "]" else ()
+      | F_const c -> ps (string_of_const c)
+      | F_coord c -> pp_coord c
+      | F_paren f -> ps "(" ; pp_formula' f ; ps ")"
 
-  and pp_formula' f = 
-    if !Global.print_ast_db then 
-      ps ("#"^(string_of_int ( A.id f ) )^"[")
-    else
-      () 
-    ;
-    pp_formula ( A.force f ) ;
-    if !Global.print_ast_db then ps "]" else () 
+    and pp_formula' f =
+      if !Global.print_ast_db then
+        ps ("#"^(string_of_int ( A.id f ) )^"[")
+      else
+        ()
+      ;
+      pp_formula ( A.force f ) ;
+      if !Global.print_ast_db then ps "]" else ()
 
-  and pp_binop = function
-    | Bop_add -> ps "+"
-    | Bop_sub -> ps "-"
-    | Bop_div -> ps "/"
-    | Bop_mul -> ps "*"
+    and pp_binop = function
+      | Bop_add -> ps "+"
+      | Bop_sub -> ps "-"
+      | Bop_div -> ps "/"
+      | Bop_mul -> ps "*"
 
-  and pp_func = function
-    | Fn_sum -> ps "SUM"
-    | Fn_max -> ps "MAX"
-    | Fn_min -> ps "MIN"
+    and pp_func = function
+      | Fn_sum -> ps "SUM"
+      | Fn_max -> ps "MAX"
+      | Fn_min -> ps "MIN"
+  end
 end
