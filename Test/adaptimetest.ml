@@ -1,5 +1,5 @@
 
-open Frtime
+open Adaptime
 
 module T = Adapton.Types
 module B = Behavior.Make( Adapton.LazySABidi)
