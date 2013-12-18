@@ -249,6 +249,8 @@ module Make (R : Hashtbl.SeededHashedType)
                         eager_now := m.meta.end_timestamp;
                         m
                     | _ ->
+                        (* note that m.meta.unmemo indirectly holds a reference to binding (via unmemo's closure);
+                            this prevents the GC from collecting binding from memotable until m itself is collected *)
                         let m = thunk (fun () -> f memo x) in
                         m.meta.unmemo <- (fun () -> Memotable.remove memotable binding);
                         binding.Binding.value <- Some m;

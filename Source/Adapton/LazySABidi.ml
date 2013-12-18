@@ -241,7 +241,8 @@ module Make (R : Hashtbl.SeededHashedType)
 
             (* memoizing constructor *)
             let rec memo x =
-                (* create a strong reference to binding and hide it in the closure unmemo stored in m *)
+                (* note that m contains unmemo that indirectly holds a reference to binding (via unmemo's closure);
+                    this prevents the GC from collecting binding from memotable until m itself is collected (or unmemo is removed from m) *)
                 let rec binding = ( x, m )
                 and unmemo () = Memotable.remove memotable binding
                 and evaluate () =
