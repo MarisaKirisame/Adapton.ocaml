@@ -58,7 +58,7 @@ if __name__ == "__main__":
     config["baselines"] = [ config["modules"][-1] ]
     config["takes"] = { str(m["name"]) : str(m["take"]) for m in config["tasks"] }
     config["tasks"] = config["takes"].keys()
-    config["output"] = "Results/SAList"
+    config["output"] = "Results/BenchmarkAdapton"
 
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="subparser")

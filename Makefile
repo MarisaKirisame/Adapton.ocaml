@@ -1,5 +1,5 @@
 
-VPATH = Source $(wildcard Applications/*) Test
+VPATH = Source $(wildcard Applications/*) Test $(wildcard Benchmarks/*)
 ifeq ($(shell uname),Darwin)
 	# bump stack size to 4GiB
 	OCAMLBUILD_DARWIN_FLAGS := -lflag -cclib -lflag -Wl,-stack_size,0x100000000
