@@ -75,7 +75,7 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
   module Mp = Map.Make(Coord)
 
   type cell = { cell_frm : formula A.thunk ;
-                cell_val : const   A.thunk ; 
+                cell_val : const   A.thunk ;
                 (* Invariant: if ! Global.stateless_semantics then cell_val is Undef *)
               }
 
@@ -109,12 +109,12 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
   let get_frm cur =
     try A.force (Mp.find cur.pos cur.db.cells).cell_frm with
       | Not_found -> F_const Undef
-          
+
   let sht_of_reg (s,_) = s
   let sht_of_pos (s,_) = s
 
   let get_val_ eval cur =
-    try 
+    try
       let cell = Mp.find cur.pos cur.db.cells in
       if ! Global.stateless_eval then
         eval (sht_of_pos (get_pos cur)) (A.force cell.cell_frm)
@@ -188,16 +188,16 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
           loop_rows cur x
       in
       loop_rows cur x
-  
+
   (* lookup and evaluate an absolute coordinate. *)
-  let lookup_cell : db -> pos -> cell = 
+  let lookup_cell : db -> pos -> cell =
     fun db pos ->
       try (Mp.find pos db.cells) with
         | Not_found -> begin
             let undef_frm = A.const (F_const Undef) in
-            let undef_cell = { cell_frm = undef_frm ; 
+            let undef_cell = { cell_frm = undef_frm ;
                                cell_val = A.const Undef } in
-            (* Monotonic side effect: 
+            (* Monotonic side effect:
                create and remember a new formula, initially holding Undef. *)
             db.cells <- Mp.add pos undef_cell db.cells ;
             undef_cell
@@ -206,21 +206,21 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
   (* -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- *)
   (* -- formula evaluation -- *)
   (* ADAPTON memoizes this function, based on the sheet and formula arguments. *)
-  let eval_ db = 
+  let eval_ db =
     let eval_memoized = A.memo2
       ~inp2_equal:Ast.frm_equal
       ~inp2_hash:Ast.frm_hash
       begin fun eval_memo sht (frm : formula) ->
-      
+
         let to_app_form : 'a list -> ('a list -> 'a list)
           = fun xs -> (fun xs_tail -> xs @ xs_tail)
         in
-        
+
         let snoc : ('a list -> 'a list) -> 'a -> ('a list -> 'a list)
           = fun xs y -> (fun tl -> xs (y :: tl))
-        in        
+        in
 
-        let eval_memo_ sht frm = 
+        let eval_memo_ sht frm =
           eval_memo sht (A.force frm)
         in
 
@@ -237,7 +237,7 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
               let cells = fold_region r db {
                 fold_row_begin = begin fun cur x -> x end ;
                 fold_row_end   = begin fun cur x -> x end ;
-                fold_cell      = begin fun cur cells -> 
+                fold_cell      = begin fun cur cells ->
                   snoc cells (get_val_ eval_memo cur) end
               } (to_app_form [])
               in
@@ -245,19 +245,19 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
                 | []    -> Undef
                 | x::xs ->
                     let x = A.force x in
-                    List.fold_right begin fun x y -> 
+                    List.fold_right begin fun x y ->
                       let x = A.force x in
                       match f, x, y with
                         | Fn_sum,  Num x, Num y -> Num ( Num.add_num x y )
                         | Fn_max,  Num x, Num y -> Num ( if Num.gt_num x y then x else y )
                         | Fn_min,  Num x, Num y -> Num ( if Num.gt_num x y then y else x )
                         | _,       Fail,  _     -> Fail
-                        | _,       _   ,  Fail  -> Fail 
+                        | _,       _   ,  Fail  -> Fail
                         | _,       Undef, _     -> Undef
                         | _,       _,     Undef -> Undef
                     end xs x
               end
-                
+
           | F_binop(bop,f1,f2) -> begin
               let c1 = A.force (eval_memo_ sht f1) in
               let c2 = A.force (eval_memo_ sht f2) in
@@ -268,7 +268,7 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
                   | Bop_div, Num n1, Num n2 -> Num (Num.div_num n1 n2)
                   | Bop_mul, Num n1, Num n2 -> Num (Num.mult_num n1 n2)
                   | _,       Fail,   _      -> Fail
-                  | _,       _,      Fail   -> Fail 
+                  | _,       _,      Fail   -> Fail
                   | _,       Undef,  _      -> Undef
                   | _,       _,      Undef  -> Undef
                 end
@@ -282,7 +282,7 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
   exception Not_yet_back_patched
 
   let empty (nshts,ncols,nrows) =
-    let db = 
+    let db =
       { nshts = nshts ;
         ncols = ncols ;
         nrows = nrows ;
@@ -291,12 +291,12 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
       }
     in
     db.eval <- eval_ db ;
-    db      
+    db
 
   let eval cur = cur.db.eval (sht_of_pos (get_pos cur))
 
   (* -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- *)
-  (* -- pretty printing -- *)    
+  (* -- pretty printing -- *)
   let print_region : Ast.absolute_region -> db -> out_channel -> unit =
     fun reg db out ->
       let ps = print_string in
@@ -312,7 +312,7 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
           end } ()
 
   let read cur = get_val cur
-    
+
   let update_cell_frm cur cell frm =
     if A.is_self_adjusting then (
       A.update_const cell.cell_frm frm ;
@@ -325,17 +325,17 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
     )
     else
       cur.db.cells <-
-        Mp.add cur.pos { 
+        Mp.add cur.pos {
           cell_frm=(A.const frm);
           cell_val=
-            if ! Global.stateless_eval 
-            then (A.const Undef) 
+            if ! Global.stateless_eval
+            then (A.const Undef)
             else cur.db.eval (sht_of_pos cur.pos) frm ;
         } cur.db.cells
-      
-  let random_const () = 
+
+  let random_const () =
     (Ast.F_const (Ast.Num (Num.num_of_int (Random.int 10000))))
-      
+
   let scramble_cell cur cell =
     update_cell_frm cur cell (random_const ())
 
@@ -343,7 +343,7 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
     let db = cur.db in
     let rnd max = (Random.int (max - 1)) + 1 in
     let s = sht_of_pos (get_pos cur) in
-    let pos = 
+    let pos =
       let s = rnd s in
       let c = rnd db.ncols in
       let r = rnd db.nrows in
@@ -367,7 +367,7 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
             let r1, r2 = rnd db.nrows, rnd db.nrows in
             let b = match Random.int 4 with
               | 0 -> Ast.Bop_add
-              | 1 -> Ast.Bop_sub 
+              | 1 -> Ast.Bop_sub
               | 2 -> Ast.Bop_div
               | 3 -> Ast.Bop_mul
               | _ -> invalid_arg "oops"
@@ -394,7 +394,7 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
             let r1, r2 = rnd db.nrows, rnd db.nrows in
             let b = match Random.int 4 with
               | 0 -> Ast.Bop_add
-              | 1 -> Ast.Bop_sub 
+              | 1 -> Ast.Bop_sub
               | 2 -> Ast.Bop_div
               | 3 -> Ast.Bop_mul
               | _ -> invalid_arg "oops"
@@ -414,7 +414,7 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
           let cell = lookup_cell cur.db cur.pos in
           update_cell_frm cur cell (A.force frm)
         end
-      | Ast.C_scramble Ast.Sf_sparse -> scramble cur 
+      | Ast.C_scramble Ast.Sf_sparse -> scramble cur
       | Ast.C_scramble Ast.Sf_dense  -> scramble_dense cur
       | Ast.C_scramble Ast.Sf_one    -> scramble_one   cur
     end

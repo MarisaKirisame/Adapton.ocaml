@@ -116,9 +116,9 @@ module Make (SA : Adapton.Signatures.SAType) : S with module A = Adapton.PolySA.
     | C_print
     | C_repeat of formula' * cmd
 
-  and scramble_flags = 
-    | Sf_sparse 
-    | Sf_dense 
+  and scramble_flags =
+    | Sf_sparse
+    | Sf_dense
     | Sf_one
 
   and mut_cmd =
@@ -175,7 +175,7 @@ module Make (SA : Adapton.Signatures.SAType) : S with module A = Adapton.PolySA.
     | Num   of Num.num (* ocaml standard library; arbitrary-precision numbers. *)
     | Fail
     | Undef
-          
+
   (* create an absolute coord *)
   let absolute : sht -> coord -> pos
     = fun s -> function
@@ -199,16 +199,16 @@ seeded_hash (seeded_hash (seeded_hash (seeded_hash seed "F_const") "Num")) n
 
   open Hashtbl
 
-  let rec frm_hash x f = 
-    let my_hash x thing = 
+  let rec frm_hash x f =
+    let my_hash x thing =
       seeded_hash_param 10 100 x thing
     in
     match f with
-      | F_func (f, reg) -> 
+      | F_func (f, reg) ->
           let x = my_hash x f in
           let x = my_hash x reg in
         x
-    | F_binop (b, f1, f2) -> 
+    | F_binop (b, f1, f2) ->
         let x = my_hash x b in
         let x = my_hash x (A.id f1) in
         let x = my_hash x (A.id f2) in
@@ -220,9 +220,9 @@ seeded_hash (seeded_hash (seeded_hash (seeded_hash seed "F_const") "Num")) n
     | F_const Undef    -> my_hash x "U"
 
   (* hash-cons'd formulae: *)
-  let memo_frm : formula -> formula' = 
-    let f = 
-      A.memo ~inp_equal:frm_equal ~inp_hash:frm_hash begin 
+  let memo_frm : formula -> formula' =
+    let f =
+      A.memo ~inp_equal:frm_equal ~inp_hash:frm_hash begin
         fun f frm -> frm end
     in f
 

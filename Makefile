@@ -21,7 +21,7 @@ all : lib as2 adaptime
 
 lib : check $(addprefix ocamlbuild//Adapton.,cmxa a cma cmi)
 
-as2 : check ocamlbuild//runas2.native 
+as2 : check ocamlbuild//runas2.native
 
 as2-test : check ocamlbuild//runas2testlazysabidi.native ocamlbuild//runas2testnonsaeager.native ocamlbuild//runas2testeagersatotalorder.native
 
@@ -56,7 +56,7 @@ check : check-trailing-whitespace check-hg
 
 check-trailing-whitespace :
 	@echo "Check trailing whitespace ..."
-	-! grep -Irn $(addprefix --exclude=,'*.rej') '[         ]\+$$' $(VPATH) Makefile* _tags myocamlbuild.ml
+	-! grep -Irn $(addprefix --exclude=,'*.rej' '*.orig') '[         ]\+$$' $(VPATH) Makefile* _tags myocamlbuild.ml
 
 check-hg :
 	hg id -nibtB 2>/dev/null || true

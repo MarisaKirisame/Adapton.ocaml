@@ -17,13 +17,13 @@ let evenCase = B.const (T.makeFunction ()) (fun i -> Printf.printf "even!\n%!")
 let ifb = B.ifb oddGuard oddCase evenCase
 let branched = B.app ifb (module T.Unit) ellapsed
 
-let rec loop () = 
+let rec loop () =
 	(*print_time ()l*)
 	B.force branched;
 	(*Unix.sleep 1;*)
 	loop ()
 
-let _ = 
+let _ =
 	assert (oddCase != evenCase);
 	assert (evenCase == evenCase);
 	(*testUniv ();*)
@@ -44,9 +44,9 @@ module Orbiter = struct
 		mass : num
 	}
 
-	let run () = 
+	let run () =
 		let t : Tm.time B.behavior = B.time () in
-		let elapsed : float B.behavior = 
+		let elapsed : float B.behavior =
 			let store = ref (Tm.to_seconds (B.force t)) in
 			B.lift (fun t' -> (Tm.to_seconds t') -. !store) (module T.Float) t
 		in
@@ -62,7 +62,7 @@ let _ = Orbiter.run ()
 
 
 (*
-let testUniv () = 
+let testUniv () =
 	let id x = x in
 	(*let module F = T.makeFunction () in*)
 	assert (B.memo_const (module T.Bool) true == B.memo_const (module T.Bool) true);

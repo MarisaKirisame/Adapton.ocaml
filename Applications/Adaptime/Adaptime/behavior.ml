@@ -24,7 +24,7 @@ module type Behavior = sig
 	val filter : ('a -> bool) -> 'a behavior -> 'a behavior
 	when
 
-	TODO: 
+	TODO:
 		memo_app
 		ifb -> switch? ifb (thunkified)
 
@@ -69,20 +69,20 @@ module Make (M : SAType) : Behavior = struct
 	type 'a behavior = 'a sa_mod * 'a M.thunk * time M.thunk
 	(* Requirement: Always force 'a thunk before time thunk. *)
 
-	let const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c : t) : t behavior = 
+	let const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c : t) : t behavior =
 		let module R = M.Make( H) in
 		let r = R.const c in
 		let t = Tm.const (get_time ()) in
 		(module R), r, t
 
 	(*
-	(* Universal type hackery. 
+	(* Universal type hackery.
 	https://ocaml.janestreet.com/?q=node/18
 	*)
 	module Univ : sig
 		type t
 		val embed: unit -> ('a -> t) * (t -> 'a option)
-	end = struct 
+	end = struct
 		type t = exn
 
 		let embed (type s) () =
@@ -91,7 +91,7 @@ module Make (M : SAType) : Behavior = struct
 	end
 	
 	let memo_const_store = Mixtbl.create 10(*ref []*) (*Hashtbl.create 10*)
-	let memo_const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c : t) : t behavior = 
+	let memo_const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c : t) : t behavior =
 		(*
 		let of1, to1 = Univ.embed () in
 		let of2, to2 = Univ.embed () in
@@ -100,10 +100,10 @@ module Make (M : SAType) : Behavior = struct
 		assert( to2 !i = Some 13);
 		*)
 		let module R = M.Make( H) in
-		let memo = 
+		let memo =
 			let get, set = Mixtbl.access () in
 			match get memo_const_store c with
-			| Some m -> 
+			| Some m ->
 				m
 			| None ->
 				let m = R.memo (module R.Data) (fun _ c' -> c') in
@@ -111,7 +111,7 @@ module Make (M : SAType) : Behavior = struct
 				m
 		in
 		(*
-		let memo = 
+		let memo =
 			let (of_memo_t, to_memo_t) = Univ.embed () in
 			let rec helper = function
 			| [] ->
@@ -132,12 +132,12 @@ module Make (M : SAType) : Behavior = struct
 			in
 			helper !memo_const_store
 		in	
-		let memo = 
+		let memo =
 			let mod_r = (module R : SAType.S with type sa = M.sa and type data = t and type t = t M.thunk) in
 			try
 				Hashtbl.find memo_const_store mod_r
 			with
-			| Not_found -> 
+			| Not_found ->
 				let m = R.memo (module R.Data) (fun _ c' -> c') in
 				Hashtbl.add memo_const_store mod_r m
 		in
@@ -148,13 +148,13 @@ module Make (M : SAType) : Behavior = struct
 			(module R), memo c, t
 	*)
 		
-	let app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior = 
+	let app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior =
 		let module R = M.Make( B) in
 		let r = R.thunk (fun () -> (F.force f) (A.force a)) in
 		let t = Tm.thunk (fun () -> max_time [ Tm.force tf; Tm.force ta]) in
 		(module R), r, t
 	
-	let memo_app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior = 
+	let memo_app (type a) (type b) (((module F), f, tf) : (a -> b) behavior) (module B : Hashtbl.SeededHashedType with type t = b) (((module A), a, ta) : a behavior) : b behavior =
 		let module R = M.Make( B) in
 		let memo = R.memo2 (module F.Data) (module A.Data) (fun _ f' a' -> f' a') in
 		let r = R.thunk (fun () -> R.force (memo (F.force f) (A.force a))) in
@@ -284,7 +284,7 @@ module Make (M : SAType) : Behavior = struct
 		(module A), r, t
 	*)
 
-	let ifb (type a) (((module G), g, tg) : bool behavior) (((module A), a, ta) : a behavior) ((_, b, tb) : a behavior) : a behavior = 
+	let ifb (type a) (((module G), g, tg) : bool behavior) (((module A), a, ta) : a behavior) ((_, b, tb) : a behavior) : a behavior =
 		let r = A.thunk (fun () ->
 			A.force begin
 				if G.force g then
@@ -298,7 +298,7 @@ module Make (M : SAType) : Behavior = struct
 		(module A), r, t
 
 	let seconds_store = ref None
-	let seconds () : time behavior = 
+	let seconds () : time behavior =
 		let c = !seconds_store in
 		match c with
 		| None ->
@@ -329,7 +329,7 @@ module Make (M : SAType) : Behavior = struct
 
 	(* Time store used to only create one time behavior. *)
 	let time_store = ref None
-	let time () = 
+	let time () =
 		match !time_store with
 		| None ->
 			(* Can use a store since the value behaviors is forced first and there is not past dependence. *)
@@ -351,7 +351,7 @@ module Make (M : SAType) : Behavior = struct
 		A.force a
 	
 	(* Returns the id of the underlying thunk. *)
-	let id (type a) ((module A), a, _ : a behavior) : int = 
+	let id (type a) ((module A), a, _ : a behavior) : int =
 		A.id a
 end
 

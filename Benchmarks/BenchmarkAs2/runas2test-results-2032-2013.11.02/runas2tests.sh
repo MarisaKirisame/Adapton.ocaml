@@ -15,5 +15,5 @@ for sht in 13 14 15 16 17 ; do
     $BIN/runas2.native --adapton-module LazySABidi $args --stats-out runas2testlazysabidi.csv
     $BIN/runas2.native --adapton-module NonSAEager $args --stats-out runas2testnonsaeager.csv
     $BIN/runas2.native --adapton-module EagerSATotalOrder $args --stats-out runas2testeagersatotalorder.csv
-    done   
+    done
 done

@@ -22,11 +22,11 @@ let rec args = [
 
   ("--stats-test",        Arg.Int begin fun n -> num_sheets := n; func := F_stats_test (n, `No_switch) end, " functionality/mode: run a predefined script, of a given size and record statisitics") ;
   ("--stats-test-switch", Arg.Int begin fun n -> num_sheets := n; func := F_stats_test (n, `Switch) end,    " functionality/mode: run a predefined script (that switches), of a given size and record statisitics") ;
-  ("--num-sheets",        Arg.Int begin fun i -> num_sheets := i end, " set the total number of sheets (default: 20)" );
+  ("--num-sheets",        Arg.Int begin fun i -> num_sheets := i end, " set the total number of sheets (default: 20)" ) ;
   ("--num-changes",       Arg.Int begin fun i -> num_changes := i end, " set the number changes in the test script") ;
   ("--stats-out",         Arg.String begin fun s -> stats_out := s end, " write out stats to the given file" ) ;
 
-  ("--Random.self_init", Arg.Unit begin fun _ -> Random.self_init () end, " initialize the Random module's number generator" ) ;  
+  ("--Random.self_init", Arg.Unit begin fun _ -> Random.self_init () end, " initialize the Random module's number generator" ) ;
   ("--verbose",          Arg.Set verbose_errors, " give verbose (contextual) errors") ;
   ("--ast-db",           Arg.Set print_ast_db, " give verbose debugging information in formulae") ;
 ]
