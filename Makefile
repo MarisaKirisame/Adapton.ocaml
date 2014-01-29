@@ -60,4 +60,6 @@ check-hg :
 	hg id -nibtB 2>/dev/null || true
 	hg qselect 2>/dev/null || true
 
+exhaustive : all $(addprefix ocamlbuild//,runadapton.top runtestadapton.d.byte runbenchmarkadapton.native adaptimetest.native)
+
 include Makefile.rules

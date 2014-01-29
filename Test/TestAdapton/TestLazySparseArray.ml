@@ -1,5 +1,5 @@
 open TestUtil.MyOUnit
-open Adapton
+open AdaptonInternal
 open Format
 
 let assert_int_option_equal = assert_equal ~printer:(option_printer pp_print_int)

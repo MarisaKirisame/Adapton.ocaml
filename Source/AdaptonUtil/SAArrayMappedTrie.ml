@@ -1,5 +1,7 @@
 (** Self-adjusting array mapped tries. *)
 
+open AdaptonInternal
+
 (**/**) (* helper parameters *)
 let depth = 7
 let bits = LazySparseArray.key_bits

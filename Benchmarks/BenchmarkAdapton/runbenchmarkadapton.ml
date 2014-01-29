@@ -1,34 +1,35 @@
-open Adapton.Statistics
 
-let list_filter_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
+open AdaptonUtil.Statistics
+
+let list_filter_task (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float) =
     L.memo_filter (fun x -> log (1. +. x) < log 1.5)
 
-let list_map_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
+let list_map_task (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float) =
     L.memo_map (module L) (fun x -> log (1. +. x) +. log 1.5)
 
-let list_tfold_min_task (type a) (type b) (module L : Adapton.Signatures.SAListType.S with type t = a and type SAData.t = b and type data = float) =
+let list_tfold_min_task (type a) (type b) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type SAData.t = b and type data = float) =
     L.memo_tfold min
 
-let list_tfold_sum_task (type a) (type b) (module L : Adapton.Signatures.SAListType.S with type t = a and type SAData.t = b and type data = float) =
+let list_tfold_sum_task (type a) (type b) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type SAData.t = b and type data = float) =
     L.memo_tfold (+.)
 
-let list_quicksort_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
+let list_quicksort_task (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float) =
     L.memo_quicksort Pervasives.compare
 
-let list_mergesort_task (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float) =
+let list_mergesort_task (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float) =
     L.memo_mergesort Pervasives.compare
 
 let list_updown1_task
-        (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float)
-        (type b) (module B : Adapton.Signatures.SAType.S with type t = b and type data = bool)
+        (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float)
+        (type b) (module B : AdaptonUtil.Signatures.SAType.S with type t = b and type data = bool)
         xs b =
     let up = L.memo_quicksort Pervasives.compare in
     let down = L.memo_quicksort (fun x y -> -(Pervasives.compare x y)) in
     L.thunk (fun () -> L.force (if B.force b then up xs else down xs))
 
 let list_updown2_task
-        (type a) (module L : Adapton.Signatures.SAListType.S with type t = a and type data = float)
-        (type b) (module B : Adapton.Signatures.SAType.S with type t = b and type data = bool)
+        (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float)
+        (type b) (module B : AdaptonUtil.Signatures.SAType.S with type t = b and type data = bool)
         xs b =
     let up = L.memo_quicksort Pervasives.compare xs in
     let down = L.memo_quicksort (fun x y -> -(Pervasives.compare x y)) xs in
@@ -46,7 +47,7 @@ let tasks = [
     ( "exptree", `ExpTree );
 ]
 
-let opt_sa = ref (fst (List.hd Adapton.All.sa_list))
+let opt_sa = ref (fst (List.hd AdaptonZoo.All.sa_list))
 let opt_task = ref "filter"
 let opt_input_size = ref 1
 let opt_repeat_count = ref 1
@@ -74,11 +75,11 @@ let show_config () =
             (fst task) (match snd task with `One _ -> "one" | `List _ -> "list" | `Flip _ -> "flip" | `ExpTree -> "exptree")
     in
     Printf.printf "{ \"modules\": [ %a ], \"tasks\": [ %a ] }\n%!"
-        (list_printer (fun ff -> Printf.fprintf ff "%S")) (fst (List.split Adapton.All.sa_list))
+        (list_printer (fun ff -> Printf.fprintf ff "%S")) (fst (List.split AdaptonZoo.All.sa_list))
         (list_printer task_printer) tasks;
     exit 0
 
-let exptree (module SA : Adapton.Signatures.SAType) rng =
+let exptree (module SA : AdaptonUtil.Signatures.SAType) rng =
     if !opt_input_size < 4 then begin
         Printf.eprintf "Task %s only supports -I n where n >= 4\n%!" !opt_task;
         exit 1
@@ -87,7 +88,7 @@ let exptree (module SA : Adapton.Signatures.SAType) rng =
         Printf.eprintf "Task %s only supports -T 1\n%!" !opt_task;
         exit 1
     end;
-    let module F = SA.Make (Adapton.Types.Float) in
+    let module F = SA.Make (AdaptonUtil.Types.Float) in
     let module E = struct
         type e = e' SA.thunk
         and e' = Num of float | Op of op * e * e
@@ -274,7 +275,7 @@ let exptree (module SA : Adapton.Signatures.SAType) rng =
 let _ =
     Arg.parse (Arg.align [
         ( "-c", Arg.Unit show_config, " output available configuration" );
-        ( "-m", Arg.Symbol ( (fst (List.split Adapton.All.sa_list)), (fun s -> opt_sa := s) ), "list module" );
+        ( "-m", Arg.Symbol ( (fst (List.split AdaptonZoo.All.sa_list)), (fun s -> opt_sa := s) ), "list module" );
         ( "-t", Arg.Symbol ( (fst (List.split tasks)), (fun s -> opt_task := s) ), "list task" );
         ( "-I", Arg.Set_int opt_input_size, "size input size" );
         ( "-R", Arg.Set_int opt_repeat_count, "count repeat count" );
@@ -286,14 +287,14 @@ let _ =
 
     let rng = Random.State.make [| !opt_random_seed |] in
     Random.init (Random.State.bits rng);
-    let module SA = (val (List.assoc !opt_sa Adapton.All.sa_list)) in
+    let module SA = (val (List.assoc !opt_sa AdaptonZoo.All.sa_list)) in
     begin match List.assoc !opt_task tasks with
         | `ExpTree -> exptree (module SA) rng
         | _ -> ()
     end;
-    let module SABool = SA.Make (Adapton.Types.Bool) in
-    let module SAList = Adapton.SAList.Make (SA) in
-    let module SAFloatList = SAList.Make (Adapton.Types.Float) in
+    let module SABool = SA.Make (AdaptonUtil.Types.Bool) in
+    let module SAList = AdaptonUtil.SAList.Make (SA) in
+    let module SAFloatList = SAList.Make (AdaptonUtil.Types.Float) in
     SA.tweak_gc ();
     Gc.compact ();
     let task = match List.assoc !opt_task tasks with

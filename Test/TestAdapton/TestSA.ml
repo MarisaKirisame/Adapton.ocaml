@@ -3,8 +3,8 @@ open Format
 
 let assert_int_equal = assert_equal ~printer:pp_print_int
 
-let make_regression_testsuite (module L : Adapton.Signatures.SAType) =
-    let module I = L.Make (Adapton.Types.Int) in
+let make_regression_testsuite (module L : AdaptonUtil.Signatures.SAType) =
+    let module I = L.Make (AdaptonUtil.Types.Int) in
 
     "Regression" >::: [
         "update const to thunk" >:: begin fun () ->
@@ -53,4 +53,4 @@ let make_testsuite ( name, sa ) =
     ]
 
 
-let testsuite = "TestSA" >::: List.map make_testsuite Adapton.All.sa_list
+let testsuite = "TestSA" >::: List.map make_testsuite AdaptonZoo.All.sa_list

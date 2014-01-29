@@ -7,6 +7,9 @@
     supporting memoization and change propagation, but not adaptive memoization.
  *)
 
+open AdaptonInternal
+open AdaptonUtil
+
 (** Types and operations common to eager self-adjusting values containing any type. *)
 module T = struct
     (** Abstract type identifying this module for self-adjusting values. *)

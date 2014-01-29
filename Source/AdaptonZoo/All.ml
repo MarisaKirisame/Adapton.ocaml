@@ -1,8 +1,10 @@
 (** Lists of all modules for self-adjusting values and applications. *)
 
+open AdaptonUtil
+
 (** List of all names and modules for self-adjusting values. *)
 let sa_list = [
-    ( "LazySABidi", (module LazySABidi : Signatures.SAType) );
+    ( "Adapton", (module Adapton : Signatures.SAType) );
     ( "EagerSATotalOrder", (module EagerSATotalOrder : Signatures.SAType) );
     ( "NonSAEager", (module NonSAEager : Signatures.SAType) );
     ( "NonSALazy", (module NonSALazy : Signatures.SAType) );

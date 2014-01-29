@@ -1,5 +1,8 @@
 (** Lazy variant of self-adjusting values based on a push-pull dependency graph. *)
 
+open AdaptonInternal
+open AdaptonUtil
+
 (** Types and operations common to lazy self-adjusting values containing any type. *)
 module T = struct
     (** Abstract type identifying this module for self-adjusting values. *)

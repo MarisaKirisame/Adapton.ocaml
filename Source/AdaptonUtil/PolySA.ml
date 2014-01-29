@@ -5,6 +5,8 @@
     ['a thunk], so custom hash and equality functions should be provided for most types.
 *)
 
+open AdaptonInternal
+
 module type S = sig
     type 'a thunk
     val is_self_adjusting : bool

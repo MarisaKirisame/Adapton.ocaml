@@ -1,5 +1,7 @@
 (** Module types for {i Adapton}. *)
 
+open AdaptonInternal
+
 (** {2 Self-adjusting values} *)
 
 (** Output module types of modules for self-adjusting values. *)

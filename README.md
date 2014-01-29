@@ -20,7 +20,7 @@ Quick-start
         % make repl
                 OCaml version 4.00.1
 
-        # module IntList = Adapton.Default.SAList.Make (Adapton.Types.Int);;
+        # module IntList = Adapton.SAList.Make (AdaptonUtil.Types.Int);;
         # let xs = IntList.of_list [1;2;3];;
         # let filter_gt_1 = IntList.memo_filter (fun x -> x > 1);;
         # let map_succ = IntList.memo_map (module IntList) succ;;

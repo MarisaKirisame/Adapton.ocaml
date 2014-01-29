@@ -3,8 +3,8 @@ open Format
 
 let assert_float_option_equal = assert_equal ~printer:(option_printer pp_print_float)
 
-let make_correctness_testsuite (module A : Adapton.Signatures.SAArrayMappedTrieType) =
-    let module F = A.Make (Adapton.Types.Float) in
+let make_correctness_testsuite (module A : AdaptonUtil.Signatures.SAArrayMappedTrieType) =
+    let module F = A.Make (AdaptonUtil.Types.Float) in
 
     "Correctness" >::: [
         "add" >:: QC.forall (QC.triple QC.float (QC.list (QC.pair QC.int QC.float)) (QC.list QC.int)) begin fun ( fseed, xs, ks ) ->
@@ -25,4 +25,4 @@ let make_testsuite ( name, saamt ) =
     ]
 
 
-let testsuite = "TestSAArrayMappedTrie" >::: List.map make_testsuite Adapton.All.saamt_list
+let testsuite = "TestSAArrayMappedTrie" >::: List.map make_testsuite AdaptonZoo.All.saamt_list

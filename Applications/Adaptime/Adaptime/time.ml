@@ -14,5 +14,5 @@ let min_time (l : time list) : time =
 let max_time (l : time list) : time =
 	List.fold_left max min_float l
 
-module TimeType (M : Adapton.Signatures.SAType) = M.Make( Adapton.Types.Float)
+module TimeType (M : AdaptonUtil.Signatures.SAType) = M.Make( AdaptonUtil.Types.Float)
 

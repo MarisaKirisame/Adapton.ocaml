@@ -1,8 +1,8 @@
 
 open Adaptime
 
-module T = Adapton.Types
-module B = Behavior.Make( Adapton.LazySABidi)
+module T = AdaptonUtil.Types
+module B = Behavior.Make( Adapton)
 module Tm = Time
 
 let t = B.seconds ()

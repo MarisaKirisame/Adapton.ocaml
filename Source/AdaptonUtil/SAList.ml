@@ -1,5 +1,7 @@
 (** Self-adjusting lists. *)
 
+open AdaptonInternal
+
 (** Functor to make self-adjusting lists, given a particular module for self-adjusting values. *)
 module Make (M : Signatures.SAType)
         : Signatures.SAListType with type sa = M.sa and type 'a thunk = 'a M.thunk and type 'a salist = [ `Cons of 'a * 'b | `Nil ] M.thunk as 'b = struct

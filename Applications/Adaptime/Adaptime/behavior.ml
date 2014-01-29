@@ -1,7 +1,7 @@
 
-open Adapton.Signatures
+open AdaptonUtil.Signatures
 open Time
-module T = Adapton.Types
+module T = AdaptonUtil.Types
 
 module type Behavior = sig
 	type 'a behavior

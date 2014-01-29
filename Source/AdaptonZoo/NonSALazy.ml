@@ -1,5 +1,8 @@
 (** Lazy variant of non-self-adjusting values. *)
 
+open AdaptonInternal
+open AdaptonUtil
+
 (** Types and operations common to lazy non-self-adjusting values containing any type. *)
 module T = struct
     (** Abstract type identifying this module for non-self-adjusting values. *)

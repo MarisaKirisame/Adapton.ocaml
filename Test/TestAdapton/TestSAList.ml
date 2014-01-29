@@ -4,8 +4,8 @@ open Format
 let assert_int_equal = assert_equal ~printer:pp_print_int
 let assert_list_equal = assert_equal ~printer:(list_printer pp_print_int ",")
 
-let make_regression_testsuite name (module L : Adapton.Signatures.SAListType) =
-    let module I = L.Make (Adapton.Types.Int) in
+let make_regression_testsuite name (module L : AdaptonUtil.Signatures.SAListType) =
+    let module I = L.Make (AdaptonUtil.Types.Int) in
 
     let test_salist_op_with_test ?(count=25) ?incl op sa_op ~test =
         Gc.compact (); (* try to make GC effects consistent across tests *)
@@ -197,4 +197,4 @@ let make_testsuite ( name, salist ) =
     ]
 
 
-let testsuite = "TestSAList" >::: List.map make_testsuite Adapton.All.salist_list
+let testsuite = "TestSAList" >::: List.map make_testsuite AdaptonZoo.All.salist_list

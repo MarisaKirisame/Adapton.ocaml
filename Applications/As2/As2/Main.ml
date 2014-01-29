@@ -1,4 +1,4 @@
-module Make (SA : Adapton.Signatures.SAType) = struct
+module Make (SA : AdaptonUtil.Signatures.SAType) = struct
   module Ast = Ast.Make (SA)
   module Parser = Parser.Make (Ast)
   module Interp = Interp.Make (Ast)
@@ -94,7 +94,7 @@ module Make (SA : Adapton.Signatures.SAType) = struct
       ast
 
   let measure f =
-    let module S = Adapton.Statistics in
+    let module S = AdaptonUtil.Statistics in
     let x, m = S.measure f
     in
     begin Printf.printf "time=%f, heap=%d, stack=%d, upd=%d, eval=%d, dirty=%d, clean=%d\n"
@@ -186,7 +186,7 @@ module Make (SA : Adapton.Signatures.SAType) = struct
   let test test_flags n cur =
     let sht_to_demand = n in
     let num_changes = ! Global.num_changes in
-    let module S = Adapton.Statistics in
+    let module S = AdaptonUtil.Statistics in
     let cmd =
       match test_flags with
         | `No_switch ->
@@ -228,8 +228,8 @@ module type S = sig
 end
 
 let as2_list = List.map begin fun ( name, sa ) ->
-    ( name, (module Make ((val sa : Adapton.Signatures.SAType)) : S) )
-end Adapton.All.sa_list
+    ( name, (module Make ((val sa : AdaptonUtil.Signatures.SAType)) : S) )
+end AdaptonZoo.All.sa_list
 
 let run () =
   let as2 = ref (snd (List.hd as2_list)) in

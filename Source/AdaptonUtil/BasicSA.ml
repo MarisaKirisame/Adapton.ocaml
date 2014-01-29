@@ -8,6 +8,8 @@
     equality functions internally.
 *)
 
+open AdaptonInternal
+
 module Make (M : Signatures.SAType) : sig
     type 'a aref
     val aref : 'a -> 'a aref
