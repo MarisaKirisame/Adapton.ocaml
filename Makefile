@@ -25,7 +25,7 @@ as2 : check ocamlbuild//runas2.native
 
 adaptime : check $(addprefix ocamlbuild//Adaptime.,cmxa a cma cmi)
 
-adaptime-test : check ocamlbuild//adaptimetest.native
+adaptime-test : check ounit//adaptimetest.native
 
 test : check ounit//runtestadapton.d.byte
 
