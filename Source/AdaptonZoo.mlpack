@@ -1,6 +1,6 @@
 AdaptonZoo/Adapton
 AdaptonZoo/All
-AdaptonZoo/EagerSATotalOrder
+AdaptonZoo/EagerNonInc
+AdaptonZoo/EagerTotalOrder
 AdaptonZoo/Exceptions
-AdaptonZoo/NonSAEager
-AdaptonZoo/NonSALazy
+AdaptonZoo/LazyNonInc

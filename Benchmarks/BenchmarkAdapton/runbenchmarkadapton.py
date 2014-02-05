@@ -82,7 +82,7 @@ if __name__ == "__main__":
         default=1, type=int)
     benchmark.add_argument("-T", "--take-counts", metavar="TAKE", help="take only the first %(metavar)s elements of each output (default: 1)",
         nargs="+", default=( 1, ), type=int)
-    benchmark.add_argument("-E", "--edit-count", metavar="COUNT", help="average self-adjusting benchmarks over %(metavar)s edits ",
+    benchmark.add_argument("-E", "--edit-count", metavar="COUNT", help="average Adapton benchmarks over %(metavar)s edits ",
         default=250, type=int)
     benchmark.add_argument("-M", "--monotonic", help="make monotonic edits ", action="store_true")
     benchmark.add_argument("-S", "--random-seeds", metavar="SEED", help="run benchmark for seeds (default: 5 random seeds)",

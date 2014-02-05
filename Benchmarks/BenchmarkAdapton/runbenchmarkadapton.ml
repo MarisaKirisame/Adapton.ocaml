@@ -1,35 +1,35 @@
 
 open AdaptonUtil.Statistics
 
-let list_filter_task (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float) =
+let list_filter_task (type a) (module L : AdaptonUtil.Signatures.AListType.S with type t = a and type data = float) =
     L.memo_filter (fun x -> log (1. +. x) < log 1.5)
 
-let list_map_task (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float) =
+let list_map_task (type a) (module L : AdaptonUtil.Signatures.AListType.S with type t = a and type data = float) =
     L.memo_map (module L) (fun x -> log (1. +. x) +. log 1.5)
 
-let list_tfold_min_task (type a) (type b) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type SAData.t = b and type data = float) =
+let list_tfold_min_task (type a) (type b) (module L : AdaptonUtil.Signatures.AListType.S with type t = a and type AData.t = b and type data = float) =
     L.memo_tfold min
 
-let list_tfold_sum_task (type a) (type b) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type SAData.t = b and type data = float) =
+let list_tfold_sum_task (type a) (type b) (module L : AdaptonUtil.Signatures.AListType.S with type t = a and type AData.t = b and type data = float) =
     L.memo_tfold (+.)
 
-let list_quicksort_task (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float) =
+let list_quicksort_task (type a) (module L : AdaptonUtil.Signatures.AListType.S with type t = a and type data = float) =
     L.memo_quicksort Pervasives.compare
 
-let list_mergesort_task (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float) =
+let list_mergesort_task (type a) (module L : AdaptonUtil.Signatures.AListType.S with type t = a and type data = float) =
     L.memo_mergesort Pervasives.compare
 
 let list_updown1_task
-        (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float)
-        (type b) (module B : AdaptonUtil.Signatures.SAType.S with type t = b and type data = bool)
+        (type a) (module L : AdaptonUtil.Signatures.AListType.S with type t = a and type data = float)
+        (type b) (module B : AdaptonUtil.Signatures.AType.S with type t = b and type data = bool)
         xs b =
     let up = L.memo_quicksort Pervasives.compare in
     let down = L.memo_quicksort (fun x y -> -(Pervasives.compare x y)) in
     L.thunk (fun () -> L.force (if B.force b then up xs else down xs))
 
 let list_updown2_task
-        (type a) (module L : AdaptonUtil.Signatures.SAListType.S with type t = a and type data = float)
-        (type b) (module B : AdaptonUtil.Signatures.SAType.S with type t = b and type data = bool)
+        (type a) (module L : AdaptonUtil.Signatures.AListType.S with type t = a and type data = float)
+        (type b) (module B : AdaptonUtil.Signatures.AType.S with type t = b and type data = bool)
         xs b =
     let up = L.memo_quicksort Pervasives.compare xs in
     let down = L.memo_quicksort (fun x y -> -(Pervasives.compare x y)) xs in
@@ -47,7 +47,7 @@ let tasks = [
     ( "exptree", `ExpTree );
 ]
 
-let opt_sa = ref (fst (List.hd AdaptonZoo.All.sa_list))
+let opt_a = ref (fst (List.hd AdaptonZoo.All.a_list))
 let opt_task = ref "filter"
 let opt_input_size = ref 1
 let opt_repeat_count = ref 1
@@ -56,7 +56,7 @@ let opt_take_count = ref 1
 let opt_random_seed = ref 1
 let opt_monotonic = ref false
 
-let header ff = Printf.fprintf ff "%24s %24s %8d %8d %20d" !opt_sa !opt_task !opt_take_count !opt_input_size !opt_random_seed
+let header ff = Printf.fprintf ff "%24s %24s %8d %8d %20d" !opt_a !opt_task !opt_take_count !opt_input_size !opt_random_seed
 let stats ff s =
     Printf.fprintf ff "\"time\": %.17g, \"heap\": %.17g, \"stack\": %.17g, \"update\": %.17g, \"evaluate\": %.17g, \"dirty\": %.17g, \"clean\": %.17g"
         s.time s.heap s.stack s.update s.evaluate s.dirty s.clean
@@ -75,11 +75,11 @@ let show_config () =
             (fst task) (match snd task with `One _ -> "one" | `List _ -> "list" | `Flip _ -> "flip" | `ExpTree -> "exptree")
     in
     Printf.printf "{ \"modules\": [ %a ], \"tasks\": [ %a ] }\n%!"
-        (list_printer (fun ff -> Printf.fprintf ff "%S")) (fst (List.split AdaptonZoo.All.sa_list))
+        (list_printer (fun ff -> Printf.fprintf ff "%S")) (fst (List.split AdaptonZoo.All.a_list))
         (list_printer task_printer) tasks;
     exit 0
 
-let exptree (module SA : AdaptonUtil.Signatures.SAType) rng =
+let exptree (module A : AdaptonUtil.Signatures.AType) rng =
     if !opt_input_size < 4 then begin
         Printf.eprintf "Task %s only supports -I n where n >= 4\n%!" !opt_task;
         exit 1
@@ -88,19 +88,19 @@ let exptree (module SA : AdaptonUtil.Signatures.SAType) rng =
         Printf.eprintf "Task %s only supports -T 1\n%!" !opt_task;
         exit 1
     end;
-    let module F = SA.Make (AdaptonUtil.Types.Float) in
+    let module F = A.Make (AdaptonUtil.Types.Float) in
     let module E = struct
-        type e = e' SA.thunk
+        type e = e' A.thunk
         and e' = Num of float | Op of op * e * e
         and op = Plus | Mul | Minus | Div
-        module E = SA.Make (struct
+        module E = A.Make (struct
             type t = e'
             let hash seed = function
                 | Num f -> Hashtbl.seeded_hash seed f
-                | Op  ( op, x, y ) -> SA.hash (SA.hash (Hashtbl.seeded_hash seed op) x) y
+                | Op  ( op, x, y ) -> A.hash (A.hash (Hashtbl.seeded_hash seed op) x) y
             let equal x y = x == y || match x, y with
                 | Num x, Num y -> x == y
-                | Op ( op1, x1, y1 ), Op ( op2, x2, y2 ) -> op1 == op2 && SA.equal x1 x2 && SA.equal y1 y2
+                | Op ( op1, x1, y1 ), Op ( op2, x2, y2 ) -> op1 == op2 && A.equal x1 x2 && A.equal y1 y2
                 | _ -> false
         end)
         include E
@@ -123,7 +123,7 @@ let exptree (module SA : AdaptonUtil.Signatures.SAType) rng =
             | Op ( Div, x, y ) -> let y = F.force (eval y) in F.force (eval x) /. (if y == 0. then 1. else y)
         end
     end in
-    SA.tweak_gc ();
+    A.tweak_gc ();
     Gc.compact ();
     let start_time = get_time () in
 
@@ -159,7 +159,7 @@ let exptree (module SA : AdaptonUtil.Signatures.SAType) rng =
         let setup_stats = finish setup_stats 1 in
         let setup_top_heap_stack = get_top_heap_stack () in
 
-        if SA.is_self_adjusting then begin
+        if A.is_incremental then begin
             let half = int_of_float (floor (log (float_of_int !opt_input_size) /. log 2. /. 2.)) in
             let rec do_edits past n update_stats take_stats edit_count =
                 if n == 0 then
@@ -197,9 +197,9 @@ let exptree (module SA : AdaptonUtil.Signatures.SAType) rng =
                         in
 
                         let (), update_stats = measure (fun () -> change false x) in
-                        let (), take_stats = measure (fun () -> SA.refresh (); take ()) in
+                        let (), take_stats = measure (fun () -> A.refresh (); take ()) in
                         let (), update_stats' = measure (fun () -> change true x) in
-                        let (), take_stats' = measure (fun () -> SA.refresh (); take ()) in
+                        let (), take_stats' = measure (fun () -> A.refresh (); take ()) in
 
                         ( add update_stats update_stats', add take_stats take_stats', 2 )
                     else
@@ -239,7 +239,7 @@ let exptree (module SA : AdaptonUtil.Signatures.SAType) rng =
                                 failwith "swap"
                         end in
 
-                        let (), take_stats = measure (fun () -> SA.refresh (); take ()) in
+                        let (), take_stats = measure (fun () -> A.refresh (); take ()) in
 
                         ( update_stats, take_stats, 1 )
                     in
@@ -275,7 +275,7 @@ let exptree (module SA : AdaptonUtil.Signatures.SAType) rng =
 let _ =
     Arg.parse (Arg.align [
         ( "-c", Arg.Unit show_config, " output available configuration" );
-        ( "-m", Arg.Symbol ( (fst (List.split AdaptonZoo.All.sa_list)), (fun s -> opt_sa := s) ), "list module" );
+        ( "-m", Arg.Symbol ( (fst (List.split AdaptonZoo.All.a_list)), (fun s -> opt_a := s) ), "list module" );
         ( "-t", Arg.Symbol ( (fst (List.split tasks)), (fun s -> opt_task := s) ), "list task" );
         ( "-I", Arg.Set_int opt_input_size, "size input size" );
         ( "-R", Arg.Set_int opt_repeat_count, "count repeat count" );
@@ -287,15 +287,15 @@ let _ =
 
     let rng = Random.State.make [| !opt_random_seed |] in
     Random.init (Random.State.bits rng);
-    let module SA = (val (List.assoc !opt_sa AdaptonZoo.All.sa_list)) in
+    let module A = (val (List.assoc !opt_a AdaptonZoo.All.a_list)) in
     begin match List.assoc !opt_task tasks with
-        | `ExpTree -> exptree (module SA) rng
+        | `ExpTree -> exptree (module A) rng
         | _ -> ()
     end;
-    let module SABool = SA.Make (AdaptonUtil.Types.Bool) in
-    let module SAList = AdaptonUtil.SAList.Make (SA) in
-    let module SAFloatList = SAList.Make (AdaptonUtil.Types.Float) in
-    SA.tweak_gc ();
+    let module ABool = A.Make (AdaptonUtil.Types.Bool) in
+    let module AList = AdaptonUtil.AList.Make (A) in
+    let module AFloatList = AList.Make (AdaptonUtil.Types.Float) in
+    A.tweak_gc ();
     Gc.compact ();
     let task = match List.assoc !opt_task tasks with
         | `One task ->
@@ -303,30 +303,30 @@ let _ =
                 Printf.eprintf "Task %s only supports -T 1\n%!" !opt_task;
                 exit 1
             end;
-            `One (task (module SAFloatList))
+            `One (task (module AFloatList))
         | `List task ->
-            `List (task (module SAFloatList))
+            `List (task (module AFloatList))
         | `Flip task ->
             if !opt_monotonic then begin
                 Printf.eprintf "Task %s does not support -M\n%!" !opt_task;
                 exit 1
             end;
-            `Flip (task (module SAFloatList) (module SABool))
+            `Flip (task (module AFloatList) (module ABool))
         | `ExpTree ->
             failwith "exptree"
     in
 
     let start_time = get_time () in
 
-    let xs = ref (SAFloatList.const `Nil) in
+    let xs = ref (AFloatList.const `Nil) in
     let xss = Array.init !opt_input_size begin fun _ ->
-        xs := SAFloatList.const (`Cons (Random.State.float rng 1.0, !xs));
+        xs := AFloatList.const (`Cons (Random.State.float rng 1.0, !xs));
         !xs
     end in
     let xs = !xs in
     let last = ref 0 in
 
-    let b = SABool.const false in
+    let b = ABool.const false in
 
     Printf.eprintf "%t\n%!" header;
     try
@@ -334,13 +334,13 @@ let _ =
             let take = match task with
                 | `List task ->
                     let yss = Array.init !opt_repeat_count (fun _ -> task xs) in
-                    (fun () -> Array.iter (fun ys -> ignore (SAFloatList.take ys !opt_take_count)) yss)
+                    (fun () -> Array.iter (fun ys -> ignore (AFloatList.take ys !opt_take_count)) yss)
                 | `One task ->
                     let ys = Array.init !opt_repeat_count (fun _ -> task xs) in
-                    (fun () -> Array.iter (fun y -> ignore (SAFloatList.SAData.force y)) ys)
+                    (fun () -> Array.iter (fun y -> ignore (AFloatList.AData.force y)) ys)
                 | `Flip task ->
                     let yss = Array.init !opt_repeat_count (fun _ -> task xs b) in
-                    (fun () -> Array.iter (fun ys -> ignore (SAFloatList.take ys !opt_take_count)) yss)
+                    (fun () -> Array.iter (fun ys -> ignore (AFloatList.take ys !opt_take_count)) yss)
                 | `ExpTree ->
                     failwith "exptree"
             in
@@ -350,7 +350,7 @@ let _ =
         let setup_stats = finish setup_stats 1 in
         let setup_top_heap_stack = get_top_heap_stack () in
 
-        if SA.is_self_adjusting then begin
+        if A.is_incremental then begin
             let rec do_edits past n update_stats take_stats edit_count =
                 if n == 0 then
                     ( update_stats, take_stats, edit_count )
@@ -375,25 +375,25 @@ let _ =
                             let zs = xss.(edit) in
 
                             let ( z', zs' ), delete_update_stats = measure begin fun () ->
-                                match SAFloatList.force zs with
+                                match AFloatList.force zs with
                                     | `Cons ( z', zs' ) ->
-                                        SAFloatList.update_const zs (SAFloatList.force zs');
+                                        AFloatList.update_const zs (AFloatList.force zs');
                                         ( z', zs' )
                                     | `Nil ->
                                         failwith "delete"
                             end in
 
                             let (), delete_take_stats = measure begin fun () ->
-                                SA.refresh ();
+                                A.refresh ();
                                 take ()
                             end in
 
                             let (), insert_update_stats = measure begin fun () ->
-                                SAFloatList.update_const zs (`Cons ( z', zs' ))
+                                AFloatList.update_const zs (`Cons ( z', zs' ))
                             end in
 
                             let (), insert_take_stats = measure begin fun () ->
-                                SA.refresh ();
+                                A.refresh ();
                                 take ()
                             end in
 
@@ -406,15 +406,15 @@ let _ =
                             let zs = xss.(edit) in
 
                             let (), update_stats = measure begin fun () ->
-                                match SAFloatList.force xs with
+                                match AFloatList.force xs with
                                     | `Cons _ as xs' ->
-                                        begin match SAFloatList.force xss.(!last) with
+                                        begin match AFloatList.force xss.(!last) with
                                             | `Cons _ as last' ->
-                                                begin match SAFloatList.force zs with
+                                                begin match AFloatList.force zs with
                                                     | `Cons _ as zs' ->
-                                                        SAFloatList.update_const xs zs';
-                                                        SAFloatList.update_const xss.(!last) xs';
-                                                        SAFloatList.update_const zs last';
+                                                        AFloatList.update_const xs zs';
+                                                        AFloatList.update_const xss.(!last) xs';
+                                                        AFloatList.update_const zs last';
                                                         last := edit;
                                                     | `Nil ->
                                                         failwith "swap"
@@ -427,7 +427,7 @@ let _ =
                             end in
 
                             let (), take_stats = measure begin fun () ->
-                                SA.refresh ();
+                                A.refresh ();
                                 take ()
                             end in
 
@@ -440,17 +440,17 @@ let _ =
                             let zs = xss.(edit) in
 
                             let (), update_stats = measure begin fun () ->
-                                SABool.update_const b (not (SABool.force b));
-                                match SAFloatList.force zs with
+                                ABool.update_const b (not (ABool.force b));
+                                match AFloatList.force zs with
                                     | `Cons ( _, zs' ) ->
-                                        SAFloatList.update_const zs (`Cons ( value, zs' ))
+                                        AFloatList.update_const zs (`Cons ( value, zs' ))
                                     | `Nil ->
                                         failwith "flip"
                             end in
 
-                            let (), take_stats = measure (fun () -> SA.refresh (); take ()) in
-                            let (), update_stats' = measure (fun () -> SABool.update_const b (not (SABool.force b))) in
-                            let (), take_stats' = measure (fun () -> SA.refresh (); take ()) in
+                            let (), take_stats = measure (fun () -> A.refresh (); take ()) in
+                            let (), update_stats' = measure (fun () -> ABool.update_const b (not (ABool.force b))) in
+                            let (), take_stats' = measure (fun () -> A.refresh (); take ()) in
 
                             ( add update_stats update_stats', add take_stats take_stats', 2 )
 

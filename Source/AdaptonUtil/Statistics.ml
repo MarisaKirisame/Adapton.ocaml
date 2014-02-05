@@ -35,8 +35,8 @@ type t = {
     stack : float; (** Max stack delta in bytes. *)
     update : float; (** Thunks updated. *)
     evaluate : float; (** Thunks re-evaluated. *)
-    dirty : float; (** For {!LazySABidi}, dependencies to be checked; for {!EagerSATotalOrder}, thunks scheduled for re-evaluation. *)
-    clean : float; (** For {!LazySABidi}, dependencies checked clean; for {!EagerSATotalOrder}, thunks unscheduled for re-evaluation (due to invalidation). *)
+    dirty : float; (** For {!Adapton}, dependencies to be checked; for {!EagerTotalOrder}, thunks scheduled for re-evaluation. *)
+    clean : float; (** For {!Adapton}, dependencies checked clean; for {!EagerTotalOrder}, thunks unscheduled for re-evaluation (due to invalidation). *)
 }
 
 type u = {

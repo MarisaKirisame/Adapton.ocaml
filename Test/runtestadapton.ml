@@ -10,7 +10,7 @@ end
 let _ =
     run_test_tt_main begin "TestAdapton" >::: [
         TestAdapton.TestLazySparseArray.testsuite;
-        TestAdapton.TestSA.testsuite;
-        TestAdapton.TestSAArrayMappedTrie.testsuite;
-        TestAdapton.TestSAList.testsuite;
+        TestAdapton.TestA.testsuite;
+        TestAdapton.TestAArrayMappedTrie.testsuite;
+        TestAdapton.TestAList.testsuite;
     ] end

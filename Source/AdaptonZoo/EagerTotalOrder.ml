@@ -1,4 +1,4 @@
-(** Eager variant of self-adjusting values based on a total-order maintenance data structure.
+(** Eager incremental computation based on self-adjusting computation with a total-order maintenance data structure.
 
     Implementation based on:
         Umut Acar, Guy Blelloch, Matthias Blume, Robert Harper, and Kanat Tangwongsan. "A Library for Self-Adjusting
@@ -10,12 +10,12 @@
 open AdaptonInternal
 open AdaptonUtil
 
-(** Types and operations common to eager self-adjusting values containing any type. *)
+(** Types and operations common to EagerTotalOrder thunks containing any type. *)
 module T = struct
-    (** Abstract type identifying this module for self-adjusting values. *)
-    type sa
+    (** Abstract type identifying this module. *)
+    type atype
 
-    (** Eager self-adjusting values containing ['a]. *)
+    (** EagerTotalOrder thunks containing ['a]. *)
     type 'a thunk = { (* 3 + 16 = 19 words *)
         id : int;
         mutable value : 'a;
@@ -34,8 +34,8 @@ module T = struct
     (**/**)
 
 
-    (** This module implements self-adjusting values. *)
-    let is_self_adjusting = true
+    (** This module implements incremental thunks. *)
+    let is_incremental = true
 
     (** This module implements eager values. *)
     let is_lazy = false
@@ -77,16 +77,16 @@ module T = struct
     (**/**)
 
 
-    (** Return the id of a self-adjusting value. *)
+    (** Return the id of an EagerTotalOrder thunk. *)
     let id m = m.id
 
-    (** Compute the hash value of a self-adjusting value. *)
+    (** Compute the hash value of an EagerTotalOrder thunk. *)
     let hash seed m = Hashtbl.seeded_hash seed m.id
 
-    (** Compute whether two self-adjusting values are equal. *)
+    (** Compute whether two EagerTotalOrder thunks are equal. *)
     let equal = (==)
 
-    (** Recompute self-adjusting values if necessary. *)
+    (** Recompute EagerTotalOrder thunks if necessary. *)
     let refresh () =
         let last_now = !eager_now in
         try
@@ -103,7 +103,7 @@ module T = struct
             eager_now := last_now;
             eager_finger := eager_start
 
-    (** Return the value contained by a self-adjusting value, computing it if necessary. *)
+    (** Return the value contained by an EagerTotalOrder thunk, computing it if necessary. *)
     let force m =
         (* add dependency to caller *)
         begin match !eager_stack with
@@ -115,15 +115,15 @@ end
 include T
 
 
-(** Functor to make constructors and updaters for eager self-adjusting values of a specific type. *)
+(** Functor to make constructors and updaters for EagerTotalOrder thunks of a specific type. *)
 module Make (R : Hashtbl.SeededHashedType)
-        : Signatures.SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk = struct
+        : Signatures.AType.S with type atype = atype and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk = struct
     include T
 
-    (** Value contained by eager self-adjusting values for a specific type. *)
+    (** Value contained by EagerTotalOrder thunks for a specific type. *)
     type data = R.t
 
-    (** Eager self-adjusting values for a specific type. *)
+    (** EagerTotalOrder thunks for a specific type. *)
     type t = R.t thunk
 
     (** Module representing type [data]. *)
@@ -145,7 +145,7 @@ module Make (R : Hashtbl.SeededHashedType)
     end
     (**/**)
 
-    (** Create an eager self-adjusting value from a constant value. *)
+    (** Create an EagerTotalOrder thunk from a constant value. *)
     let const x =
         let m = {
             id=Types.Counter.next eager_id_counter;
@@ -160,7 +160,7 @@ module Make (R : Hashtbl.SeededHashedType)
         } in
         m
 
-    (** Update an eager self-adjusting value with a constant value. *)
+    (** Update an EagerTotalOrder thunk with a constant value. *)
     let update_const m x =
         incr Statistics.Counts.update;
         if m.meta.start_timestamp != TotalOrder.null then begin
@@ -191,7 +191,7 @@ module Make (R : Hashtbl.SeededHashedType)
     let make_evaluate m f = fun () -> update m (evaluate_meta m.meta f)
     (**/**)
 
-    (** Create an eager self-adjusting value from a thunk. *)
+    (** Create an EagerTotalOrder thunk from a function that may depend on other EagerTotalOrder thunks. *)
     let thunk f =
         let meta = {
             evaluate=nop;
@@ -206,7 +206,7 @@ module Make (R : Hashtbl.SeededHashedType)
         meta.evaluate <- make_evaluate m f;
         m
 
-    (** Update an eager self-adjusting value with a thunk. *)
+    (** Update an EagerTotalOrder thunk with a function that may depend on other EagerTotalOrder thunks. *)
     let update_thunk m f =
         incr Statistics.Counts.update;
         if m.meta.start_timestamp != TotalOrder.null then begin
@@ -230,7 +230,7 @@ module Make (R : Hashtbl.SeededHashedType)
         type data = R.t
         type t = R.t thunk
 
-        (** Create memoizing constructor for an eager self-adjusting value. *)
+        (** Create memoizing constructor for an EagerTotalOrder thunk. *)
         let memo (type a) (module A : Hashtbl.SeededHashedType with type t = a) f =
             let module Binding = struct
                 type t = { key : A.t; mutable value : R.t thunk option }

@@ -1,4 +1,4 @@
-(** Self-adjusting array mapped tries. *)
+(** Adapton array mapped tries. *)
 
 open AdaptonInternal
 
@@ -12,52 +12,52 @@ let key_bits' = bits * (depth - 1)
 let _ = assert (key_bits' < Sys.word_size - 3)
 (**/**)
 
-(** Key-width of self-adjusting array mapped tries. *)
+(** Key-width of Adapton array mapped tries. *)
 let key_bits = bits * depth
 
-(** Size of self-adjusting array mapped tries. *)
+(** Size of Adapton array mapped tries. *)
 let size = 1 lsl key_bits
 
-(** Functor to make self-adjusting array mapped tries, given a particular module for self-adjusting values. *)
-module Make (M : Signatures.SAType)
-        : Signatures.SAArrayMappedTrieType with
-            type sa = M.sa
+(** Functor to make Adapton array mapped tries, given a particular module for Adapton thunks. *)
+module Make (M : Signatures.AType)
+        : Signatures.AArrayMappedTrieType with
+            type atype = M.atype
             and type 'a thunk = 'a M.thunk
         = struct
 
-    (** Self-adjusting array mapped tries containing ['a]. *)
-    type 'a saamt = 'a saamt' M.thunk
+    (** Adapton array mapped tries containing ['a]. *)
+    type 'a aamt = 'a aamt' M.thunk
 
-    (** Constructor tags for self-adjusting array mapped tries containing ['a]. *)
-    and 'a saamt' =
-        | Branches of 'a saamt' LazySparseArray.t
+    (** Constructor tags for Adapton array mapped tries containing ['a]. *)
+    and 'a aamt' =
+        | Branches of 'a aamt' LazySparseArray.t
         | Leaves of 'a LazySparseArray.t
         | Empty
 
-    (** Types and operations common to self-adjusting array mapped tries containing any type. *)
+    (** Types and operations common to Adapton array mapped tries containing any type. *)
     module T = struct
-        (** Abstract type identifying the given module for self-adjusting values used to create this module for self-adjusting array mapped tries. *)
-        type sa = M.sa
+        (** Abstract type identifying the given module for Adapton thunks used to create this module for Adapton array mapped tries. *)
+        type atype = M.atype
 
-        (** Self-adjusting values from the given module used to create this module for self-adjusting array mapped tries. *)
+        (** Adapton thunks from the given module used to create this module for Adapton array mapped tries. *)
         type 'a thunk = 'a M.thunk
 
-        (** True if this module implements self-adjusting array mapped tries. *)
-        let is_self_adjusting = M.is_self_adjusting
+        (** True if this module implements Adapton array mapped tries. *)
+        let is_incremental = M.is_incremental
 
         (** True if this module implements lazy array mapped tries. *)
         let is_lazy = M.is_lazy
 
-        (** Compute the hash value of a self-adjusting array mapped trie. *)
+        (** Compute the hash value of an Adapton array mapped trie. *)
         let hash = M.hash
 
-        (** Compute whether two self-adjusting array mapped tries are equal. *)
+        (** Compute whether two Adapton array mapped tries are equal. *)
         let equal = M.equal
 
-        (** Recompute self-adjusting array mapped tries if necessary. *)
+        (** Recompute Adapton array mapped tries if necessary. *)
         let refresh = M.refresh
 
-        (** Return the value at index [k] of a self-adjusting array mapped trie. *)
+        (** Return the value at index [k] of an Adapton array mapped trie. *)
         let get xs k =
             if k < 0 || k >= size then invalid_arg "index out of bounds";
             let rec get xs s =
@@ -77,14 +77,14 @@ module Make (M : Signatures.SAType)
     end
     include T
 
-    (** Output module types of {!SAArrayMappedTrie.Make}. *)
-    module type S = Signatures.SAArrayMappedTrieType.S
+    (** Output module types of {!AArrayMappedTrie.Make}. *)
+    module type S = Signatures.AArrayMappedTrieType.S
 
-    (** Helper functor to make a constructor for self-adjusting array mapped tries of a specific type. *)
+    (** Helper functor to make a constructor for Adapton array mapped tries of a specific type. *)
     module Make (R : Hashtbl.SeededHashedType)
-            : S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t saamt = struct
+            : S with type atype = atype and type 'a thunk = 'a thunk and type data = R.t and type t = R.t aamt = struct
         module A = M.Make (struct
-            type t = R.t saamt'
+            type t = R.t aamt'
             let hash seed = function
                 | Branches xs -> LazySparseArray.hash (Hashtbl.seeded_hash seed `Branches) xs
                 | Leaves xs -> LazySparseArray.hash (Hashtbl.seeded_hash seed `Leaves) xs
@@ -95,18 +95,18 @@ module Make (M : Signatures.SAType)
                 | _ -> false
         end)
 
-        (** Value contained by self-adjusting array mapped tries for a specific type. *)
+        (** Value contained by Adapton array mapped tries for a specific type. *)
         type data = R.t
 
-        (** Self-adjusting array mapped tries for a specific type. *)
+        (** Adapton array mapped tries for a specific type. *)
         type t = A.t
 
         include T
 
-        (** An empty self-adjusting array mapped trie. *)
+        (** An empty Adapton array mapped trie. *)
         let empty = A.const Empty
 
-        (** Create memoizing constructor that adds a binding to an self-adjusting array mapped trie. *)
+        (** Create memoizing constructor that adds a binding to an Adapton array mapped trie. *)
         let memo_add =
             let add = A.memo3 (module A) (module Types.Int) (module R) begin fun _ xs k v ->
                 let rec add xs s =

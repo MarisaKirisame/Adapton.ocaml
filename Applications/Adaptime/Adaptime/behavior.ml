@@ -59,14 +59,14 @@ module type Behavior = sig
 	val id : 'a behavior -> int
 end
 
-(* Make a behavior, given a SAType. *)
-module Make (M : SAType) : Behavior = struct
+(* Make a behavior, given an AType. *)
+module Make (M : AType) : Behavior = struct
 	module Tm = TimeType(M)
 	module S = Sys
 	module U = Unix
 
-	type 'a sa_mod = (module SAType.S with type sa = M.sa and type data = 'a and type t = 'a M.thunk)
-	type 'a behavior = 'a sa_mod * 'a M.thunk * time M.thunk
+	type 'a a_mod = (module AType.S with type atype = M.atype and type data = 'a and type t = 'a M.thunk)
+	type 'a behavior = 'a a_mod * 'a M.thunk * time M.thunk
 	(* Requirement: Always force 'a thunk before time thunk. *)
 
 	let const (type t) (module H : Hashtbl.SeededHashedType with type t = t) (c : t) : t behavior =
@@ -133,7 +133,7 @@ module Make (M : SAType) : Behavior = struct
 			helper !memo_const_store
 		in	
 		let memo =
-			let mod_r = (module R : SAType.S with type sa = M.sa and type data = t and type t = t M.thunk) in
+			let mod_r = (module R : AType.S with type atype = M.atype and type data = t and type t = t M.thunk) in
 			try
 				Hashtbl.find memo_const_store mod_r
 			with
@@ -321,7 +321,7 @@ module Make (M : SAType) : Behavior = struct
 			in
 			S.set_signal S.sigalrm handle;
 			ignore (U.alarm 1);
-			let beh = (module Tm : SAType.S with type sa = M.sa and type data = time and type t = time M.thunk), r, t in
+			let beh = (module Tm : AType.S with type atype = M.atype and type data = time and type t = time M.thunk), r, t in
 			seconds_store := Some beh;
 			beh
 		| Some c' ->
@@ -341,7 +341,7 @@ module Make (M : SAType) : Behavior = struct
 				t'
 			)
 			in
-			let beh = (module Tm : SAType.S with type sa = M.sa and type data = time and type t = time M.thunk), r, t in
+			let beh = (module Tm : AType.S with type atype = M.atype and type data = time and type t = time M.thunk), r, t in
 			time_store := Some beh;
 			beh
 		| Some c ->

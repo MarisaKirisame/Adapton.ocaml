@@ -1,4 +1,4 @@
-(** Memoization helper module to create modules for self-adjusting values. *)
+(** Memoization helper module to memoize incremental thunks. *)
 
 (** Input module type of memoization functor {!MemoN.Make}. *)
 module type MemoNType = sig

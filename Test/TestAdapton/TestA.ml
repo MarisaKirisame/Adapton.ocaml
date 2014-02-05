@@ -3,7 +3,7 @@ open Format
 
 let assert_int_equal = assert_equal ~printer:pp_print_int
 
-let make_regression_testsuite (module L : AdaptonUtil.Signatures.SAType) =
+let make_regression_testsuite (module L : AdaptonUtil.Signatures.AType) =
     let module I = L.Make (AdaptonUtil.Types.Int) in
 
     "Regression" >::: [
@@ -12,7 +12,7 @@ let make_regression_testsuite (module L : AdaptonUtil.Signatures.SAType) =
             let y = I.thunk (fun () -> I.force x) in
             assert_int_equal ~msg:"initial" 1 (I.force y);
 
-            if L.is_self_adjusting then begin
+            if L.is_incremental then begin
                 let w = I.const 1 in
                 I.update_thunk x (fun () -> I.force w);
                 I.refresh ();
@@ -29,7 +29,7 @@ let make_regression_testsuite (module L : AdaptonUtil.Signatures.SAType) =
             let y = I.thunk (fun () -> I.force x) in
             assert_int_equal ~msg:"initial" 1 (I.force y);
 
-            if L.is_self_adjusting then begin
+            if L.is_incremental then begin
                 I.update_const x 2;
                 I.refresh ();
                 assert_int_equal ~msg:"update x to const" 2 (I.force y);
@@ -47,10 +47,10 @@ let make_regression_testsuite (module L : AdaptonUtil.Signatures.SAType) =
     ]
 
 
-let make_testsuite ( name, sa ) =
+let make_testsuite ( name, atype ) =
     name >::: [
-        make_regression_testsuite sa
+        make_regression_testsuite atype
     ]
 
 
-let testsuite = "TestSA" >::: List.map make_testsuite AdaptonZoo.All.sa_list
+let testsuite = "TestA" >::: List.map make_testsuite AdaptonZoo.All.a_list

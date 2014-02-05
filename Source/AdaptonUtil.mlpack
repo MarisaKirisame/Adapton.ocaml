@@ -1,7 +1,7 @@
-AdaptonUtil/BasicSA
-AdaptonUtil/PolySA
-AdaptonUtil/SAArrayMappedTrie
-AdaptonUtil/SAList
+AdaptonUtil/AArrayMappedTrie
+AdaptonUtil/AList
+AdaptonUtil/BasicAPI
+AdaptonUtil/PolyAPI
 AdaptonUtil/Signatures
 AdaptonUtil/Statistics
 AdaptonUtil/Types

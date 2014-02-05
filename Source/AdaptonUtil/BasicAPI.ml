@@ -1,4 +1,4 @@
-(** Functor that provides a basic polymorphic API for a self-adjusting module.
+(** Functor that provides a basic polymorphic API for an Adapton module.
 
     Instead of providing ['a thunk], this provides two types: ['a aref], which are input thunks that can only hold
     values but is updateable by the outer program, and ['a athunk], which can hold computations, but cannot be updated
@@ -10,7 +10,7 @@
 
 open AdaptonInternal
 
-module Make (M : Signatures.SAType) : sig
+module Make (M : Signatures.AType) : sig
     type 'a aref
     val aref : 'a -> 'a aref
     val get : 'a aref -> 'a
@@ -21,7 +21,7 @@ module Make (M : Signatures.SAType) : sig
     val thunk : (unit -> 'a) -> 'a athunk
     val memo : ('fn -> 'arg -> 'a) -> ('arg -> 'a athunk as 'fn)
 end = struct
-    module P = PolySA.Make (M)
+    module P = PolyAPI.Make (M)
 
     type 'a aref = 'a P.thunk
     let aref x = P.const x

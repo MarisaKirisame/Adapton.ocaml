@@ -1,4 +1,4 @@
-Adapton.ocaml: Self-adjusting computation library for OCaml.
+Adapton.ocaml: Incremental computation library for OCaml.
 
 Copyright (c) 2013, Khoo Yit Phang <khooyp@cs.umd.edu>
 

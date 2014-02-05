@@ -1,21 +1,21 @@
-(** Lists of all modules for self-adjusting values and applications. *)
+(** Lists of all incremental computation modules and applications. *)
 
 open AdaptonUtil
 
-(** List of all names and modules for self-adjusting values. *)
-let sa_list = [
-    ( "Adapton", (module Adapton : Signatures.SAType) );
-    ( "EagerSATotalOrder", (module EagerSATotalOrder : Signatures.SAType) );
-    ( "NonSAEager", (module NonSAEager : Signatures.SAType) );
-    ( "NonSALazy", (module NonSALazy : Signatures.SAType) );
+(** List of all incremental computation modules. *)
+let a_list = [
+    ( "Adapton", (module Adapton : Signatures.AType) );
+    ( "EagerTotalOrder", (module EagerTotalOrder : Signatures.AType) );
+    ( "EagerNonInc", (module EagerNonInc : Signatures.AType) );
+    ( "LazyNonInc", (module LazyNonInc : Signatures.AType) );
 ]
 
-(** List of all names and modules for self-adjusting lists. *)
-let salist_list = List.map begin fun ( name, sa ) ->
-    ( "SAList (" ^ name ^ ")", (module SAList.Make ((val sa : Signatures.SAType)) : Signatures.SAListType)  )
-end sa_list
+(** List of all incremental list modules. *)
+let alist_list = List.map begin fun ( name, atype ) ->
+    ( "AList (" ^ name ^ ")", (module AList.Make ((val atype : Signatures.AType)) : Signatures.AListType)  )
+end a_list
 
-(** List of all names and modules for self-adjusting array mapped trie. *)
-let saamt_list = List.map begin fun ( name, sa ) ->
-    ( "SAArrayMappedTrie (" ^ name ^ ")", (module SAArrayMappedTrie.Make ((val sa : Signatures.SAType)) : Signatures.SAArrayMappedTrieType)  )
-end sa_list
+(** List of all incremental array mapped trie modules. *)
+let aamt_list = List.map begin fun ( name, atype ) ->
+    ( "AArrayMappedTrie (" ^ name ^ ")", (module AArrayMappedTrie.Make ((val atype : Signatures.AType)) : Signatures.AArrayMappedTrieType)  )
+end a_list

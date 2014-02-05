@@ -314,7 +314,7 @@ module Make : INTERP = functor (Ast : Ast.S) -> struct
   let read cur = get_val cur
 
   let update_cell_frm cur cell frm =
-    if A.is_self_adjusting then (
+    if A.is_incremental then (
       A.update_const cell.cell_frm frm ;
       A.update_thunk cell.cell_val begin fun _ ->
         if (! Global.stateless_eval ) then

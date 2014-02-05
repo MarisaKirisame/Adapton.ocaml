@@ -1,15 +1,15 @@
-(** Lazy variant of self-adjusting values based on a push-pull dependency graph. *)
+(** Lazy incremental computation based a demand-computation graph. *)
 
 open AdaptonInternal
 open AdaptonUtil
 
-(** Types and operations common to lazy self-adjusting values containing any type. *)
+(** Types and operations common to Adapton thunks containing any type. *)
 module T = struct
-    (** Abstract type identifying this module for self-adjusting values. *)
-    type sa
+    (** Abstract type identifying this module. *)
+    type atype
 
     module rec TT : sig
-        (** Lazy self-adjusting values containing ['a]. *)
+        (** Adapton thunks containing ['a]. *)
         type 'a thunk = { (* 2 + 2 + 7 = 11 words (not including closures of receipt, repair, evaluate, and unmemo) *)
             meta : meta;
             mutable thunk : 'a thunk';
@@ -46,10 +46,10 @@ module T = struct
     (**/**)
 
 
-    (** This module implements self-adjusting values. *)
-    let is_self_adjusting = true
+    (** This module implements incremental thunks. *)
+    let is_incremental = true
 
-    (** This module implements lazy values. *)
+    (** This module implements lazy thunks. *)
     let is_lazy = true
 
 
@@ -59,19 +59,19 @@ module T = struct
     (**/**)
 
 
-    (** Return the id of a self-adjusting value. *)
+    (** Return the id of an Adapton thunk. *)
     let id m = m.meta.id
 
-    (** Compute the hash value of a self-adjusting value. *)
+    (** Compute the hash value of an Adapton thunk. *)
     let hash seed m = Hashtbl.seeded_hash seed m.meta.id
 
-    (** Compute whether two self-adjusting values are equal. *)
+    (** Compute whether two Adapton thunks are equal. *)
     let equal = (==)
 
-    (** Recompute self-adjusting values if necessary (unused by this module; a no-op). *)
+    (** Recompute Adapton thunks if necessary (unused by this module; a no-op). *)
     let refresh () = ()
 
-    (** Return the value contained by a self-adjusting value, (re-)computing it if necessary. *)
+    (** Return the value contained by an Adapton thunk, (re-)computing it if necessary. *)
     let force m =
         let value, receipt = match m.thunk with
             | MemoValue ( repair, _, _, _, _, _ ) | Value ( repair, _, _, _, _ ) ->
@@ -97,15 +97,15 @@ end
 include T
 
 
-(** Functor to make constructors for lazy self-adjusting values of a specific type. *)
+(** Functor to make constructors for Adapton thunks of a specific type. *)
 module Make (R : Hashtbl.SeededHashedType)
-        : Signatures.SAType.S with type sa = sa and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk = struct
+        : Signatures.AType.S with type atype = atype and type 'a thunk = 'a thunk and type data = R.t and type t = R.t thunk = struct
     include T
 
-    (** Value contained by lazy self-adjusting values for a specific type. *)
+    (** Value contained by Adapton thunks for a specific type. *)
     type data = R.t
 
-    (** Lazy self-adjusting values for a specific type. *)
+    (** Adapton thunks for a specific type. *)
     type t = R.t thunk
 
     (** Module representing type [data]. *)
@@ -148,13 +148,13 @@ module Make (R : Hashtbl.SeededHashedType)
         | Const ( value, _ ) -> k (R.equal value x)
     (**/**)
 
-    (** Create a lazy self-adjusting value from a constant value that does not depend on other lazy self-adjusting values. *)
+    (** Create an Adapton thunk from a constant value that does not depend on other Adapton thunks. *)
     let const x =
         let rec check : 'a . (bool -> 'a) -> 'a = fun k -> make_check m x k
         and m = { meta=make_meta (); thunk=Const ( x, { check } ) } in
         m
 
-    (** Update a lazy self-adjusting value with a constant value that does not depend on other lazy self-adjusting values. *)
+    (** Update an Adapton thunk with a constant value that does not depend on other Adapton thunks. *)
     let update_const m x =
         incr Statistics.Counts.update;
         begin match m.thunk with
@@ -214,13 +214,13 @@ module Make (R : Hashtbl.SeededHashedType)
         evaluate
     (**/**)
 
-    (** Create a lazy self-adjusting value from a thunk that may depend on other lazy self-adjusting values. *)
+    (** Create an Adapton thunk from a function that may depend on other Adapton thunks. *)
     let thunk f =
         let rec evaluate () = make_evaluate m f ()
         and m = { meta=make_meta (); thunk=Thunk evaluate } in
         m
 
-    (** Update a lazy self-adjusting value with a thunk that may depend on other lazy self-adjusting values. *)
+    (** Update an Adapton thunk with a function that may depend on other Adapton thunks. *)
     let update_thunk m f =
         incr Statistics.Counts.update;
         dirty m;
@@ -232,7 +232,7 @@ module Make (R : Hashtbl.SeededHashedType)
         type data = R.t
         type t = R.t thunk
 
-        (** Create memoizing constructor for a lazy self-adjusting value. *)
+        (** Create memoizing constructor for an Adapton thunk. *)
         let memo (type a) (module A : Hashtbl.SeededHashedType with type t = a) f =
             let module Memotable = Weak.Make (struct
                 type t = A.t * R.t thunk

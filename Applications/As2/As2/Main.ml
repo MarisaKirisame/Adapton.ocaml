@@ -1,5 +1,5 @@
-module Make (SA : AdaptonUtil.Signatures.SAType) = struct
-  module Ast = Ast.Make (SA)
+module Make (AA : AdaptonUtil.Signatures.AType) = struct
+  module Ast = Ast.Make (AA)
   module Parser = Parser.Make (Ast)
   module Interp = Interp.Make (Ast)
   module Lexer = Lexer.Make (Ast) (Parser)
@@ -114,7 +114,7 @@ module Make (SA : AdaptonUtil.Signatures.SAType) = struct
         (* Important: refresh signals to TotalOrder implementation that
            we want to start re-evaluation now; return to "at the
            beginning of time".  This is a no-op otherwise. *)
-        if Ast.A.is_self_adjusting then
+        if Ast.A.is_incremental then
           Ast.A.refresh ()
         else () ;
         let (sht,_) = Interp.get_pos cur in
@@ -227,9 +227,9 @@ module type S = sig
   val run : unit -> unit
 end
 
-let as2_list = List.map begin fun ( name, sa ) ->
-    ( name, (module Make ((val sa : AdaptonUtil.Signatures.SAType)) : S) )
-end AdaptonZoo.All.sa_list
+let as2_list = List.map begin fun ( name, atype ) ->
+    ( name, (module Make ((val atype : AdaptonUtil.Signatures.AType)) : S) )
+end AdaptonZoo.All.a_list
 
 let run () =
   let as2 = ref (snd (List.hd as2_list)) in

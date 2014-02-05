@@ -1,6 +1,6 @@
 
 module type S = sig
-  module A : AdaptonUtil.PolySA.S
+  module A : AdaptonUtil.PolyAPI.S
 
   type col = int
   type row = int
@@ -99,8 +99,8 @@ module type S = sig
   end
 end
 
-module Make (SA : AdaptonUtil.Signatures.SAType) : S with module A = AdaptonUtil.PolySA.Make (SA) = struct
-  module A = AdaptonUtil.PolySA.Make (SA)
+module Make (AA : AdaptonUtil.Signatures.AType) : S with module A = AdaptonUtil.PolyAPI.Make (AA) = struct
+  module A = AdaptonUtil.PolyAPI.Make (AA)
 
   type col = int
   type row = int

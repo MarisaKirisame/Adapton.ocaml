@@ -1,4 +1,4 @@
-(** Functor that provides a polymorphic API for a self-adjusting module.
+(** Functor that provides a polymorphic API for an Adapton module.
 
     Note that thunk constructors will provide conservative hash as well as equality functions by default (to compare
     thunk values as well as memoization keys). These functions are too conservative for types other than [int] and
@@ -9,7 +9,7 @@ open AdaptonInternal
 
 module type S = sig
     type 'a thunk
-    val is_self_adjusting : bool
+    val is_incremental : bool
     val is_lazy : bool
     val id : 'a thunk -> int
     val hash : 'a thunk -> int
@@ -45,10 +45,10 @@ module type S = sig
     val tweak_gc : unit -> unit
 end
 
-module Make (M : Signatures.SAType) = struct
-    type 'a thunk = 'a M.thunk * (module Signatures.SAType.S with type sa = M.sa and type data = 'a and type t = 'a M.thunk)
+module Make (M : Signatures.AType) = struct
+    type 'a thunk = 'a M.thunk * (module Signatures.AType.S with type atype = M.atype and type data = 'a and type t = 'a M.thunk)
 
-    let is_self_adjusting = M.is_self_adjusting
+    let is_incremental = M.is_incremental
 
     let is_lazy = M.is_lazy
 
