@@ -1,6 +1,9 @@
 Adapton.ocaml: Incremental computation library for OCaml.
 
-Copyright (c) 2013, Khoo Yit Phang <khooyp@cs.umd.edu>
+Copyright (c) 2013-2014
+Khoo Yit Phang <khooyp@cs.umd.edu>
+Matthew A. Hammer <hammer@cs.umd.edu>
+James Parker <jp@jamesparker.me>
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
