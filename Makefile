@@ -9,6 +9,7 @@ OCAMLBUILD_DOCDIR = Documents/API
 OCAMLBUILD_PRODUCTDIR = _product
 OUNIT_FLAGS = -verbose
 export OCAMLPATH := $(CURDIR)
+export OCAMLFIND_IGNORE_DUPS_IN := Source
 
 
 # local configuration hook; include it if it exists
