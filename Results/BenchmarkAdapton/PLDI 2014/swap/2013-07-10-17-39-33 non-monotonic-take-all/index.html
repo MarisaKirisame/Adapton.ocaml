@@ -1,0 +1,144 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>2013-07-10-17-39-33 non-monotonic-take-all</title>
+<style>figure.inline-figure { display: inline-block; margin: 0; }</style>
+<h1 id="tfold(sum)-0004">tfold(sum)-0004</h1>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-time-1.01-from-scratch-propagate.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-time-1.01-propagate.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-heap-1.01-from-scratch-propagate.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-stack-1.01-from-scratch-propagate.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-update-1.01-from-scratch-propagate.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-evaluate-1.01-from-scratch-propagate.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-evaluate-1.01-propagate.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-clean-1.01-from-scratch-propagate.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-dirty-1.01-from-scratch-propagate.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-max-heap-1.01-from-scratch-propagate.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-max-stack-1.01-from-scratch-propagate.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-NonSALazy-time-overhead.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-NonSAEager-time-overhead.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-NonSALazy-time-speedup.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-NonSAEager-time-speedup.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-NonSALazy-evaluate-overhead.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-NonSAEager-evaluate-overhead.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-NonSALazy-evaluate-speedup.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-NonSAEager-evaluate-speedup.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-LazySABidi-details.pdf></figure>
+<figure class=inline-figure><img src=tfold(sum)-0004/tfold%28sum%29-0004-EagerSATotalOrder-details.pdf></figure>
+<h1 id="summary">Summary</h1>
+<pre>
+    Summarizing tfold(sum)-0004.json.gz ...
+        Loading Results/SAList/latest/tfold(sum)-0004.json.gz ...  done
+        Plotting time (1.01x of ('from-scratch', 'propagate'))
+                                     LazySABidi (from-scratch) ...   3.8e-05      37.8
+                              EagerSATotalOrder (from-scratch) ...  4.99e-05      18.9
+                                     NonSAEager (from-scratch) ...  8.23e-06      1.97
+                                      NonSALazy (from-scratch) ...  1.13e-05      1.11
+                                 EagerSATotalOrder (propagate) ...  8.96e-07      8.68
+                                        LazySABidi (propagate) ...  1.42e-06   0.00222
+        Plotting time (1.01x of ('propagate',))
+                                     LazySABidi (from-scratch) ...   3.8e-05      37.8
+                              EagerSATotalOrder (from-scratch) ...  4.99e-05      18.9
+                                     NonSAEager (from-scratch) ...  8.23e-06      1.97
+                                      NonSALazy (from-scratch) ...  1.13e-05      1.11
+                                 EagerSATotalOrder (propagate) ...  8.96e-07      8.68
+                                        LazySABidi (propagate) ...  1.42e-06   0.00222
+        Plotting heap (1.01x of ('from-scratch', 'propagate'))
+                              EagerSATotalOrder (from-scratch) ...         0  1.04e+09
+                                     LazySABidi (from-scratch) ...         0  9.58e+08
+                                     NonSAEager (from-scratch) ...         0  1.46e+08
+                                      NonSALazy (from-scratch) ...         0  8.33e+07
+                                 EagerSATotalOrder (propagate) ...         0  1.09e+07
+                                        LazySABidi (propagate) ...         0         0
+        Plotting stack (1.01x of ('from-scratch', 'propagate'))
+                              EagerSATotalOrder (from-scratch) ...         0   1.2e+08
+                                     NonSAEager (from-scratch) ...         0  3.01e+07
+                                     LazySABidi (from-scratch) ...         0  1.08e+04
+                                      NonSALazy (from-scratch) ...         0  6.65e+03
+                                 EagerSATotalOrder (propagate) ...         0  9.55e+06
+                                        LazySABidi (propagate) ...         0         0
+        Plotting update (1.01x of ('from-scratch', 'propagate'))
+                                     LazySABidi (from-scratch) ...         0         0
+                                      NonSALazy (from-scratch) ...         0         0
+                              EagerSATotalOrder (from-scratch) ...         0         0
+                                     NonSAEager (from-scratch) ...         0         0
+                                        LazySABidi (propagate) ...         3         3
+                                 EagerSATotalOrder (propagate) ...         3         3
+        Plotting evaluate (1.01x of ('from-scratch', 'propagate'))
+                              EagerSATotalOrder (from-scratch) ...      17.1     2e+06
+                                     LazySABidi (from-scratch) ...      15.1     2e+06
+                                      NonSALazy (from-scratch) ...         0         0
+                                     NonSAEager (from-scratch) ...         0         0
+                                 EagerSATotalOrder (propagate) ...     0.367  9.88e+05
+                                        LazySABidi (propagate) ...     0.289       177
+        Plotting evaluate (1.01x of ('propagate',))
+                              EagerSATotalOrder (from-scratch) ...      17.1     2e+06
+                                     LazySABidi (from-scratch) ...      15.1     2e+06
+                                      NonSALazy (from-scratch) ...         0         0
+                                     NonSAEager (from-scratch) ...         0         0
+                                 EagerSATotalOrder (propagate) ...     0.367  9.88e+05
+                                        LazySABidi (propagate) ...     0.289       177
+        Plotting clean (1.01x of ('from-scratch', 'propagate'))
+                                     LazySABidi (from-scratch) ...         0         0
+                                      NonSALazy (from-scratch) ...         0         0
+                              EagerSATotalOrder (from-scratch) ...         0         0
+                                     NonSAEager (from-scratch) ...         0         0
+                                        LazySABidi (propagate) ...    0.0745      3.98
+                                 EagerSATotalOrder (propagate) ...    0.0435       2.1
+        Plotting dirty (1.01x of ('from-scratch', 'propagate'))
+                                     LazySABidi (from-scratch) ...         0         0
+                                      NonSALazy (from-scratch) ...         0         0
+                              EagerSATotalOrder (from-scratch) ...         0         0
+                                     NonSAEager (from-scratch) ...         0         0
+                                        LazySABidi (propagate) ...     0.616       185
+                                 EagerSATotalOrder (propagate) ...     0.251       117
+        Plotting max-heap (1.01x of ('from-scratch', 'propagate'))
+                                     LazySABidi (from-scratch) ...  1.02e+06  1.63e+09
+                              EagerSATotalOrder (from-scratch) ...  1.02e+06  1.44e+09
+                                     NonSAEager (from-scratch) ...  1.02e+06  2.55e+08
+                                      NonSALazy (from-scratch) ...  1.02e+06   1.8e+08
+                                 EagerSATotalOrder (propagate) ...  1.02e+06  6.09e+09
+                                        LazySABidi (propagate) ...  1.02e+06  1.64e+09
+        Plotting max-stack (1.01x of ('from-scratch', 'propagate'))
+                              EagerSATotalOrder (from-scratch) ...       584   1.2e+08
+                                     NonSAEager (from-scratch) ...       424  3.01e+07
+                                     LazySABidi (from-scratch) ...       424  1.12e+04
+                                      NonSALazy (from-scratch) ...       424  7.03e+03
+                                 EagerSATotalOrder (propagate) ...       584   1.2e+08
+                                        LazySABidi (propagate) ...       424  1.12e+04
+        Plotting time overhead using baseline NonSALazy ...
+                                  LazySABidi ...      3.36        34
+                           EagerSATotalOrder ...      4.42        17
+        Plotting time overhead using baseline NonSAEager ...
+                                  LazySABidi ...      4.62      19.1
+                           EagerSATotalOrder ...      6.07       9.6
+        Plotting time speed-up using baseline NonSALazy ...
+                                  LazySABidi ...      7.95       501
+                           EagerSATotalOrder ...      12.6     0.128
+        Plotting time speed-up using baseline NonSAEager ...
+                                  LazySABidi ...      5.79       888
+                           EagerSATotalOrder ...      9.18     0.228
+        Plotting evaluate overhead using baseline NonSALazy ...
+                                  LazySABidi ...       inf       inf
+                           EagerSATotalOrder ...       inf       inf
+        Plotting evaluate overhead using baseline NonSAEager ...
+                                  LazySABidi ...       inf       inf
+                           EagerSATotalOrder ...       inf       inf
+        Plotting evaluate speed-up using baseline NonSALazy ...
+                                  LazySABidi ...         0         0
+                           EagerSATotalOrder ...         0         0
+        Plotting evaluate speed-up using baseline NonSAEager ...
+                                  LazySABidi ...         0         0
+                           EagerSATotalOrder ...         0         0
+        Plotting LazySABidi details ...
+                           propagate ...  1.42e-06   0.00222
+                              update ...  5.12e-07   9.2e-05
+        Plotting EagerSATotalOrder details ...
+                           propagate ...  8.96e-07      8.68
+                              update ...   1.8e-07  6.77e-06
+
+</pre>
+<style>div#header { position: fixed; top: 0; right: 0; padding: 0.5em; background: white }</style>
+<div id="header">
+<a href="#summary">Summary</a>
+<a href="#tfold(sum)-0004">tfold(sum)-0004</a>
+</div>

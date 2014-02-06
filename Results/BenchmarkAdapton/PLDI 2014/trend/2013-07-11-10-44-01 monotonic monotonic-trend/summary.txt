@@ -1,0 +1,117 @@
+    Summarizing quicksort-0004.json.gz ...
+        Loading Results/SAList/latest/quicksort-0004.json.gz ...  done
+        Plotting time (1.01x of ('from-scratch', 'propagate'))
+                              EagerSATotalOrder (from-scratch) ...      41.9      42.6      42.5      42.8      42.7      43.1      42.1      42.7      42.2      43.1      43.2      42.6      42.1      42.1      42.8      42.3      42.7      42.9
+                                     LazySABidi (from-scratch) ...       1.8      1.76      1.78      1.82      1.87      1.76       1.7      1.79      1.97      2.23       2.5      2.64      2.89      3.04      3.32      3.47      4.43       4.7
+                                     NonSAEager (from-scratch) ...     0.757     0.779     0.741     0.784     0.757     0.802      0.75     0.773      0.76     0.785     0.795     0.741     0.751     0.767     0.747     0.726     0.774     0.781
+                                      NonSALazy (from-scratch) ...     0.075    0.0701    0.0703     0.071    0.0743     0.071    0.0676    0.0686    0.0725    0.0803    0.0924    0.0889      0.09    0.0969     0.109      0.11     0.126     0.138
+                                        LazySABidi (propagate) ...  3.73e-05  3.69e-05  3.85e-05  3.76e-05  4.42e-05  5.87e-05  9.05e-05  0.000169  0.000502   0.00151   0.00306   0.00421   0.00541   0.00662   0.00777   0.00968    0.0113    0.0129
+                                 EagerSATotalOrder (propagate) ...   0.00327   0.00336   0.00339   0.00347   0.00339    0.0035   0.00343   0.00347    0.0034   0.00348    0.0036   0.00356   0.00353   0.00366   0.00374   0.00373   0.00372   0.00394
+        Plotting time (1.01x of ('propagate',))
+                              EagerSATotalOrder (from-scratch) ...      41.9      42.6      42.5      42.8      42.7      43.1      42.1      42.7      42.2      43.1      43.2      42.6      42.1      42.1      42.8      42.3      42.7      42.9
+                                     LazySABidi (from-scratch) ...       1.8      1.76      1.78      1.82      1.87      1.76       1.7      1.79      1.97      2.23       2.5      2.64      2.89      3.04      3.32      3.47      4.43       4.7
+                                     NonSAEager (from-scratch) ...     0.757     0.779     0.741     0.784     0.757     0.802      0.75     0.773      0.76     0.785     0.795     0.741     0.751     0.767     0.747     0.726     0.774     0.781
+                                      NonSALazy (from-scratch) ...     0.075    0.0701    0.0703     0.071    0.0743     0.071    0.0676    0.0686    0.0725    0.0803    0.0924    0.0889      0.09    0.0969     0.109      0.11     0.126     0.138
+                                        LazySABidi (propagate) ...  3.73e-05  3.69e-05  3.85e-05  3.76e-05  4.42e-05  5.87e-05  9.05e-05  0.000169  0.000502   0.00151   0.00306   0.00421   0.00541   0.00662   0.00777   0.00968    0.0113    0.0129
+                                 EagerSATotalOrder (propagate) ...   0.00327   0.00336   0.00339   0.00347   0.00339    0.0035   0.00343   0.00347    0.0034   0.00348    0.0036   0.00356   0.00353   0.00366   0.00374   0.00373   0.00372   0.00394
+        Plotting heap (1.01x of ('from-scratch', 'propagate'))
+                              EagerSATotalOrder (from-scratch) ...  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09  2.38e+09
+                                     LazySABidi (from-scratch) ...  1.17e+08  1.17e+08  1.17e+08  1.17e+08  1.17e+08  1.17e+08  1.17e+08  1.17e+08  1.22e+08  1.27e+08  1.27e+08  1.43e+08  1.64e+08  1.91e+08  1.91e+08  2.02e+08  2.22e+08  2.22e+08
+                                     NonSAEager (from-scratch) ...  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07  2.63e+07
+                                      NonSALazy (from-scratch) ...   6.6e+06   6.6e+06   6.6e+06   6.6e+06   6.6e+06   6.6e+06   6.6e+06   6.6e+06   6.6e+06  7.24e+06  7.24e+06  7.24e+06  7.24e+06  7.24e+06  8.25e+06  8.25e+06  9.65e+06  9.65e+06
+                                        LazySABidi (propagate) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                 EagerSATotalOrder (propagate) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+        Plotting stack (1.01x of ('from-scratch', 'propagate'))
+                              EagerSATotalOrder (from-scratch) ...  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07
+                                     NonSAEager (from-scratch) ...  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06
+                                     LazySABidi (from-scratch) ...  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04  1.15e+04
+                                      NonSALazy (from-scratch) ...  4.43e+03  4.43e+03  4.43e+03  4.43e+03  4.43e+03  4.43e+03  4.43e+03  4.43e+03  4.43e+03  4.43e+03  4.43e+03  4.43e+03  4.43e+03  4.43e+03  4.67e+03  4.67e+03  4.67e+03  4.67e+03
+                                        LazySABidi (propagate) ...         0         0         0         0         0         0         0         0         0         0         0     0.136     0.408         0     0.136         0         0     0.272
+                                 EagerSATotalOrder (propagate) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+        Plotting update (1.01x of ('from-scratch', 'propagate'))
+                                     LazySABidi (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                      NonSALazy (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                              EagerSATotalOrder (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                     NonSAEager (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                        LazySABidi (propagate) ...         1         1         1         1         1         1         1         1         1         1         1         1         1         1         1         1         1         1
+                                 EagerSATotalOrder (propagate) ...         1         1         1         1         1         1         1         1         1         1         1         1         1         1         1         1         1         1
+        Plotting evaluate (1.01x of ('from-scratch', 'propagate'))
+                              EagerSATotalOrder (from-scratch) ...  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06
+                                     LazySABidi (from-scratch) ...  2.09e+05  2.09e+05  2.09e+05  2.09e+05  2.09e+05   2.1e+05  2.11e+05  2.14e+05  2.22e+05  2.46e+05  2.61e+05  2.79e+05  2.95e+05  3.11e+05  3.38e+05  3.51e+05  4.13e+05  4.31e+05
+                                      NonSALazy (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                     NonSAEager (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                 EagerSATotalOrder (propagate) ...       450       450       450       450       450       450       450       450       450       450       450       450       450       450       450       450       450       450
+                                        LazySABidi (propagate) ...      2.93      2.93      2.93      2.93      2.94      2.95      2.98      3.08      3.26      3.79      4.33      5.06      5.04      5.26      5.88      6.11      7.77      8.27
+        Plotting evaluate (1.01x of ('propagate',))
+                              EagerSATotalOrder (from-scratch) ...  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06  4.47e+06
+                                     LazySABidi (from-scratch) ...  2.09e+05  2.09e+05  2.09e+05  2.09e+05  2.09e+05   2.1e+05  2.11e+05  2.14e+05  2.22e+05  2.46e+05  2.61e+05  2.79e+05  2.95e+05  3.11e+05  3.38e+05  3.51e+05  4.13e+05  4.31e+05
+                                      NonSALazy (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                     NonSAEager (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                 EagerSATotalOrder (propagate) ...       450       450       450       450       450       450       450       450       450       450       450       450       450       450       450       450       450       450
+                                        LazySABidi (propagate) ...      2.93      2.93      2.93      2.93      2.94      2.95      2.98      3.08      3.26      3.79      4.33      5.06      5.04      5.26      5.88      6.11      7.77      8.27
+        Plotting clean (1.01x of ('from-scratch', 'propagate'))
+                                     LazySABidi (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                      NonSALazy (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                              EagerSATotalOrder (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                     NonSAEager (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                        LazySABidi (propagate) ...        55        58        67      79.4       104       190       338       640  1.53e+03     3e+03  4.46e+03  5.97e+03   7.5e+03  9.01e+03  1.05e+04  1.21e+04  1.36e+04  1.51e+04
+                                 EagerSATotalOrder (propagate) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+        Plotting dirty (1.01x of ('from-scratch', 'propagate'))
+                                     LazySABidi (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                      NonSALazy (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                              EagerSATotalOrder (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                     NonSAEager (from-scratch) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                        LazySABidi (propagate) ...        58      60.9      69.9      82.3       107       193       341       643  1.53e+03     3e+03  4.47e+03  5.98e+03  7.51e+03  9.01e+03  1.05e+04  1.21e+04  1.36e+04  1.51e+04
+                                 EagerSATotalOrder (propagate) ...      60.8      60.8      60.8      60.8      60.8      60.8      60.8      60.8      60.8      60.8      60.8      60.8      60.8      60.8      60.8      60.8      60.8      60.8
+        Plotting max-heap (1.01x of ('from-scratch', 'propagate'))
+                              EagerSATotalOrder (from-scratch) ...   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09   2.6e+09
+                                     LazySABidi (from-scratch) ...  1.61e+08  1.61e+08  1.61e+08  1.61e+08  1.62e+08  1.62e+08  1.63e+08  1.64e+08   1.7e+08  1.85e+08  1.95e+08  2.07e+08  2.19e+08  2.29e+08  2.45e+08  2.51e+08  2.89e+08     3e+08
+                                     NonSAEager (from-scratch) ...   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07   3.5e+07
+                                      NonSALazy (from-scratch) ...  1.86e+07  1.86e+07  1.86e+07  1.86e+07  1.86e+07  1.86e+07  1.86e+07  1.86e+07  1.86e+07  1.92e+07  1.95e+07     2e+07  2.04e+07  2.04e+07  2.14e+07  2.16e+07  2.37e+07  2.39e+07
+                                 EagerSATotalOrder (propagate) ...  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09  2.68e+09
+                                        LazySABidi (propagate) ...  1.62e+08  1.62e+08  1.62e+08  1.62e+08  1.62e+08  1.62e+08  1.63e+08  1.65e+08  1.71e+08  1.87e+08     2e+08  2.16e+08   2.3e+08  2.41e+08  2.63e+08  2.78e+08  3.24e+08  3.42e+08
+        Plotting max-stack (1.01x of ('from-scratch', 'propagate'))
+                              EagerSATotalOrder (from-scratch) ...  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07
+                                     NonSAEager (from-scratch) ...  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06  3.94e+06
+                                     LazySABidi (from-scratch) ...  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04
+                                      NonSALazy (from-scratch) ...   4.8e+03   4.8e+03   4.8e+03   4.8e+03   4.8e+03   4.8e+03   4.8e+03   4.8e+03   4.8e+03   4.8e+03   4.8e+03   4.8e+03   4.8e+03   4.8e+03  5.04e+03  5.04e+03  5.04e+03  5.04e+03
+                                 EagerSATotalOrder (propagate) ...  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07  1.74e+07
+                                        LazySABidi (propagate) ...  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.18e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04  1.19e+04
+        Plotting time overhead using baseline NonSALazy ...
+                           EagerSATotalOrder ...       559       608       605       604       574       607       622       623       581       536       468       479       468       434       392       385       338       311
+                                  LazySABidi ...      24.1      25.1      25.3      25.7      25.2      24.9      25.1      26.1      27.2      27.8        27      29.7      32.1      31.4      30.4      31.6      35.1      34.1
+                                  NonSAEager ...      10.1      11.1      10.5      11.1      10.2      11.3      11.1      11.3      10.5      9.77       8.6      8.34      8.34      7.92      6.83      6.61      6.13      5.66
+        Plotting time overhead using baseline NonSAEager ...
+                           EagerSATotalOrder ...      55.4      54.7      57.4      54.6      56.4      53.7      56.1      55.3      55.5      54.9      54.4      57.4      56.1      54.8      57.3      58.3      55.2        55
+                                  LazySABidi ...      2.38      2.26       2.4      2.32      2.47       2.2      2.26      2.31       2.6      2.85      3.14      3.57      3.84      3.96      4.45      4.78      5.73      6.02
+                                   NonSALazy ...     0.099      0.09    0.0949    0.0905    0.0982    0.0885    0.0901    0.0887    0.0954     0.102     0.116      0.12      0.12     0.126     0.146     0.151     0.163     0.177
+        Plotting time speed-up using baseline NonSALazy ...
+                     EagerTotalOrder (incr.) ...      22.9      20.8      20.7      20.4      21.9      20.3      19.7      19.8      21.3      23.1      25.6      24.9      25.5      26.4      29.2      29.5      33.9      35.1
+                   LazyBidirectional (incr.) ...  2.01e+03   1.9e+03  1.83e+03  1.89e+03  1.68e+03  1.21e+03       747       406       144      53.1      30.2      21.1      16.7      14.6      14.1      11.4      11.2      10.7
+                                 EagerNonInc ...     0.099      0.09    0.0949    0.0905    0.0982    0.0885    0.0901    0.0887    0.0954     0.102     0.116      0.12      0.12     0.126     0.146     0.151     0.163     0.177
+        Plotting time speed-up using baseline NonSAEager ...
+                     EagerTotalOrder (incr.) ...       231       232       219       226       223       229       219       223       224       226       221       208       213       209       200       195       208       198
+                   LazyBidirectional (incr.) ...  2.03e+04  2.11e+04  1.92e+04  2.08e+04  1.71e+04  1.37e+04  8.29e+03  4.58e+03  1.51e+03       519       260       176       139       116        96        75      68.7      60.8
+                                  LazyNonInc ...      10.1      11.1      10.5      11.1      10.2      11.3      11.1      11.3      10.5      9.77       8.6      8.34      8.34      7.92      6.83      6.61      6.13      5.66
+        Plotting evaluate overhead using baseline NonSALazy ...
+                           EagerSATotalOrder ...       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf
+                                  LazySABidi ...       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf
+                              quicksort-0004 ... skipped due to zeros
+        Plotting evaluate overhead using baseline NonSAEager ...
+                           EagerSATotalOrder ...       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf
+                                  LazySABidi ...       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf       inf
+                              quicksort-0004 ... skipped due to zeros
+        Plotting evaluate speed-up using baseline NonSALazy ...
+                     EagerTotalOrder (incr.) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                   LazyBidirectional (incr.) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                 EagerNonInc ... skipped due to zeros
+        Plotting evaluate speed-up using baseline NonSAEager ...
+                     EagerTotalOrder (incr.) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                   LazyBidirectional (incr.) ...         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+                                  LazyNonInc ... skipped due to zeros
+        Plotting LazySABidi details ...
+                           propagate ...    0.0373    0.0369    0.0385    0.0376    0.0442    0.0587    0.0905     0.169     0.502      1.51      3.06      4.21      5.41      6.62      7.77      9.68      11.3      12.9
+                              update ...   0.00779   0.00903    0.0083   0.00942    0.0117    0.0185    0.0305    0.0627     0.198     0.606      1.24      1.68      2.12       2.6      3.05      3.78      4.38      4.95
+        Plotting EagerSATotalOrder details ...
+                           propagate ...      3.27      3.36      3.39      3.47      3.39       3.5      3.43      3.47       3.4      3.48       3.6      3.56      3.53      3.66      3.74      3.73      3.72      3.94
+                              update ...    0.0017   0.00171   0.00173   0.00175    0.0601   0.00171   0.00822   0.00174   0.00176   0.00185   0.00189   0.00187   0.00185   0.00187   0.00197   0.00194   0.00194   0.00207
