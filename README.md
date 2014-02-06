@@ -31,3 +31,28 @@ Quick-start
         # IntList.insert 0 10 xs;;
         # IntList.to_list zs;;
         - : IntList.data list = [11; 3; 4]
+
+4. Run Adapton.ocaml benchmarks:
+
+        % make pldi2014-benchmarks
+
+    Results will be located in Results/BenchmarkAdapton.
+
+
+Requirements
+============
+
+To compile Adapton.ocaml:
+
+* [OCaml](http://ocaml.org)
+* [Findlib](http://projects.camlcity.org/projects/findlib.html)
+
+To test Adapton.ocaml:
+
+* [OUnit](http://ounit.forge.ocamlcore.org)
+
+To benchmark Adapton.ocaml:
+
+* [Python](http://www.python.org)
+* [matplotlib](http://matplotlib.org)
+* [scipy](http://www.scipy.org)
