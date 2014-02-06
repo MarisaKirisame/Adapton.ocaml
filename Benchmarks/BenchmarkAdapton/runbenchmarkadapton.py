@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     benchmark = subparsers.add_parser("benchmark", help="run benchmark")
     benchmark.add_argument("-O", "--output", metavar="DIRECTORY",
-        help="run benchmark and store results in a subdirectory of %(metavar)s (default: \"%(const)s\")", default=config["output"])
+        help="run benchmark and store results in a subdirectory of %(metavar)s (default: \"%(default)s\")", default=config["output"])
     benchmark.add_argument("-L", "--label", metavar="LABEL", help="optionally append %(metavar)s to result directory")
     benchmark.add_argument("-P", "--processes", metavar="N", help="run %(metavar)s benchmarks in parallel", default=physical_cpu_count(), type=int)
     benchmark.add_argument("-m", "--modules", metavar="MODULE",
