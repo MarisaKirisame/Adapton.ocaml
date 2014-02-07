@@ -34,9 +34,16 @@ Quick-start
 
 4. Run Adapton.ocaml benchmarks:
 
-        % make pldi2014-benchmarks
+    * for a system with at least 8 cores and 16GB memory
 
-    Results will be located in Results/BenchmarkAdapton.
+            % make pldi2014-benchmarks
+
+    * for smaller systems (10% the benchmark size, not run in parallel)
+
+            % make small-pldi2014-benchmarks
+
+    Note the larger benchmark will take a good part of a day to complete. Results will be located in
+    `Results/BenchmarkAdapton`.
 
 
 Requirements
