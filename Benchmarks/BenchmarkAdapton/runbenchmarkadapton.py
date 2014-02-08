@@ -38,13 +38,28 @@ def driver(( module, task, size, repeat, take, edit, monotonic, seed )):
 
 def physical_cpu_count():
     if sys.platform.startswith("darwin"):
-        cpu_count = int(subprocess.check_output([ "sysctl", "-n", "hw.physicalcpu" ]))
+        cpu_count = int(subprocess.check_output(( "sysctl", "-n", "hw.physicalcpu" )))
     elif sys.platform.startswith("linux"):
         import re
-        re_cpuinfo = re.compile(r"siblings\s+: ([0-9]+).*?cpu cores\s+: ([0-9]+)", re.MULTILINE | re.DOTALL)
-        cpu_count = int(sum(map(lambda m: float(m.group(2)) / float(m.group(1)), re_cpuinfo.finditer(open("/proc/cpuinfo").read()))))
+        re_lscpu = re.compile(r"Core\(s\) per socket:\s+([0-9]+).*Socket\(s\):\s+([0-9]+)", re.MULTILINE | re.DOTALL)
+        try:
+            m = re_lscpu.find(subprocess.check_output("lscpu"))
+        except Exception:
+            cpu_count = 0
+        else:
+            if m:
+                cpu_count = int(m.group(1) * m.group(2))
+            else:
+                cpu_count = 0
+        if cpu_count == 0:
+            re_cpuinfo = re.compile(r"siblings\s+: ([0-9]+).*?cpu cores\s+: ([0-9]+)", re.MULTILINE | re.DOTALL)
+            cpu_count = int(sum(map(lambda m: float(m.group(2)) / float(m.group(1)), re_cpuinfo.finditer(open("/proc/cpuinfo").read()))))
+        if cpu_count == 0:
+            cpu_count = multiprocessing.cpu_count()
+            print>>sys.stderr, "Warning: unable compute physical_cpu_count() using lscpu or /proc/cpuinfo; using %d" % ( cpu_count, )
     else:
-        print>>sys.stderr, "Warning: physical_cpu_count() not implemented for %s; using %d" % ( sys.platform, multiprocessing.cpu_count() )
+        cpu_count = multiprocessing.cpu_count()
+        print>>sys.stderr, "Warning: physical_cpu_count() not implemented for %s; using %d" % ( sys.platform, cpu_count )
     global physical_cpu_count
     physical_cpu_count = lambda: cpu_count
     return cpu_count
