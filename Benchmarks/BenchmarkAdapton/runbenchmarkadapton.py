@@ -75,43 +75,52 @@ if __name__ == "__main__":
     config["tasks"] = config["takes"].keys()
     config["output"] = "Results/BenchmarkAdapton"
 
+    class HelpFormatter(argparse.HelpFormatter):
+        def _expand_help(self, action):
+            if isinstance(action.default, ( list, tuple )):
+                import copy
+                action = copy.copy(action)
+                action.default = " ".join(map(str, action.default))
+            return super(HelpFormatter, self)._expand_help(action)
+
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="subparser")
 
-    benchmark = subparsers.add_parser("benchmark", help="run benchmark")
+    benchmark = subparsers.add_parser("benchmark", help="run benchmark", formatter_class=HelpFormatter)
     benchmark.add_argument("-O", "--output", metavar="DIRECTORY",
-        help="run benchmark and store results in a subdirectory of %(metavar)s (default: \"%(default)s\")", default=config["output"])
+        help="run benchmark and store results in a subdirectory of %(metavar)s (default: %(default)s)", default=config["output"])
     benchmark.add_argument("-L", "--label", metavar="LABEL", help="optionally append %(metavar)s to result directory")
-    benchmark.add_argument("-P", "--processes", metavar="N", help="run %(metavar)s benchmarks in parallel", default=physical_cpu_count(), type=int)
+    benchmark.add_argument("-P", "--processes", metavar="N", help="run %(metavar)s benchmarks in parallel (default: %(default)s)",
+        default=physical_cpu_count(), type=int)
     benchmark.add_argument("-m", "--modules", metavar="MODULE",
-        help="apply benchmark to %(metavar)s(s) (default: \"%(default)s\")", nargs="+", default=config["modules"], choices=config["modules"])
+        help="apply benchmark to %(metavar)s(s) (default: %(default)s)", nargs="+", default=config["modules"], choices=config["modules"])
     benchmark.add_argument("-b", "--baselines", metavar="BASELINE",
-        help="compare modules against %(metavar)s(s) (default: \"%(default)s\")", nargs="+", default=config["baselines"], choices=config["modules"])
+        help="compare modules against %(metavar)s(s) (default: %(default)s)", nargs="+", default=config["baselines"], choices=config["modules"])
     benchmark.add_argument("-t", "--tasks", metavar="TASK",
-        help="apply benchmark to %(metavar)s(s) (default: \"%(default)s\")", nargs="+", default=config["tasks"], choices=config["tasks"])
+        help="apply benchmark to %(metavar)s(s) (default: %(default)s)", nargs="+", default=config["tasks"], choices=config["tasks"])
     benchmark.add_argument("-I", "--input-sizes", metavar="SIZE",
-        help="run benchmarks with input size (default: 100000 10000 1000 100 50000 5000 500 50 200000 20000 2000 200 20)",
+        help="run benchmarks with input size (default: %(default)s)",
         nargs="+", default=( 100000, 10000, 1000, 100, 50000, 5000, 500, 50, 20000, 2000, 200, 20 ), type=int)
     benchmark.add_argument("-R", "--repeat-count", metavar="REPEAT",
-        help="repeat the computation on the same input %(metavar)s times per cycle (default: 1)",
+        help="repeat the computation on the same input %(metavar)s times per cycle (default: %(default)s)",
         default=1, type=int)
-    benchmark.add_argument("-T", "--take-counts", metavar="TAKE", help="take only the first %(metavar)s elements of each output (default: 1)",
+    benchmark.add_argument("-T", "--take-counts", metavar="TAKE", help="take only the first %(metavar)s elements of each output (default: %(default)s)",
         nargs="+", default=( 1, ), type=int)
-    benchmark.add_argument("-E", "--edit-count", metavar="COUNT", help="average Adapton benchmarks over %(metavar)s edits ",
+    benchmark.add_argument("-E", "--edit-count", metavar="COUNT", help="average Adapton benchmarks over %(metavar)s edits (default: %(default)s)",
         default=250, type=int)
     benchmark.add_argument("-M", "--monotonic", help="make monotonic edits ", action="store_true")
     benchmark.add_argument("-S", "--random-seeds", metavar="SEED", help="run benchmark for seeds (default: 5 random seeds)",
         nargs="+", default=random.sample(xrange(sys.maxint >> 1), 5), type=int)
 
-    resummarize = subparsers.add_parser("resummarize", help="resummarize benchmark results")
+    resummarize = subparsers.add_parser("resummarize", help="resummarize benchmark results", formatter_class=HelpFormatter)
     resummarize.add_argument("-I", "--inputs", metavar="DIRECTORY",
-        help="resummarize benchmark results in %(metavar)s(s) (default: \"%(default)s\")", nargs="+", default=( os.path.join(config["output"], "latest"), ))
+        help="resummarize benchmark results in %(metavar)s(s) (default: %(default)s)", nargs="+", default=( os.path.join(config["output"], "latest"), ))
     resummarize.add_argument("-O", "--output", metavar="DIRECTORY",
         help="save benchmark summary in %(metavar)s (default: if only one directory is given for -I/--inputs, the same directory; "
-            + "otherwise, a subdirectory in \"%s\")" % ( config["output"], ), nargs="?")
+            + "otherwise, a subdirectory in %s)" % ( config["output"], ), nargs="?")
     resummarize.add_argument("-L", "--label", metavar="LABEL", help="optionally append %(metavar)s to summary directory")
     resummarize.add_argument("-b", "--baselines", metavar="BASELINE",
-        help="compare modules against %(metavar)s(s) (default: \"%(default)s\")", nargs="+", default=config["baselines"], choices=config["modules"])
+        help="compare modules against %(metavar)s(s) (default: %(default)s)", nargs="+", default=config["baselines"], choices=config["modules"])
 
     args = parser.parse_args()
 
