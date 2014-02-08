@@ -383,9 +383,10 @@ if __name__ == "__main__":
                         for key in table.iterkeys():
                             table[key].setdefault("from-scratch", {}).setdefault(record["module"], {}) \
                                 .setdefault(record[results["x-axis"]], []).append(record["setup"][key])
-                        if units and units != record["units"]:
+                        if not units:
+                            units = record["units"]
+                        elif units != record["units"]:
                             raise ValueError("inconsistent units in results:\nexpected: %s\ngot: %s" % ( pprint.pformat(units), pprint.pformat(record["units"]) ))
-                        units.update(record["units"])
                     except Exception:
                         traceback.print_exc()
                         if "error" in record:
