@@ -164,8 +164,6 @@ if __name__ == "__main__":
             parser.error("-P/--processes must be between 1 and %d (the total number of physical processor cores)" % ( physical_cpu_count(), ))
         if len(set(args.input_sizes)) > 1 and len(set(args.take_counts)) > 1:
             parser.error("either -I/--input-sizes or -T/--take-counts must be given only one unique value")
-        elif len(set(args.input_sizes)) == 1 and len(set(args.take_counts)) == 1:
-            parser.error("-I/--input-sizes and -T/--take-counts must not both be given only one unique value each")
         if min(args.input_sizes) < 4:
             for task in args.tasks:
                 if config["takes"][task] == "exptree":
@@ -253,17 +251,25 @@ if __name__ == "__main__":
                     if len(args.input_sizes) > 1:
                         assert len(args.take_counts) == 1
                         results = OrderedDict((
-                            ( "label", "take count = %d" % args.take_counts[0] ),
+                            ( "label", "take count = %d" % ( args.take_counts[0], ) ),
                             ( "x-axis", "size" ),
                             ( "x-label", "input size" ),
                             ( "data", results )
                         ))
-                    else:
-                        assert len(args.input_sizes) == 1 and len(args.take_counts) > 1
+                    elif len(args.take_counts) > 1:
+                        assert len(args.input_sizes) == 1
                         results = OrderedDict((
-                            ( "label", "input size = %d" % args.input_sizes[0] ),
+                            ( "label", "input size = %d" % ( args.input_sizes[0], ) ),
                             ( "x-axis", "take" ),
                             ( "x-label", "take count" ),
+                            ( "data", results )
+                        ))
+                    else:
+                        assert len(args.take_counts) == 1 and len(args.input_sizes) == 1
+                        results = OrderedDict((
+                            ( "label", "input size = %d; count = %d" % ( args.input_sizes[0], args.take_counts[0] ) ),
+                            ( "x-axis", "size" ),
+                            ( "x-label", "" ),
                             ( "data", results )
                         ))
                     with gzip.open(os.path.join(output, "%s-%04d.json.gz" % ( task, len(results) )), "w") as jsonfile:
@@ -278,6 +284,7 @@ if __name__ == "__main__":
     from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
     from matplotlib.figure import Figure
     from matplotlib.ticker import Formatter
+    from matplotlib.colors import colorConverter
     from scipy import stats
 
     class Tee(object):
@@ -315,6 +322,9 @@ if __name__ == "__main__":
         for color, ( linestyle, ( marker, markersize ) ) in izip(
             cycle(( "black", "darkblue", "darkred", "darkgreen", "darkcyan", "dimgray" )),
             cycle(product(( "-", "--", "-." ), ( ( ".", 8 ), ( "^", 6 ), ( "s", 4 ), ( "*", 7 ), ( "D", 4 ) ))) )).next)
+
+    def lightcolor(style):
+        return tuple( c**0.20 for c in colorConverter.to_rgb(style["color"]) )
 
     scalings = defaultdict(lambda: ( ( 1.01, ( "from-scratch", "propagate" ) ), ))
     scalings["time"] += ( (  1.01, ( "propagate", ) ), )
@@ -442,6 +452,7 @@ if __name__ == "__main__":
                                 ax.spines[side].set_visible(False)
                             ax.grid(linewidth=0.5, linestyle=":", color="silver")
 
+                            offset = 0
                             for timing in ( "from-scratch", "propagate" ):
                                 if timing == "propagate" and not editables:
                                     continue
@@ -450,9 +461,17 @@ if __name__ == "__main__":
                                     xvalues, yvalues = zip(*xvalues.iteritems())
                                     print>>txtfile, "            %50s ... %s" \
                                         % ( "%s (%s)" % ( module, timing ), " ".join( format(yvalue, "9.3g") for yvalue in yvalues ) )
-                                    ax.plot(xvalues, yvalues, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none",
-                                        **styles[module, timing])
-                            ax.set_xbound(lower=0)
+                                    if results["x-label"] == "":
+                                        ax.bar(offset, yvalues[-1], clip_on=False, label="%s (%s)" % ( module, timing ), color=lightcolor(styles[module, timing]))
+                                        offset += 1
+                                    else:
+                                        ax.plot(xvalues, yvalues, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none",
+                                            **styles[module, timing])
+                            if results["x-label"] == "":
+                                ax.set_xticks([])
+                                ax.set_xbound(lower=0, upper=offset)
+                            else:
+                                ax.set_xbound(lower=0)
                             ax.set_ybound(lower=0, upper=yadjust * max( ymax[measurement].get(timing, 0) for timing in timings ))
 
                             try:
@@ -492,14 +511,23 @@ if __name__ == "__main__":
                                 ax.grid(linewidth=0.5, linestyle=":", color="silver")
 
                                 print>>txtfile, "        Plotting %s overhead using baseline %s ..." % ( measurement, baseline )
+                                offset = 0
                                 for module in table[measurement]["from-scratch"].iterkeys():
                                     if module == baseline:
                                         continue
                                     xvalues, overheads = zip(*( ( xvalue, yvalue / table[measurement]["from-scratch"][baseline][xvalue] ) \
                                         for xvalue, yvalue in table[measurement]["from-scratch"][module].iteritems() ))
                                     print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(overhead, "9.3g") for overhead in overheads ) )
-                                    ax.plot(xvalues, overheads, clip_on=False, label=module, markeredgecolor="none", **styles[module, "from-scratch"])
-                                ax.set_xbound(lower=0)
+                                    if results["x-label"] == "":
+                                        ax.bar(offset, overheads[-1], clip_on=False, label=module, color=lightcolor(styles[module, "from-scratch"]))
+                                        offset += 1
+                                    else:
+                                        ax.plot(xvalues, overheads, clip_on=False, label=module, markeredgecolor="none", **styles[module, "from-scratch"])
+                                if results["x-label"] == "":
+                                    ax.set_xticks([])
+                                    ax.set_xbound(lower=0, upper=offset)
+                                else:
+                                    ax.set_xbound(lower=0)
                                 ax.set_ybound(lower=0)
 
                                 try:
@@ -537,6 +565,7 @@ if __name__ == "__main__":
                                 ax.grid(linewidth=0.5, linestyle=":", color="silver")
 
                                 print>>txtfile, "        Plotting %s speed-up using baseline %s ..." % ( measurement, baseline )
+                                offset = 0
                                 for module in table[measurement]["from-scratch"].iterkeys():
                                     if module == baseline:
                                         continue
@@ -548,9 +577,17 @@ if __name__ == "__main__":
                                         for xvalue, yvalue in table[measurement][timing][module].iteritems() ))
                                     print>>txtfile, "            %50s ... %s" \
                                         % ( "%s (%s)" % ( module, timing ), " ".join( format(speedup, "9.3g") for speedup in speedups ) )
-                                    ax.plot(xvalues, speedups, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none",
-                                        **styles[module, timing])
-                                ax.set_xbound(lower=0)
+                                    if results["x-label"] == "":
+                                        ax.bar(offset, speedups[-1], clip_on=False, label="%s (%s)" % ( module, timing ), color=lightcolor(styles[module, timing]))
+                                        offset += 1
+                                    else:
+                                        ax.plot(xvalues, speedups, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none",
+                                            **styles[module, timing])
+                                if results["x-label"] == "":
+                                    ax.set_xticks([])
+                                    ax.set_xbound(lower=0, upper=offset)
+                                else:
+                                    ax.set_xbound(lower=0)
                                 ax.set_ybound(lower=0)
 
                                 try:
@@ -588,12 +625,21 @@ if __name__ == "__main__":
                                 ax.spines[side].set_visible(False)
                             ax.grid(linewidth=0.5, linestyle=":", color="silver")
 
+                            offset = 0
                             for timing in ( "propagate", "update" ):
                                 xvalues, yvalues = zip(*table["time"][timing][module].iteritems())
                                 print>>txtfile, "            %24s ... %s" \
                                     % ( timing, " ".join( format(yvalue, "9.3g") for yvalue in yvalues ) )
-                                ax.plot(xvalues, yvalues, clip_on=False, label="%s" % ( timing, ), markeredgecolor="none", **styles[module, timing])
-                            ax.set_xbound(lower=0)
+                                if results["x-label"] == "":
+                                    ax.bar(offset, yvalues[-1], clip_on=False, label="%s" % ( timing, ), color=lightcolor(styles[module, timing]))
+                                    offset += 1
+                                else:
+                                    ax.plot(xvalues, yvalues, clip_on=False, label="%s" % ( timing, ), markeredgecolor="none", **styles[module, timing])
+                            if results["x-label"] == "":
+                                ax.set_xticks([])
+                                ax.set_xbound(lower=0, upper=offset)
+                            else:
+                                ax.set_xbound(lower=0)
                             ax.set_ybound(lower=0)
 
                             try:
