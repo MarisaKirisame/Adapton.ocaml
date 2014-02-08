@@ -53,6 +53,7 @@ To compile Adapton.ocaml:
 
 * [OCaml](http://ocaml.org)
 * [Findlib](http://projects.camlcity.org/projects/findlib.html)
+* [Menhir](http://cristal.inria.fr/~fpottier/menhir)
 
 To test Adapton.ocaml:
 
@@ -61,5 +62,6 @@ To test Adapton.ocaml:
 To benchmark Adapton.ocaml:
 
 * [Python](http://www.python.org)
+* [psutil](http://code.google.com/p/psutil)
 * [matplotlib](http://matplotlib.org)
 * [scipy](http://www.scipy.org)
