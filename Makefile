@@ -79,6 +79,8 @@ pldi2014-benchmarks :
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t "tfold(sum)" "tfold(min)" -I 1000000 4 -T 1 -P 2 $(FLAGS)'
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t exptree -I 1000000 4 -T 1 -P 8 $(FLAGS)'
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/swap" -t updown1 updown2 -I 40000 4 -T 1 -P 2 $(FLAGS)'
+
+pldi2014-trend-benchmarks :
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/trend" -t quicksort -I 100000 -T 5000 4500 4000 3500 3000 2500 2000 1500 1000 500 200 100 50 20 10 5 2 1 -M $(SEEDS) -P 4 -m "Adapton" "EagerTotalOrder" "LazyNonInc" -b "EagerNonInc"'
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/trend" -t mergesort -I 100000 -T 5000 4500 4000 3500 3000 2500 2000 1500 1000 500 200 100 50 20 10 5 2 1 -M $(SEEDS) -P 4 -m "Adapton" "LazyNonInc" -b "EagerNonInc"'
 
@@ -98,6 +100,8 @@ small-pldi2014-benchmarks :
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t "tfold(sum)" "tfold(min)" -I 100000 4 -T 1 -P 1 $(FLAGS)'
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t exptree -I 100000 4 -T 1 -P 1 $(FLAGS)'
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/swap" -t updown1 updown2 -I 4000 4 -T 1 -P 1 $(FLAGS)'
+
+small-pldi2014-trend-benchmarks :
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/trend" -t quicksort -I 10000 -T 500 450 400 350 300 250 200 150 100 50 20 10 5 2 1 -M $(SEEDS) -P 1 -m "Adapton" "EagerTotalOrder" "LazyNonInc" -b "EagerNonInc"'
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/trend" -t mergesort -I 10000 -T 500 450 400 350 300 250 200 150 100 50 20 10 5 2 1 -M $(SEEDS) -P 1 -m "Adapton" "LazyNonInc" -b "EagerNonInc"'
 
