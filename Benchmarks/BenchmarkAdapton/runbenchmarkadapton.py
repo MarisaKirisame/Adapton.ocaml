@@ -340,7 +340,7 @@ if __name__ == "__main__":
         with Tee(sys.stderr, os.path.join(output, "summary.txt"), "w") as txtfile:
             for file in files:
                 print>>txtfile, "    Summarizing %s ..." % ( file, )
-                label = file[:-8]
+                label = file[:-13]
                 summary = os.path.join(output, label)
                 print>>htmlfile, "<h1 id=\"%s\">%s</h1>" % ( label, label )
 
@@ -664,6 +664,7 @@ if __name__ == "__main__":
         print>>htmlfile, "<style>div#header { position: fixed; top: 0; right: 0; padding: 0.5em; background: white }</style>"
         print>>htmlfile, "<div id=\"header\">"
         print>>htmlfile, "<a href=\"#summary\">Summary</a>"
-        for label in ( file[:-8] for file in files ):
+        for file in files:
+            label = file[:-13]
             print>>htmlfile, "<a href=\"#%s\">%s</a>" % ( label, label )
         print>>htmlfile, "</div>"
