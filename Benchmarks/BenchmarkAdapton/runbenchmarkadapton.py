@@ -111,6 +111,8 @@ if __name__ == "__main__":
     benchmark.add_argument("-M", "--monotonic", help="make monotonic edits ", action="store_true")
     benchmark.add_argument("-S", "--random-seeds", metavar="SEED", help="run benchmark for seeds (default: 5 random seeds)",
         nargs="+", default=random.sample(xrange(sys.maxint >> 1), 5), type=int)
+    benchmark.add_argument("-s", "--summaries", metavar="SUMMARY",
+        help="generate %(metavar)s(s) (default: %(default)s)", nargs="*", default=( "table", "plots" ), choices=( "table", "plots" ))
 
     resummarize = subparsers.add_parser("resummarize", help="resummarize benchmark results", formatter_class=HelpFormatter)
     resummarize.add_argument("-I", "--inputs", metavar="DIRECTORY",
@@ -120,7 +122,9 @@ if __name__ == "__main__":
             + "otherwise, a subdirectory in %s)" % ( config["output"], ), nargs="?")
     resummarize.add_argument("-L", "--label", metavar="LABEL", help="optionally append %(metavar)s to summary directory")
     resummarize.add_argument("-b", "--baselines", metavar="BASELINE",
-        help="compare modules against %(metavar)s(s) (default: %(default)s)", nargs="+", default=config["baselines"], choices=config["modules"])
+        help="compare modules against %(metavar)s(s) (default: %(default)s)", nargs="+", default=config["baselines"]) #, choices=config["modules"])
+    resummarize.add_argument("-s", "--summaries", metavar="SUMMARY",
+        help="generate %(metavar)s(s) (default: %(default)s)", nargs="+", default=( "table", "plots" ), choices=( "table", "plots" ))
 
     args = parser.parse_args()
 
@@ -275,6 +279,10 @@ if __name__ == "__main__":
                     with gzip.open(os.path.join(output, "%s-%04d.json.gz" % ( task, len(results) )), "w") as jsonfile:
                         json.dump(results, jsonfile, indent=4, separators=( ",", ":" ))
 
+    if not args.summaries:
+        sys.exit()
+
+
     print>>sys.stderr, "Generating summary in %s ..." % ( output, )
     files = sorted(set(chain.from_iterable( ( file for file in os.listdir(path) if file.endswith(".json.gz") ) for path in inputs )))
 
@@ -301,8 +309,9 @@ if __name__ == "__main__":
             self.file.write(s)
 
     class EngFormatter(Formatter):
-        def __init__(self, places=3):
+        def __init__(self, places=3, exp0=False):
             self.places = places
+            self.exp0 = exp0
 
         def __call__(self, num, pos=None):
             num = Decimal(str(num))
@@ -314,7 +323,7 @@ if __name__ == "__main__":
 
             mantissa = num / ( 10 ** exp )
             result = "%.*g" % ( self.places, mantissa )
-            if exp != 0:
+            if self.exp0 or exp != 0:
                 result += "e%+d" % ( exp, )
             return result
 
@@ -338,17 +347,12 @@ if __name__ == "__main__":
         print>>htmlfile, "<style>figure.inline-figure { display: inline-block; margin: 0; }</style>"
 
         with Tee(sys.stderr, os.path.join(output, "summary.txt"), "w") as txtfile:
+            tasks = OrderedDict()
+            units = {}
+            editables = set()
             for file in files:
-                print>>txtfile, "    Summarizing %s ..." % ( file, )
                 label = file[:-13]
-                summary = os.path.join(output, label)
-                print>>htmlfile, "<h1 id=\"%s\">%s</h1>" % ( label, label )
-
-                try:
-                    os.makedirs(summary)
-                except OSError as e:
-                    if e.errno != errno.EEXIST:
-                        raise
+                print>>txtfile, "    Loading %s ..." % ( label, )
 
                 results = None
                 for path in inputs:
@@ -376,13 +380,15 @@ if __name__ == "__main__":
                         print>>txtfile, " done"
 
                 table = OrderedDict( ( key, {} ) for key in ( "time", "heap", "stack", "update", "evaluate", "clean", "dirty", "max-heap", "max-stack" ) )
-                units = {}
-                editables = set()
+                sizes = set()
+                takes = set()
                 for record in results["data"]:
                     try:
                         for key in table.iterkeys():
                             table[key].setdefault("from-scratch", {}).setdefault(record["module"], {}) \
                                 .setdefault(record[results["x-axis"]], []).append(record["setup"][key])
+                            sizes.add(record["size"])
+                            takes.add(record["take"])
                         if not units:
                             units = record["units"]
                         elif units != record["units"]:
@@ -409,95 +415,255 @@ if __name__ == "__main__":
                                 if "error" in record:
                                     pprint.pprint(dict(record))
 
-                xmax = {}
                 ymax = {}
                 for measurement, measurement_table in table.iteritems():
-                    xmax[measurement] = {}
                     ymax[measurement] = {}
                     for timing, module_table in measurement_table.iteritems():
                         for module, xvalues in module_table.iteritems():
                             for xvalue, yvalues in xvalues.iteritems():
                                 avg = stats.tmean(yvalues)
                                 xvalues[xvalue] = avg
-                                xmax[measurement][timing] = max(xmax[measurement].get(timing, 0), xvalue)
                                 ymax[measurement][timing] = max(ymax[measurement].get(timing, 0), avg)
                             module_table[module] = OrderedDict(sorted(xvalues.iteritems()))
                         measurement_table[timing] = OrderedDict(
                             sorted(module_table.iteritems(), key=lambda ( module, xvalues ): max(xvalues.itervalues()), reverse=True))
 
-                for measurement, measurement_table in table.iteritems():
-                    for yadjust, timings in scalings[measurement]:
-                        if timings == ( "propagate", ) and not editables:
-                            continue
-                        print>>txtfile, "        Plotting %s (%.2fx of %s)" % ( measurement, yadjust, timings )
-                        pdffilename = "%s-%s-%s-%s.pdf" % ( label, measurement, yadjust, "-".join(timings) )
-                        with open(os.path.join(summary, pdffilename), "w") as pdffile:
-                            fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
-                            ax = fig.add_subplot(1, 1, 1)
-                            ax.set_title(results["label"], fontsize=8)
-                            ax.set_xlabel(results["x-label"], fontsize=8)
-                            if units[measurement]:
-                                ax.set_ylabel("%s (%s)" % ( measurement, units[measurement] ), fontsize=8)
+                tasks[label] = { "results": results, "table": table, "sizes": sorted(sizes), "takes": sorted(takes), "ymax": ymax }
+
+
+            if "table" in args.summaries:
+                from contextlib import contextmanager
+                from collections import namedtuple, defaultdict
+                import types
+
+                class TableError(Exception): pass
+                class TableTag(object):
+                    def __init__(self, tag): self.tag = tag
+                    def __str__(self): return self.tag
+                THeadBegin = TableTag("<thead>")
+                THeadEnd = TableTag("</thead>")
+                TBodyBegin = TableTag("<tbody>")
+                TBodyEnd = TableTag("</tbody>")
+                TNull = TableTag("")
+                class TCell(namedtuple("TCell", ( "val", "colspan", "rowspan" ))):
+                    def __str__(self):
+                        return "<%s%s%s>%s</%s>" % (
+                            self.__class__.__name__.lower(),
+                            "" if self.colspan == 1 else " colspan=\"%s\"" % self.colspan,
+                            "" if self.rowspan == 1 else " rowspan=\"%s\"" % self.rowspan,
+                            self.val,
+                            self.__class__.__name__.lower() )
+                class Th(TCell): pass
+                class Td(TCell): pass
+                class Table(object):
+                    def __init__(self):
+                        self.span = []
+                        self.rows = []
+                        self.pend = None
+                        self.sec = None
+                        self.cur = None
+                        self.pos = None
+                    def thead(self):
+                        return self.tsec(THeadBegin, THeadEnd)
+                    def tbody(self):
+                        return self.tsec(TBodyBegin, TBodyEnd)
+                    @contextmanager
+                    def tsec(self, tbegin, tend):
+                        if self.sec:
+                            raise TableError("already in a %s section" % ( self.sec, ))
+                        try:
+                            self.sec = tbegin
+                            self.pend = []
+                            self.rows.append(tbegin)
+                            yield
+                        finally:
+                            self.rows.append(tend)
+                            self.pend = None
+                            self.sec = None
+                    @contextmanager
+                    def tr(self):
+                        if self.pos is not None:
+                            raise TableError("already in a row")
+                        try:
+                            self.pos = 0
+                            if not self.pend:
+                                self.pend.append([])
+                            yield
+                        finally:
+                            self.rows.append(self.pend.pop(0))
+                            self.pos = None
+                    def th(self, *args, **kwargs):
+                        self.cell(Th, *args, **kwargs)
+                    def td(self, *args, **kwargs):
+                        self.cell(Td, *args, **kwargs)
+                    def cell(self, T, val, colspan=1, rowspan=1):
+                        if colspan <= 0:
+                            raise ValueError("colspan %d <= 0" % ( colspan, ))
+                        if rowspan <= 0:
+                            raise ValueError("rowspan %d <= 0" % ( rowspan, ))
+                        if self.pos is None:
+                            raise TableError("not in a row")
+                        while self.pos < len(self.pend[0]) and self.pend[0][self.pos] is not None:
+                            self.pos += 1
+                        self.pend.extend( [] for _ in xrange(rowspan - len(self.pend)) )
+                        for pend in self.pend[0:rowspan]:
+                            pend.extend( ( None, ) * (self.pos + colspan - len(pend)) )
+                            pend[self.pos:self.pos + colspan] = ( TNull, ) * colspan
+                        val = str(val)
+                        self.span.extend( set() for _ in xrange(colspan - len(self.span)) )
+                        self.span[colspan - 1].add(( len(val), self.pos ))
+                        self.pend[0][self.pos] = T(val, colspan, rowspan)
+                        self.pos += 1
+                    def to_plain(self, sep=" | ", vsep="-"):
+                        if self.pos is not None:
+                            raise TableError("still in a row")
+                        if self.sec is not None:
+                            raise TableError("still in a %s section" % ( self.sec, ))
+                        if len(vsep) != 1 or not isinstance(vsep, types.StringTypes):
+                            raise ValueError("vsep = \"%s\" is not a single character" % ( vsep, ))
+
+                        colw = []
+                        for colspan, widths in enumerate(self.span):
+                            colspan = colspan + 1
+                            for width, pos in sorted(widths):
+                                width -= len(sep) * (colspan - 1)
+                                if width > 0:
+                                    colw.extend( ( 0, ) * (pos + colspan - len(colw)))
+                                    rem = width % colspan
+                                    for col in xrange(colspan):
+                                        colw[pos + col] = max(width // colspan + (col < rem), colw[pos + col])
+
+                        lines = []
+                        for row in self.rows:
+                            if row is THeadEnd:
+                                lines.append(vsep * (sum(colw) + len(sep) * (len(colw) - 1)))
+                            elif isinstance(row, list):
+                                line = []
+                                pos = 0
+                                for col, cell in enumerate(row):
+                                    if cell is TNull:
+                                        if col == pos:
+                                            line.append(" " * colw[col])
+                                            pos += 1
+                                    elif isinstance(cell, TCell):
+                                        line.append("%*s" % ( sum(colw[col:col + cell.colspan]) + len(sep) * (cell.colspan - 1), cell.val ))
+                                        pos += cell.colspan
+                                lines.append(sep.join(line))
+                        return "\n".join(lines)
+                    def __str__(self):
+                        if self.cur is not None:
+                            raise TableError("still in a row")
+                        if self.sec is not None:
+                            raise TableError("still in a %s section" % ( self.sec, ))
+                        lines = []
+                        lines.append("<table>")
+                        for row in self.rows:
+                            if isinstance(row, TableTag):
+                                lines.append(str(row))
                             else:
-                                ax.set_ylabel("%s" % ( measurement, ), fontsize=8)
-                            for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
-                                axis.set_major_formatter(EngFormatter())
-                                axis.set_ticks_position("none")
-                            if hasattr(ax, "tick_params"):
-                                ax.tick_params(labelsize=7)
-                            for side in ( "left", "bottom" ):
-                                ax.spines[side].set_color("silver")
-                                ax.spines[side].set_linestyle("dotted")
-                                ax.spines[side].set_linewidth(0.5)
-                            for side in ( "right", "top" ):
-                                ax.spines[side].set_visible(False)
-                            ax.grid(linewidth=0.5, linestyle=":", color="silver")
-
-                            offset = 0
-                            for timing in ( "from-scratch", "propagate" ):
-                                if timing == "propagate" and not editables:
-                                    continue
-                                module_table = measurement_table[timing]
-                                for module, xvalues in module_table.iteritems():
-                                    xvalues, yvalues = zip(*xvalues.iteritems())
-                                    print>>txtfile, "            %50s ... %s" \
-                                        % ( "%s (%s)" % ( module, timing ), " ".join( format(yvalue, "9.3g") for yvalue in yvalues ) )
-                                    if results["x-label"] == "":
-                                        ax.bar(offset, yvalues[-1], clip_on=False, label="%s (%s)" % ( module, timing ), color=lightcolor(styles[module, timing]))
-                                        offset += 1
-                                    else:
-                                        ax.plot(xvalues, yvalues, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none",
-                                            **styles[module, timing])
-                            if results["x-label"] == "":
-                                ax.set_xticks([])
-                                ax.set_xbound(lower=0, upper=offset)
-                            else:
-                                ax.set_xbound(lower=0)
-                            ax.set_ybound(lower=0, upper=yadjust * max( ymax[measurement].get(timing, 0) for timing in timings ))
-
-                            try:
-                                ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
-                            except TypeError:
-                                ax.legend(loc="best", prop={ "size": 8 }, fancybox=False)
-
-                            if hasattr(fig, "tight_layout"):
-                                fig.tight_layout(pad=0.5)
-
-                            fig.savefig(pdffile, format="pdf")
-                            print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
-                                % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
+                                lines.append("<tr>")
+                                lines.extend( str(cell) for cell in row if isinstance(cell, TCell) )
+                                lines.append("</tr>")
+                        lines.append("</table>")
+                        return "\n".join(lines)
 
 
-                if editables:
-                    for measurement in ( "time", "evaluate" ):
+                print>>htmlfile, "<h1 id=\"table\">Table</h1>"
+                print>>htmlfile, "<style>table, th, td { border: 1px solid black; border-collapse: collapse } td { text-align: right }</style>"
+                htmltable = Table()
+                with htmltable.thead():
+                    with htmltable.tr():
+                        htmltable.th("task", rowspan=4)
+                        htmltable.th("input #", rowspan=4)
+                        htmltable.th("take #", rowspan=4)
                         for baseline in args.baselines:
-                            pdffilename = "%s-%s-%s-overhead.pdf" % ( label, baseline, measurement )
+                            htmltable.th(baseline, colspan=2)
+                        for editable in editables:
+                            htmltable.th(editable, colspan=2 * (len(args.baselines) + 1))
+                    with htmltable.tr():
+                        for _ in args.baselines:
+                            htmltable.th("time", rowspan=2)
+                            htmltable.th("max-heap", rowspan=2)
+                        for _ in editables:
+                            htmltable.th("from-scratch", colspan=len(args.baselines) + 1)
+                            htmltable.th("incremental", colspan=len(args.baselines) + 1)
+                    with htmltable.tr():
+                        for _ in editables:
+                            htmltable.th("overhead", colspan=len(args.baselines))
+                            htmltable.th("max-heap")
+                            htmltable.th("speed-up", colspan=len(args.baselines))
+                            htmltable.th("max-heap")
+                    with htmltable.tr():
+                        for _ in args.baselines:
+                            htmltable.th(units["time"])
+                            htmltable.th(units["max-heap"])
+                        for _ in xrange(len(editables) * 2):
+                            for baseline in args.baselines:
+                                htmltable.th(baseline)
+                            htmltable.th(units["max-heap"])
+                engFormatter = EngFormatter(exp0=True)
+                with htmltable.tbody():
+                    for label, task in tasks.iteritems():
+                        print>>txtfile, "    Tabulating %s ..." % ( label, )
+                        results = task["results"]
+                        table = task["table"]
+                        size = task["sizes"][-1]
+                        take = task["takes"][-1]
+                        with htmltable.tr():
+                            htmltable.th(label)
+                            htmltable.td(size)
+                            htmltable.td(take)
+                            for baseline in args.baselines:
+                                time = table["time"]["from-scratch"][baseline].values()[-1]
+                                max_heap = table["max-heap"]["from-scratch"][baseline].values()[-1]
+                                htmltable.td(engFormatter(time))
+                                htmltable.td(engFormatter(max_heap))
+                            for editable in editables:
+                                for baseline in args.baselines:
+                                    overhead = table["time"]["from-scratch"][editable].values()[-1] / table["time"]["from-scratch"][baseline].values()[-1]
+                                    htmltable.td(engFormatter(overhead))
+                                max_heap = table["max-heap"]["from-scratch"][editable].values()[-1]
+                                htmltable.td(engFormatter(max_heap))
+                                for baseline in args.baselines:
+                                    speedup = table["time"]["from-scratch"][baseline].values()[-1] / table["time"]["propagate"][editable].values()[-1]
+                                    htmltable.td(engFormatter(speedup))
+                                max_heap = table["max-heap"]["propagate"][editable].values()[-1]
+                                htmltable.td(engFormatter(max_heap))
+
+                print>>txtfile, htmltable.to_plain()
+                print>>htmlfile, htmltable
+
+
+            if "plots" in args.summaries:
+                for label, task in tasks.iteritems():
+                    print>>txtfile, "    Plotting %s ..." % ( label, )
+                    summary = os.path.join(output, label)
+                    try:
+                        os.makedirs(summary)
+                    except OSError as e:
+                        if e.errno != errno.EEXIST:
+                            raise
+
+                    print>>htmlfile, "<h1 id=\"%s\">%s</h1>" % ( label, label )
+                    results = task["results"]
+                    table = task["table"]
+                    ymax = task["ymax"]
+
+                    for measurement, measurement_table in table.iteritems():
+                        for yadjust, timings in scalings[measurement]:
+                            if timings == ( "propagate", ) and not editables:
+                                continue
+                            print>>txtfile, "        Plotting %s (%.2fx of %s)" % ( measurement, yadjust, timings )
+                            pdffilename = "%s-%s-%s-%s.pdf" % ( label, measurement, yadjust, "-".join(timings) )
                             with open(os.path.join(summary, pdffilename), "w") as pdffile:
                                 fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
                                 ax = fig.add_subplot(1, 1, 1)
                                 ax.set_title(results["label"], fontsize=8)
                                 ax.set_xlabel(results["x-label"], fontsize=8)
-                                ax.set_ylabel("%s overhead\nX (from-scratch) / %s (from-scratch)" % ( measurement, baseline ), fontsize=8, multialignment="center")
+                                if units[measurement]:
+                                    ax.set_ylabel("%s (%s)" % ( measurement, units[measurement] ), fontsize=8)
+                                else:
+                                    ax.set_ylabel("%s" % ( measurement, ), fontsize=8)
                                 for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
                                     axis.set_major_formatter(EngFormatter())
                                     axis.set_ticks_position("none")
@@ -511,19 +677,189 @@ if __name__ == "__main__":
                                     ax.spines[side].set_visible(False)
                                 ax.grid(linewidth=0.5, linestyle=":", color="silver")
 
-                                print>>txtfile, "        Plotting %s overhead using baseline %s ..." % ( measurement, baseline )
                                 offset = 0
-                                for module in table[measurement]["from-scratch"].iterkeys():
-                                    if module == baseline:
+                                for timing in ( "from-scratch", "propagate" ):
+                                    if timing == "propagate" and not editables:
                                         continue
-                                    xvalues, overheads = zip(*( ( xvalue, yvalue / table[measurement]["from-scratch"][baseline][xvalue] ) \
-                                        for xvalue, yvalue in table[measurement]["from-scratch"][module].iteritems() ))
-                                    print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(overhead, "9.3g") for overhead in overheads ) )
+                                    module_table = measurement_table[timing]
+                                    for module, xvalues in module_table.iteritems():
+                                        xvalues, yvalues = zip(*xvalues.iteritems())
+                                        print>>txtfile, "            %50s ... %s" \
+                                            % ( "%s (%s)" % ( module, timing ), " ".join( format(yvalue, "9.3g") for yvalue in yvalues ) )
+                                        if results["x-label"] == "":
+                                            ax.bar(offset, yvalues[-1], clip_on=False, label="%s (%s)" % ( module, timing ), color=lightcolor(styles[module, timing]))
+                                            offset += 1
+                                        else:
+                                            ax.plot(xvalues, yvalues, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none",
+                                                **styles[module, timing])
+                                if results["x-label"] == "":
+                                    ax.set_xticks([])
+                                    ax.set_xbound(lower=0, upper=offset)
+                                else:
+                                    ax.set_xbound(lower=0)
+                                ax.set_ybound(lower=0, upper=yadjust * max( ymax[measurement].get(timing, 0) for timing in timings ))
+
+                                try:
+                                    ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
+                                except TypeError:
+                                    ax.legend(loc="best", prop={ "size": 8 }, fancybox=False)
+
+                                if hasattr(fig, "tight_layout"):
+                                    fig.tight_layout(pad=0.5)
+
+                                fig.savefig(pdffile, format="pdf")
+                                print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
+                                    % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
+
+
+                    if editables:
+                        for measurement in ( "time", "evaluate" ):
+                            for baseline in args.baselines:
+                                pdffilename = "%s-%s-%s-overhead.pdf" % ( label, baseline, measurement )
+                                with open(os.path.join(summary, pdffilename), "w") as pdffile:
+                                    fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
+                                    ax = fig.add_subplot(1, 1, 1)
+                                    ax.set_title(results["label"], fontsize=8)
+                                    ax.set_xlabel(results["x-label"], fontsize=8)
+                                    ax.set_ylabel("%s overhead\nX (from-scratch) / %s (from-scratch)" % ( measurement, baseline ), fontsize=8, multialignment="center")
+                                    for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
+                                        axis.set_major_formatter(EngFormatter())
+                                        axis.set_ticks_position("none")
+                                    if hasattr(ax, "tick_params"):
+                                        ax.tick_params(labelsize=7)
+                                    for side in ( "left", "bottom" ):
+                                        ax.spines[side].set_color("silver")
+                                        ax.spines[side].set_linestyle("dotted")
+                                        ax.spines[side].set_linewidth(0.5)
+                                    for side in ( "right", "top" ):
+                                        ax.spines[side].set_visible(False)
+                                    ax.grid(linewidth=0.5, linestyle=":", color="silver")
+
+                                    print>>txtfile, "        Plotting %s overhead using baseline %s ..." % ( measurement, baseline )
+                                    offset = 0
+                                    for module in table[measurement]["from-scratch"].iterkeys():
+                                        if module == baseline:
+                                            continue
+                                        xvalues, overheads = zip(*( ( xvalue, yvalue / table[measurement]["from-scratch"][baseline][xvalue] ) \
+                                            for xvalue, yvalue in table[measurement]["from-scratch"][module].iteritems() ))
+                                        print>>txtfile, "            %32s ... %s" % ( module, " ".join( format(overhead, "9.3g") for overhead in overheads ) )
+                                        if results["x-label"] == "":
+                                            ax.bar(offset, overheads[-1], clip_on=False, label=module, color=lightcolor(styles[module, "from-scratch"]))
+                                            offset += 1
+                                        else:
+                                            ax.plot(xvalues, overheads, clip_on=False, label=module, markeredgecolor="none", **styles[module, "from-scratch"])
                                     if results["x-label"] == "":
-                                        ax.bar(offset, overheads[-1], clip_on=False, label=module, color=lightcolor(styles[module, "from-scratch"]))
+                                        ax.set_xticks([])
+                                        ax.set_xbound(lower=0, upper=offset)
+                                    else:
+                                        ax.set_xbound(lower=0)
+                                    ax.set_ybound(lower=0)
+
+                                    try:
+                                        ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
+                                    except TypeError:
+                                        ax.legend(loc="best", prop={ "size": 8 }, fancybox=False)
+
+                                    if hasattr(fig, "tight_layout"):
+                                        fig.tight_layout(pad=0.5)
+
+                                    fig.savefig(pdffile, format="pdf")
+                                    print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
+                                        % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
+
+
+                            for baseline in args.baselines:
+                                pdffilename = "%s-%s-%s-speedup.pdf" % ( label, baseline, measurement )
+                                with open(os.path.join(summary, pdffilename), "w") as pdffile:
+                                    fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
+                                    ax = fig.add_subplot(1, 1, 1)
+                                    ax.set_title(results["label"], fontsize=8)
+                                    ax.set_xlabel(results["x-label"], fontsize=8)
+                                    ax.set_ylabel("%s speed-up\n%s (from-scratch) / X" % ( measurement, baseline ), fontsize=8, multialignment="center")
+                                    for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
+                                        axis.set_major_formatter(EngFormatter())
+                                        axis.set_ticks_position("none")
+                                    if hasattr(ax, "tick_params"):
+                                        ax.tick_params(labelsize=7)
+                                    for side in ( "left", "bottom" ):
+                                        ax.spines[side].set_color("silver")
+                                        ax.spines[side].set_linestyle("dotted")
+                                        ax.spines[side].set_linewidth(0.5)
+                                    for side in ( "right", "top" ):
+                                        ax.spines[side].set_visible(False)
+                                    ax.grid(linewidth=0.5, linestyle=":", color="silver")
+
+                                    print>>txtfile, "        Plotting %s speed-up using baseline %s ..." % ( measurement, baseline )
+                                    offset = 0
+                                    for module in table[measurement]["from-scratch"].iterkeys():
+                                        if module == baseline:
+                                            continue
+                                        if module in editables:
+                                            timing = "propagate"
+                                        else:
+                                            timing = "from-scratch"
+                                        xvalues, speedups = zip(*( ( xvalue, table[measurement]["from-scratch"][baseline][xvalue] / yvalue ) \
+                                            for xvalue, yvalue in table[measurement][timing][module].iteritems() ))
+                                        print>>txtfile, "            %50s ... %s" \
+                                            % ( "%s (%s)" % ( module, timing ), " ".join( format(speedup, "9.3g") for speedup in speedups ) )
+                                        if results["x-label"] == "":
+                                            ax.bar(offset, speedups[-1], clip_on=False, label="%s (%s)" % ( module, timing ), color=lightcolor(styles[module, timing]))
+                                            offset += 1
+                                        else:
+                                            ax.plot(xvalues, speedups, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none",
+                                                **styles[module, timing])
+                                    if results["x-label"] == "":
+                                        ax.set_xticks([])
+                                        ax.set_xbound(lower=0, upper=offset)
+                                    else:
+                                        ax.set_xbound(lower=0)
+                                    ax.set_ybound(lower=0)
+
+                                    try:
+                                        ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
+                                    except TypeError:
+                                        ax.legend(loc="best", prop={ "size": 8 }, fancybox=False)
+
+                                    if hasattr(fig, "tight_layout"):
+                                        fig.tight_layout(pad=0.5)
+
+                                    fig.savefig(pdffile, format="pdf")
+                                    print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
+                                        % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
+
+
+                        for module in editables:
+                            print>>txtfile, "        Plotting %s details ..." % ( module, )
+                            pdffilename = "%s-%s-details.pdf" % ( label, module )
+                            with open(os.path.join(summary, pdffilename), "w") as pdffile:
+                                fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
+                                ax = fig.add_subplot(1, 1, 1)
+                                ax.set_title("%s details; %s" % ( module, results["label"] ), fontsize=8)
+                                ax.set_xlabel(results["x-label"], fontsize=8)
+                                ax.set_ylabel("time (%s)" % ( units["time"], ), fontsize=8)
+                                for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
+                                    axis.set_major_formatter(EngFormatter())
+                                    axis.set_ticks_position("none")
+                                if hasattr(ax, "tick_params"):
+                                    ax.tick_params(labelsize=7)
+                                for side in ( "left", "bottom" ):
+                                    ax.spines[side].set_color("silver")
+                                    ax.spines[side].set_linestyle("dotted")
+                                    ax.spines[side].set_linewidth(0.5)
+                                for side in ( "right", "top" ):
+                                    ax.spines[side].set_visible(False)
+                                ax.grid(linewidth=0.5, linestyle=":", color="silver")
+
+                                offset = 0
+                                for timing in ( "propagate", "update" ):
+                                    xvalues, yvalues = zip(*table["time"][timing][module].iteritems())
+                                    print>>txtfile, "            %24s ... %s" \
+                                        % ( timing, " ".join( format(yvalue, "9.3g") for yvalue in yvalues ) )
+                                    if results["x-label"] == "":
+                                        ax.bar(offset, yvalues[-1], clip_on=False, label="%s" % ( timing, ), color=lightcolor(styles[module, timing]))
                                         offset += 1
                                     else:
-                                        ax.plot(xvalues, overheads, clip_on=False, label=module, markeredgecolor="none", **styles[module, "from-scratch"])
+                                        ax.plot(xvalues, yvalues, clip_on=False, label="%s" % ( timing, ), markeredgecolor="none", **styles[module, timing])
                                 if results["x-label"] == "":
                                     ax.set_xticks([])
                                     ax.set_xbound(lower=0, upper=offset)
@@ -542,118 +878,6 @@ if __name__ == "__main__":
                                 fig.savefig(pdffile, format="pdf")
                                 print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
                                     % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
-
-
-                        for baseline in args.baselines:
-                            pdffilename = "%s-%s-%s-speedup.pdf" % ( label, baseline, measurement )
-                            with open(os.path.join(summary, pdffilename), "w") as pdffile:
-                                fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
-                                ax = fig.add_subplot(1, 1, 1)
-                                ax.set_title(results["label"], fontsize=8)
-                                ax.set_xlabel(results["x-label"], fontsize=8)
-                                ax.set_ylabel("%s speed-up\n%s (from-scratch) / X" % ( measurement, baseline ), fontsize=8, multialignment="center")
-                                for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
-                                    axis.set_major_formatter(EngFormatter())
-                                    axis.set_ticks_position("none")
-                                if hasattr(ax, "tick_params"):
-                                    ax.tick_params(labelsize=7)
-                                for side in ( "left", "bottom" ):
-                                    ax.spines[side].set_color("silver")
-                                    ax.spines[side].set_linestyle("dotted")
-                                    ax.spines[side].set_linewidth(0.5)
-                                for side in ( "right", "top" ):
-                                    ax.spines[side].set_visible(False)
-                                ax.grid(linewidth=0.5, linestyle=":", color="silver")
-
-                                print>>txtfile, "        Plotting %s speed-up using baseline %s ..." % ( measurement, baseline )
-                                offset = 0
-                                for module in table[measurement]["from-scratch"].iterkeys():
-                                    if module == baseline:
-                                        continue
-                                    if module in editables:
-                                        timing = "propagate"
-                                    else:
-                                        timing = "from-scratch"
-                                    xvalues, speedups = zip(*( ( xvalue, table[measurement]["from-scratch"][baseline][xvalue] / yvalue ) \
-                                        for xvalue, yvalue in table[measurement][timing][module].iteritems() ))
-                                    print>>txtfile, "            %50s ... %s" \
-                                        % ( "%s (%s)" % ( module, timing ), " ".join( format(speedup, "9.3g") for speedup in speedups ) )
-                                    if results["x-label"] == "":
-                                        ax.bar(offset, speedups[-1], clip_on=False, label="%s (%s)" % ( module, timing ), color=lightcolor(styles[module, timing]))
-                                        offset += 1
-                                    else:
-                                        ax.plot(xvalues, speedups, clip_on=False, label="%s (%s)" % ( module, timing ), markeredgecolor="none",
-                                            **styles[module, timing])
-                                if results["x-label"] == "":
-                                    ax.set_xticks([])
-                                    ax.set_xbound(lower=0, upper=offset)
-                                else:
-                                    ax.set_xbound(lower=0)
-                                ax.set_ybound(lower=0)
-
-                                try:
-                                    ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
-                                except TypeError:
-                                    ax.legend(loc="best", prop={ "size": 8 }, fancybox=False)
-
-                                if hasattr(fig, "tight_layout"):
-                                    fig.tight_layout(pad=0.5)
-
-                                fig.savefig(pdffile, format="pdf")
-                                print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
-                                    % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
-
-
-                    for module in editables:
-                        print>>txtfile, "        Plotting %s details ..." % ( module, )
-                        pdffilename = "%s-%s-details.pdf" % ( label, module )
-                        with open(os.path.join(summary, pdffilename), "w") as pdffile:
-                            fig = FigureCanvas(Figure(figsize=( 3.5, 3 ))).figure
-                            ax = fig.add_subplot(1, 1, 1)
-                            ax.set_title("%s details; %s" % ( module, results["label"] ), fontsize=8)
-                            ax.set_xlabel(results["x-label"], fontsize=8)
-                            ax.set_ylabel("time (%s)" % ( units["time"], ), fontsize=8)
-                            for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
-                                axis.set_major_formatter(EngFormatter())
-                                axis.set_ticks_position("none")
-                            if hasattr(ax, "tick_params"):
-                                ax.tick_params(labelsize=7)
-                            for side in ( "left", "bottom" ):
-                                ax.spines[side].set_color("silver")
-                                ax.spines[side].set_linestyle("dotted")
-                                ax.spines[side].set_linewidth(0.5)
-                            for side in ( "right", "top" ):
-                                ax.spines[side].set_visible(False)
-                            ax.grid(linewidth=0.5, linestyle=":", color="silver")
-
-                            offset = 0
-                            for timing in ( "propagate", "update" ):
-                                xvalues, yvalues = zip(*table["time"][timing][module].iteritems())
-                                print>>txtfile, "            %24s ... %s" \
-                                    % ( timing, " ".join( format(yvalue, "9.3g") for yvalue in yvalues ) )
-                                if results["x-label"] == "":
-                                    ax.bar(offset, yvalues[-1], clip_on=False, label="%s" % ( timing, ), color=lightcolor(styles[module, timing]))
-                                    offset += 1
-                                else:
-                                    ax.plot(xvalues, yvalues, clip_on=False, label="%s" % ( timing, ), markeredgecolor="none", **styles[module, timing])
-                            if results["x-label"] == "":
-                                ax.set_xticks([])
-                                ax.set_xbound(lower=0, upper=offset)
-                            else:
-                                ax.set_xbound(lower=0)
-                            ax.set_ybound(lower=0)
-
-                            try:
-                                ax.legend(loc="best", prop={ "size": 8 }, frameon=False, fancybox=False)
-                            except TypeError:
-                                ax.legend(loc="best", prop={ "size": 8 }, fancybox=False)
-
-                            if hasattr(fig, "tight_layout"):
-                                fig.tight_layout(pad=0.5)
-
-                            fig.savefig(pdffile, format="pdf")
-                            print>>htmlfile, "<figure class=inline-figure><img src=%s></figure>" \
-                                % ( os.path.join(label, urllib.pathname2url(pdffilename)), )
 
         import cgi
         print>>htmlfile, "<h1 id=\"summary\">Summary</h1>"
@@ -663,8 +887,10 @@ if __name__ == "__main__":
 
         print>>htmlfile, "<style>div#header { position: fixed; top: 0; right: 0; padding: 0.5em; background: white }</style>"
         print>>htmlfile, "<div id=\"header\">"
+        if "table" in args.summaries:
+            print>>htmlfile, "<a href=\"#table\">Table</a>"
+        if "plots" in args.summaries:
+            for label in tasks.iterkeys():
+                print>>htmlfile, "<a href=\"#%s\">%s</a>" % ( label, label )
         print>>htmlfile, "<a href=\"#summary\">Summary</a>"
-        for file in files:
-            label = file[:-13]
-            print>>htmlfile, "<a href=\"#%s\">%s</a>" % ( label, label )
         print>>htmlfile, "</div>"
