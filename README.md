@@ -56,7 +56,18 @@ Quick-start
 
     Note the larger benchmark will take a good part of a day to complete, whereas the smaller benchmark will take a few
     hours. Results will be written to `Results/BenchmarkAdapton/*pldi2014-benchmarks-*/{lazy,batch,swap,switch}/summary`
-    for a HTML or text summary of the results.
+    for a HTML or text summary of the results, in particular, look under the _incremental_ columns:
+
+                                    Adapton |                         EagerTotalOrder
+                                incremental |                             incremental
+                        speed-up | max-heap |                     speed-up | max-heap
+        EagerNonInc | LazyNonInc |    bytes |     EagerNonInc | LazyNonInc |    bytes
+        ------------------------------------- ... -----------------------------------
+          63.9e+0   |   120e+0   | 175e+6   |        161e+0 * |   301e+0 * | 169e+6 *
+          3.21e+0   |  2.85e+0   | 166e+6 * |        8.3e+0 * |  7.37e+0 * | 169e+6
+           674e+0 * |   630e+0 * | 163e+6 * |        493e+0   |   461e+0   | 169e+6
+
+    Cells marked `*` show the highest speed-up over *NonInc or smallest memory usage.
 
 
 Requirements

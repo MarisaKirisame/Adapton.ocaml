@@ -449,12 +449,13 @@ if __name__ == "__main__":
                 TBodyBegin = TableTag("<tbody>")
                 TBodyEnd = TableTag("</tbody>")
                 TNull = TableTag("")
-                class TCell(namedtuple("TCell", ( "val", "colspan", "rowspan" ))):
+                class TCell(namedtuple("TCell", ( "val", "colspan", "rowspan", "cls" ))):
                     def __str__(self):
-                        return "<%s%s%s>%s</%s>" % (
+                        return "<%s%s%s%s>%s</%s>" % (
                             self.__class__.__name__.lower(),
                             "" if self.colspan == 1 else " colspan=\"%s\"" % self.colspan,
                             "" if self.rowspan == 1 else " rowspan=\"%s\"" % self.rowspan,
+                            "" if self.cls is None or self.cls == "" else " class=\"%s\"" % self.cls,
                             self.val,
                             self.__class__.__name__.lower() )
                 class Th(TCell): pass
@@ -500,11 +501,13 @@ if __name__ == "__main__":
                         self.cell(Th, *args, **kwargs)
                     def td(self, *args, **kwargs):
                         self.cell(Td, *args, **kwargs)
-                    def cell(self, T, val, colspan=1, rowspan=1):
+                    def cell(self, T, val, colspan=1, rowspan=1, cls=None):
                         if colspan <= 0:
                             raise ValueError("colspan %d <= 0" % ( colspan, ))
                         if rowspan <= 0:
                             raise ValueError("rowspan %d <= 0" % ( rowspan, ))
+                        if cls is not None and not isinstance(cls, types.StringTypes):
+                            raise TypeError("cls %s is not a string")
                         if self.pos is None:
                             raise TableError("not in a row")
                         while self.pos < len(self.pend[0]) and self.pend[0][self.pos] is not None:
@@ -514,11 +517,12 @@ if __name__ == "__main__":
                             pend.extend( ( None, ) * (self.pos + colspan - len(pend)) )
                             pend[self.pos:self.pos + colspan] = ( TNull, ) * colspan
                         val = str(val)
+                        cell = T(val, colspan, rowspan, cls)
                         self.span.extend( set() for _ in xrange(colspan - len(self.span)) )
-                        self.span[colspan - 1].add(( len(val), self.pos ))
-                        self.pend[0][self.pos] = T(val, colspan, rowspan)
+                        self.span[colspan - 1].add(( cell, self.pos ))
+                        self.pend[0][self.pos] = cell
                         self.pos += 1
-                    def to_plain(self, sep=" | ", vsep="-"):
+                    def to_plain(self, sep=" | ", vsep="-", formatter=lambda val, cls: val):
                         if self.pos is not None:
                             raise TableError("still in a row")
                         if self.sec is not None:
@@ -527,9 +531,9 @@ if __name__ == "__main__":
                             raise ValueError("vsep = \"%s\" is not a single character" % ( vsep, ))
 
                         colw = []
-                        for colspan, widths in enumerate(self.span):
+                        for colspan, cells in enumerate(self.span):
                             colspan = colspan + 1
-                            for width, pos in sorted(widths):
+                            for width, pos in sorted( ( len(formatter(cell.val, cell.cls)), pos ) for cell, pos in cells ):
                                 width -= len(sep) * (colspan - 1)
                                 if width > 0:
                                     colw.extend( ( 0, ) * (pos + colspan - len(colw)))
@@ -550,7 +554,7 @@ if __name__ == "__main__":
                                             line.append(" " * colw[col])
                                             pos += 1
                                     elif isinstance(cell, TCell):
-                                        line.append("%*s" % ( sum(colw[col:col + cell.colspan]) + len(sep) * (cell.colspan - 1), cell.val ))
+                                        line.append("%*s" % ( sum(colw[col:col + cell.colspan]) + len(sep) * (cell.colspan - 1), formatter(cell.val, cell.cls) ))
                                         pos += cell.colspan
                                 lines.append(sep.join(line))
                         return "\n".join(lines)
@@ -573,7 +577,11 @@ if __name__ == "__main__":
 
 
                 print>>htmlfile, "<h1 id=\"table\">Table</h1>"
-                print>>htmlfile, "<style>table, th, td { border: 1px solid black; border-collapse: collapse } td { text-align: right }</style>"
+                print>>htmlfile, "<style>"
+                print>>htmlfile, "table, th, td { border: 1px solid black; border-collapse: collapse; font-size: smaller }"
+                print>>htmlfile, "td { text-align: right }"
+                print>>htmlfile, "td.highlight { background: silver }"
+                print>>htmlfile, "</style>"
                 htmltable = Table()
                 with htmltable.thead():
                     with htmltable.tr():
@@ -622,19 +630,29 @@ if __name__ == "__main__":
                                 max_heap = table["max-heap"]["from-scratch"][baseline].values()[-1]
                                 htmltable.td(engFormatter(time))
                                 htmltable.td(engFormatter(max_heap))
+                            performance = {}
+                            best = {}
                             for editable in editables:
                                 for baseline in args.baselines:
                                     overhead = table["time"]["from-scratch"][editable].values()[-1] / table["time"]["from-scratch"][baseline].values()[-1]
+                                    speedup = table["time"]["from-scratch"][baseline].values()[-1] / table["time"]["propagate"][editable].values()[-1]
+                                    performance.setdefault(editable, {})[baseline] = ( overhead, speedup )
+                                    best[baseline] = max(speedup, best.get(baseline, speedup))
+                                max_heap = table["max-heap"]["propagate"][editable].values()[-1]
+                                best["max-heap"] = min(max_heap, best.get("max-heap", max_heap))
+                            for editable in editables:
+                                for baseline in args.baselines:
+                                    overhead = performance[editable][baseline][0]
                                     htmltable.td(engFormatter(overhead))
                                 max_heap = table["max-heap"]["from-scratch"][editable].values()[-1]
                                 htmltable.td(engFormatter(max_heap))
                                 for baseline in args.baselines:
-                                    speedup = table["time"]["from-scratch"][baseline].values()[-1] / table["time"]["propagate"][editable].values()[-1]
-                                    htmltable.td(engFormatter(speedup))
+                                    speedup = performance[editable][baseline][1]
+                                    htmltable.td(engFormatter(speedup), cls="" if speedup != best[baseline] else "highlight")
                                 max_heap = table["max-heap"]["propagate"][editable].values()[-1]
-                                htmltable.td(engFormatter(max_heap))
+                                htmltable.td(engFormatter(max_heap), cls="" if max_heap != best["max-heap"] else "highlight")
 
-                print>>txtfile, htmltable.to_plain()
+                print>>txtfile, htmltable.to_plain(formatter=lambda val, cls: val if cls is None else "%s %s" % ( val, "*" if cls == "highlight" else " " ))
                 print>>htmlfile, htmltable
 
 
