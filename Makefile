@@ -32,10 +32,10 @@ test : check ounit//runtestadapton.d.byte
 
 .PRECIOUS : $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py
 
-$(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py : runbenchmark%.py
+$(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py : runbenchmark%.py ocamlbuild//runbenchmark%.native
 	cp $< $@
 
-benchmark-% : check $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py ocamlbuild//runbenchmark%.native
+benchmark-% : check $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py
 	ulimit -s hard > /dev/null 2>&1 || ulimit -s unlimited; \
 		$(OCAMLBUILD_PRODUCTDIR)/runbenchmark$*.py benchmark \
 			$(and $(shell hg id 2>/dev/null),--label "r$(shell (hg id -n -rqparent && hg qapplied --config defaults.qapplied= || hg id -n) 2>/dev/null)") \
