@@ -67,7 +67,7 @@ exhaustive : all $(addprefix ocamlbuild//,runadapton.top runtestadapton.d.byte r
 pldi2014-benchmarks : SEEDS = -S 1 2 3 4 5 6 7 8
 pldi2014-benchmarks : MODULES = -m "Adapton" "EagerTotalOrder"
 pldi2014-benchmarks : BASELINES = -b "EagerNonInc" "LazyNonInc"
-pldi2014-benchmarks : FLAGS = -s $(SEEDS) $(MODULES) $(BASELINES)
+pldi2014-benchmarks : FLAGS = -s -N $(SEEDS) $(MODULES) $(BASELINES)
 pldi2014-benchmarks : SUMMARIES = -s table $(BASELINES)
 pldi2014-benchmarks : BENCHMARK = $(MAKE) benchmark-adapton
 pldi2014-benchmarks : RESUMMARIZE = $(MAKE) resummarize-benchmark-adapton
@@ -95,7 +95,7 @@ pldi2014-trend-benchmarks :
 small-pldi2014-benchmarks : SEEDS = -S 1 2 3 4 5 6 7 8
 small-pldi2014-benchmarks : MODULES = -m "Adapton" "EagerTotalOrder" -b "EagerNonInc" "LazyNonInc"
 small-pldi2014-benchmarks : BASELINES = -b "EagerNonInc" "LazyNonInc"
-small-pldi2014-benchmarks : FLAGS = -s $(SEEDS) $(MODULES) $(BASELINES)
+small-pldi2014-benchmarks : FLAGS = -s -N $(SEEDS) $(MODULES) $(BASELINES)
 small-pldi2014-benchmarks : SUMMARIES = -s table $(BASELINES)
 small-pldi2014-benchmarks : BENCHMARK = $(MAKE) benchmark-adapton
 small-pldi2014-benchmarks : RESUMMARIZE = $(MAKE) resummarize-benchmark-adapton

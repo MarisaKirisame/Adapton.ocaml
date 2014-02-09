@@ -90,6 +90,7 @@ if __name__ == "__main__":
     benchmark.add_argument("-O", "--output", metavar="DIRECTORY",
         help="run benchmark and store results in a subdirectory of %(metavar)s (default: %(default)s)", default=config["output"])
     benchmark.add_argument("-L", "--label", metavar="LABEL", help="optionally append %(metavar)s to result directory")
+    benchmark.add_argument("-N", "--no-symlink", help="do not create a \"latest\" symbolic link to the results directory", action="store_true")
     benchmark.add_argument("-P", "--processes", metavar="N", help="run %(metavar)s benchmarks in parallel (default: %(default)s)",
         default=physical_cpu_count(), type=int)
     benchmark.add_argument("-m", "--modules", metavar="MODULE",
@@ -121,6 +122,7 @@ if __name__ == "__main__":
         help="save benchmark summary in %(metavar)s (default: if only one directory is given for -I/--inputs, the same directory; "
             + "otherwise, a subdirectory in %s)" % ( config["output"], ), nargs="?")
     resummarize.add_argument("-L", "--label", metavar="LABEL", help="optionally append %(metavar)s to summary directory")
+    resummarize.add_argument("-N", "--no-symlink", help="do not create a \"latest\" symbolic link to the results directory (implied by --output)", action="store_true")
     resummarize.add_argument("-b", "--baselines", metavar="BASELINE",
         help="compare modules against %(metavar)s(s) (default: %(default)s)", nargs="+", default=config["baselines"]) #, choices=config["modules"])
     resummarize.add_argument("-s", "--summaries", metavar="SUMMARY",
@@ -146,16 +148,17 @@ if __name__ == "__main__":
                     output_label += " " + args.label.strip()
                 output = os.path.join(config["output"], output_label)
                 os.makedirs(output)
-                latest = os.path.join(config["output"], "latest")
-                try:
-                    os.unlink(latest)
-                except OSError:
-                    pass
-                try:
-                    os.symlink(output_label, latest)
-                except OSError:
-                    print>>sys.stderr, traceback.format_exc()
-                    print>>sys.stderr, "warning: cannot create latest symlink to summary"
+                if not args.no_symlink:
+                    latest = os.path.join(config["output"], "latest")
+                    try:
+                        os.unlink(latest)
+                    except OSError:
+                        pass
+                    try:
+                        os.symlink(output_label, latest)
+                    except OSError:
+                        print>>sys.stderr, traceback.format_exc()
+                        print>>sys.stderr, "warning: cannot create latest symlink to summary"
         else:
             output = args.output
             if args.label:
@@ -192,16 +195,17 @@ if __name__ == "__main__":
         output = os.path.join(args.output, output_label)
         os.makedirs(output)
         inputs = [ output ]
-        latest = os.path.join(args.output, "latest")
-        try:
-            os.unlink(latest)
-        except OSError:
-            pass
-        try:
-            os.symlink(output_label, latest)
-        except OSError:
-            print>>sys.stderr, traceback.format_exc()
-            print>>sys.stderr, "warning: cannot create latest symlink to benchmark"
+        if not args.no_symlink:
+            latest = os.path.join(args.output, "latest")
+            try:
+                os.unlink(latest)
+            except OSError:
+                pass
+            try:
+                os.symlink(output_label, latest)
+            except OSError:
+                print>>sys.stderr, traceback.format_exc()
+                print>>sys.stderr, "warning: cannot create latest symlink to benchmark"
 
         print>>sys.stderr, "Using random seeds %s" % ( args.random_seeds, )
 
