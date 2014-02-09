@@ -14,6 +14,18 @@ Quick-start
 2. Run Adapton.ocaml unit tests:
 
         % make test
+        2014-02-07T14:05:38+00:00 hostname#00 I: Summary:
+        ... lots of lines ...
+        2014-02-07T14:05:38+00:00 hostname#00 I: Ran: 53 tests in: 33.42 seconds.
+        2014-02-07T14:05:38+00:00 hostname#00 I: Cases: 53.
+        2014-02-07T14:05:38+00:00 hostname#00 I: Tried: 53.
+        2014-02-07T14:05:38+00:00 hostname#00 I: Errors: 0.
+        2014-02-07T14:05:38+00:00 hostname#00 I: Failures: 0.
+        2014-02-07T14:05:38+00:00 hostname#00 I: Skip: 5.
+        2014-02-07T14:05:38+00:00 hostname#00 I: Todo: 0.
+        2014-02-07T14:05:38+00:00 hostname#00 I: Timeout: 0.
+
+    Make sure that there are no errors, failures or timeouts (a few skips are expected).
 
 3. Start an OCaml REPL with Adapton.ocaml loaded:
 
@@ -34,16 +46,17 @@ Quick-start
 
 4. Run Adapton.ocaml benchmarks:
 
-    * for a system with at least 8 cores and 16GB memory
+    * for systems with at least 8 cores and 16GB memory (runs up to 8 benchmarks in parallel)
 
             % make pldi2014-benchmarks
 
-    * for smaller systems (10% the benchmark size, not run in parallel)
+    * for smaller systems with at least 1GB memory (similar to above except 10% of the input sizes, not run in parallel)
 
             % make small-pldi2014-benchmarks
 
-    Note the larger benchmark will take a good part of a day to complete. Results will be located in
-    `Results/BenchmarkAdapton`.
+    Note the larger benchmark will take a good part of a day to complete, whereas the smaller benchmark will take a few
+    hours. Results will be written to `Results/BenchmarkAdapton/*pldi2014-benchmarks-*/{lazy,batch,swap,switch}/summary`
+    for a HTML or text summary of the results.
 
 
 Requirements
