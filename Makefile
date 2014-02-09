@@ -32,11 +32,11 @@ test : check ounit//runtestadapton.d.byte
 
 .PRECIOUS : $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py
 
-$(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py : runbenchmark%.py
+$(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py : runbenchmark%.py ocamlbuild//runbenchmark%.native
 	cp $< $@
 
-benchmark-% : check $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py ocamlbuild//runbenchmark%.native
-	ulimit -s hard && \
+benchmark-% : check $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py
+	ulimit -s hard > /dev/null 2>&1 || ulimit -s unlimited; \
 		$(OCAMLBUILD_PRODUCTDIR)/runbenchmark$*.py benchmark \
 			$(and $(shell hg id 2>/dev/null),--label "r$(shell (hg id -n -rqparent && hg qapplied --config defaults.qapplied= || hg id -n) 2>/dev/null)") \
 			$(BENCHMARK_FLAGS) $(BENCHMARK_FLAGS.$*)
@@ -63,42 +63,6 @@ check-hg :
 
 exhaustive : all $(addprefix ocamlbuild//,runadapton.top runtestadapton.d.byte runbenchmarkadapton.native adaptimetest.native)
 
-# designed to run on an early 2009 Mac Pro with two 2.26 GHz quad-core Intel Xeons and 16 GB memory
-pldi2014-benchmarks : SEEDS = -S 1 2 3 4 5 6 7 8
-pldi2014-benchmarks : MODULES = -m "Adapton" "EagerTotalOrder" -b "EagerNonInc" "LazyNonInc"
-pldi2014-benchmarks : FLAGS = $(SEEDS) $(MODULES)
-pldi2014-benchmarks : BENCHMARK = $(MAKE) benchmark-adapton
-pldi2014-benchmarks : OUTDIR := $(CURDIR)/Results/BenchmarkAdapton/pldi2014-$(shell date "+%F-%H-%M-%S")
-pldi2014-benchmarks :
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/lazy" -t filter map -I 1000000 4 -T 1 -M -P 8 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/lazy" -t quicksort -I 100000 4 -T 1 -M -P 4 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/lazy" -t mergesort -I 100000 4 -T 1 -M -P 2 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/batch" -t filter map -I 1000000 4 -T 1000001 -M -P 8 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/batch" -t exptree "tfold(sum)" "tfold(min)" -I 1000000 4 -T 1 -M -P 8 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t filter map -I 1000000 4 -T 1000001 -P 4 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t "tfold(sum)" "tfold(min)" -I 1000000 4 -T 1 -P 2 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t exptree -I 1000000 4 -T 1 -P 8 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/swap" -t updown1 updown2 -I 40000 4 -T 1 -P 2 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/trend" -t quicksort -I 100000 -T 5000 4500 4000 3500 3000 2500 2000 1500 1000 500 200 100 50 20 10 5 2 1 -M $(SEEDS) -P 4 -m "Adapton" "EagerTotalOrder" "LazyNonInc" -b "EagerNonInc"'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/trend" -t mergesort -I 100000 -T 5000 4500 4000 3500 3000 2500 2000 1500 1000 500 200 100 50 20 10 5 2 1 -M $(SEEDS) -P 4 -m "Adapton" "LazyNonInc" -b "EagerNonInc"'
-
-# small version of pldi2014-benchmarks with 10% of the input size and not parallel
-small-pldi2014-benchmarks : SEEDS = -S 1 2 3 4 5 6 7 8
-small-pldi2014-benchmarks : MODULES = -m "Adapton" "EagerTotalOrder" -b "EagerNonInc" "LazyNonInc"
-small-pldi2014-benchmarks : FLAGS = $(SEEDS) $(MODULES)
-small-pldi2014-benchmarks : BENCHMARK = $(MAKE) benchmark-adapton
-small-pldi2014-benchmarks : OUTDIR := $(CURDIR)/Results/BenchmarkAdapton/small-pldi2014-$(shell date "+%F-%H-%M-%S")
-small-pldi2014-benchmarks :
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/lazy" -t filter map -I 100000 4 -T 1 -M -P 1 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/lazy" -t quicksort -I 10000 4 -T 1 -M -P 1 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/lazy" -t mergesort -I 10000 4 -T 1 -M -P 1 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/batch" -t filter map -I 100000 4 -T 100001 -M -P 1 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/batch" -t exptree "tfold(sum)" "tfold(min)" -I 100000 4 -T 1 -M -P 1 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t filter map -I 100000 4 -T 100001 -P 1 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t "tfold(sum)" "tfold(min)" -I 100000 4 -T 1 -P 1 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t exptree -I 100000 4 -T 1 -P 1 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/swap" -t updown1 updown2 -I 4000 4 -T 1 -P 1 $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/trend" -t quicksort -I 10000 -T 500 450 400 350 300 250 200 150 100 50 20 10 5 2 1 -M $(SEEDS) -P 1 -m "Adapton" "EagerTotalOrder" "LazyNonInc" -b "EagerNonInc"'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/trend" -t mergesort -I 10000 -T 500 450 400 350 300 250 200 150 100 50 20 10 5 2 1 -M $(SEEDS) -P 1 -m "Adapton" "LazyNonInc" -b "EagerNonInc"'
+include Makefile.benchmarks
 
 include Makefile.rules
