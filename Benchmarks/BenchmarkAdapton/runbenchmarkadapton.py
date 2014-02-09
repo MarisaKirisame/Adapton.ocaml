@@ -43,12 +43,12 @@ def physical_cpu_count():
         import re
         re_lscpu = re.compile(r"Core\(s\) per socket:\s+([0-9]+).*Socket\(s\):\s+([0-9]+)", re.MULTILINE | re.DOTALL)
         try:
-            m = re_lscpu.find(subprocess.check_output("lscpu"))
+            m = re_lscpu.search(subprocess.check_output("lscpu"))
         except Exception:
             cpu_count = 0
         else:
             if m:
-                cpu_count = int(m.group(1) * m.group(2))
+                cpu_count = int(m.group(1)) * int(m.group(2))
             else:
                 cpu_count = 0
         if cpu_count == 0:
