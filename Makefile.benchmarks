@@ -1,0 +1,80 @@
+
+# designed to run on an early 2009 Mac Pro with two 2.26 GHz quad-core Intel Xeons and 16 GB memory
+pldi2014-benchmarks : INPUT_1M = -I 1000000
+pldi2014-benchmarks : TAKE_1M1 = -T 1000001
+pldi2014-benchmarks : INPUT_100k = -I 100000
+pldi2014-benchmarks : INPUT_40k = -I 40000
+pldi2014-benchmarks : TAKE_1 = -T 1
+pldi2014-benchmarks : CPU_8 = -P 8
+pldi2014-benchmarks : CPU_4 = -P 4
+pldi2014-benchmarks : CPU_2 = -P 2
+pldi2014-benchmarks : OUTDIR = $(CURDIR)/Results/BenchmarkAdapton/pldi2014-$(CURDATE)
+pldi2014-benchmarks : pldi2014-benchmarks-template
+
+pldi2014-trend-benchmarks : INPUT = -I 100000
+pldi2014-trend-benchmarks : TAKE = -T 5000 4500 4000 3500 3000 2500 2000 1500 1000 500 200 100 50 20 10 5 2 1
+pldi2014-trend-benchmarks : CPU = -P 4
+pldi2014-trend-benchmarks : OUTDIR = $(CURDIR)/Results/BenchmarkAdapton/pldi2014-$(CURDATE)
+pldi2014-trend-benchmarks : pldi2014-trend-benchmarks-template
+
+
+# small version of pldi2014-benchmarks with 10% of the input size and not parallel
+small-pldi2014-benchmarks : INPUT_1M = -I 100000
+small-pldi2014-benchmarks : TAKE_1M1 = -T 100001
+small-pldi2014-benchmarks : INPUT_100k = -I 10000
+small-pldi2014-benchmarks : INPUT_40k = -I 4000
+small-pldi2014-benchmarks : TAKE_1 = -T 1
+small-pldi2014-benchmarks : CPU_8 = -P 1
+small-pldi2014-benchmarks : CPU_4 = -P 1
+small-pldi2014-benchmarks : CPU_2 = -P 1
+small-pldi2014-benchmarks : OUTDIR = $(CURDIR)/Results/BenchmarkAdapton/small-pldi2014-$(CURDATE)
+small-pldi2014-benchmarks : pldi2014-benchmarks-template
+
+small-pldi2014-trend-benchmarks : INPUT = -I 10000
+small-pldi2014-trend-benchmarks : TAKE = -T 500 450 400 350 300 250 200 150 100 50 20 10 5 2 1
+small-pldi2014-trend-benchmarks : CPU = -P 1
+small-pldi2014-trend-benchmarks : OUTDIR = $(CURDIR)/Results/BenchmarkAdapton/small-pldi2014-$(CURDATE)
+small-pldi2014-trend-benchmarks : pldi2014-trend-benchmarks-template
+
+
+# tiny version of pldi2014-benchmarks with 1% of the input size and not parallel
+tiny-pldi2014-benchmarks : INPUT_1M = -I 10000
+tiny-pldi2014-benchmarks : TAKE_1M1 = -T 10001
+tiny-pldi2014-benchmarks : INPUT_100k = -I 1000
+tiny-pldi2014-benchmarks : INPUT_40k = -I 400
+tiny-pldi2014-benchmarks : TAKE_1 = -T 1
+tiny-pldi2014-benchmarks : CPU_8 = -P 1
+tiny-pldi2014-benchmarks : CPU_4 = -P 1
+tiny-pldi2014-benchmarks : CPU_2 = -P 1
+tiny-pldi2014-benchmarks : OUTDIR = $(CURDIR)/Results/BenchmarkAdapton/tiny-pldi2014-$(CURDATE)
+tiny-pldi2014-benchmarks : pldi2014-benchmarks-template
+
+tiny-pldi2014-trend-benchmarks : INPUT = -I 1000
+tiny-pldi2014-trend-benchmarks : TAKE = -T 50 45 40 35 30 25 20 15 10 5 2 1
+tiny-pldi2014-trend-benchmarks : CPU = -P 1
+tiny-pldi2014-trend-benchmarks : OUTDIR = $(CURDIR)/Results/BenchmarkAdapton/tiny-pldi2014-$(CURDATE)
+tiny-pldi2014-trend-benchmarks : pldi2014-trend-benchmarks-template
+
+
+CURDATE := $(shell date "+%F-%H-%M-%S")
+pldi2014-benchmarks-template : SEEDS = -S 1 2 3 4 5 6 7 8
+pldi2014-benchmarks-template : MODULES = -m "Adapton" "EagerTotalOrder"
+pldi2014-benchmarks-template : BASELINES = -b "EagerNonInc" "LazyNonInc"
+pldi2014-benchmarks-template : FLAGS = -s -N $(SEEDS) $(MODULES) $(BASELINES)
+pldi2014-benchmarks-template : SUMMARIES = -s table $(BASELINES)
+pldi2014-benchmarks-template : BENCHMARK = $(MAKE) benchmark-adapton
+pldi2014-benchmarks-template : RESUMMARIZE = $(MAKE) resummarize-benchmark-adapton
+pldi2014-benchmarks-template :
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/lazy" -t filter map $(INPUT_1M) $(TAKE_1) -M $(CPU_8) $(FLAGS)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/lazy" -t quicksort $(INPUT_100k) $(TAKE_1) -M $(CPU_4) $(FLAGS)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/lazy" -t mergesort $(INPUT_100k) $(TAKE_1) -M $(CPU_2) $(FLAGS)'
+	-$(RESUMMARIZE) RESUMMARIZE_FLAGS='-I "$(OUTDIR)/lazy"/* -O "$(OUTDIR)/lazy/summary" $(SUMMARIES)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/batch" -t filter map $(INPUT_1M) $(INPUT_1M1) -M $(CPU_8) $(FLAGS)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/batch" -t exptree "tfold(sum)" "tfold(min)" $(INPUT_1M) $(TAKE_1) -M $(CPU_8) $(FLAGS)'
+	-$(RESUMMARIZE) RESUMMARIZE_FLAGS='-I "$(OUTDIR)/batch"/* -O "$(OUTDIR)/batch/summary" $(SUMMARIES)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t filter map $(INPUT_1M) $(TAKE_1M1) $(CPU_4) $(FLAGS)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t "tfold(sum)" "tfold(min)" $(INPUT_1M) $(TAKE_1) $(CPU_2) $(FLAGS)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t exptree $(INPUT_1M) $(TAKE_1) $(CPU_8) $(FLAGS)'
+	-$(RESUMMARIZE) RESUMMARIZE_FLAGS='-I "$(OUTDIR)/switch"/* -O "$(OUTDIR)/switch/summary" $(SUMMARIES)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/swap" -t updown1 updown2 $(INPUT_40k) $(TAKE_1) $(CPU_2) $(FLAGS)'
+	-$(RESUMMARIZE) RESUMMARIZE_FLAGS='-I "$(OUTDIR)/swap"/* -O "$(OUTDIR)/swap/summary" $(SUMMARIES)'

@@ -54,9 +54,14 @@ Quick-start
 
             % make small-pldi2014-benchmarks
 
+    * for the impatient (similar to above except 1% of the input sizes, not run in parallel)
+
+            % make tiny-pldi2014-benchmarks
+
     Note the larger benchmark will take a good part of a day to complete, whereas the smaller benchmark will take a few
-    hours. Results will be written to `Results/BenchmarkAdapton/*pldi2014-benchmarks-*/{lazy,batch,swap,switch}/summary`
-    for a HTML or text summary of the results, in particular, look under the _incremental_ columns:
+    hours, and the tiny benchmark takes a few minutes. Results will be written to
+    `Results/BenchmarkAdapton/*pldi2014-benchmarks-*/{lazy,batch,swap,switch}/summary` for a HTML or text summary of the
+    results, in particular, look under the _incremental_ columns:
 
                                     Adapton |                         EagerTotalOrder
                                 incremental |                             incremental
