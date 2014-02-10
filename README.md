@@ -103,11 +103,11 @@ Quick-start
   * The following test script works for all versions, and can be
     entered interactively:
 
-    scrambled; goto 10!a1 ; print ; repeat 5 do scramble1 ; print done .
+        scrambled; goto 10!a1 ; print ; repeat 5 do scramble1 ; print done .
 
   * Alternatively, this script can be invoked at the command-line as follows:
 
-    % ./_product/runas2.native --num-changes 5 --stats-test 10
+        % ./_product/runas2.native --num-changes 5 --stats-test 10
 
     In this mode, the program prints statistics and appends this
     information to the file as2-stats.out, then exits.  The numbers 5
