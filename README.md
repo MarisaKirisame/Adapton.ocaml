@@ -46,22 +46,22 @@ Quick-start
 
 4. Run Adapton.ocaml benchmarks:
 
-    * for systems with at least 8 cores and 16GB memory (runs up to 8 benchmarks in parallel)
+    * for systems with at least 8 cores and 16GB memory (runs up to 8 benchmarks in parallel; takes a good part of a
+      day)
 
             % make pldi2014-benchmarks
 
-    * for smaller systems with at least 1GB memory (similar to above except 10% of the input sizes, not run in parallel)
+    * for smaller systems with at least 1GB memory (similar to above except 10% of the input sizes, not run in parallel;
+      takes a couple of hours)
 
             % make small-pldi2014-benchmarks
 
-    * for the impatient (similar to above except 1% of the input sizes, not run in parallel)
+    * for the impatient (similar to above except 1% of the input sizes, not run in parallel; takes a few minutes)
 
             % make tiny-pldi2014-benchmarks
 
-    Note the larger benchmark will take a good part of a day to complete, whereas the smaller benchmark will take a few
-    hours, and the tiny benchmark takes a few minutes. Results will be written to
-    `Results/BenchmarkAdapton/*pldi2014-benchmarks-*/{lazy,batch,swap,switch}/summary` for a HTML or text summary of the
-    results, in particular, look under the _incremental_ columns:
+    Results will be written to `Results/BenchmarkAdapton/*pldi2014-benchmarks-*/{lazy,batch,swap,switch}/summary` as
+    HTML as well as text-only tables. In particular, look under the _incremental_ columns, e.g.:
 
                                     Adapton |                         EagerTotalOrder
                                 incremental |                             incremental
