@@ -60,7 +60,7 @@ let header ff = Printf.fprintf ff "%24s %24s %8d %8d %20d" !opt_a !opt_task !opt
 let stats ff s =
     Printf.fprintf ff "\"time\": %.17g, \"heap\": %.17g, \"stack\": %.17g, \"update\": %.17g, \"evaluate\": %.17g, \"dirty\": %.17g, \"clean\": %.17g"
         s.time s.heap s.stack s.update s.evaluate s.dirty s.clean
-let max_heap_stack ff ( heap, stack ) = Printf.fprintf ff "\"max-heap\": %.17g, \"max-stack\": %.17g" (word_bytes heap) (word_bytes stack)
+let top_heap_stack ff ( heap, stack ) = Printf.fprintf ff "\"max-heap\": %.17g, \"max-stack\": %.17g" (word_bytes heap) (word_bytes stack)
 let units =
     "\"units\": { \"time\": \"seconds\", \"heap\": \"bytes\", \"stack\": \"bytes\", "
     ^ "\"update\": null, \"evaluate\": null, \"dirty\": null, \"clean\": null, "
@@ -123,12 +123,12 @@ let do_benchmark (module A : AdaptonUtil.Signatures.AType) ~make_input ~setup ~d
             let update_stats = finish update_stats edit_count in
             let take_stats = finish take_stats edit_count in
             Printf.printf "{ \"setup\": { %a, %a }, \"edits\": { \"update\": { %a }, \"take\": { %a }, %a }, %s }\n%!"
-                stats setup_stats max_heap_stack setup_top_heap_stack stats update_stats stats take_stats max_heap_stack edit_top_heap_stack units;
+                stats setup_stats top_heap_stack setup_top_heap_stack stats update_stats stats take_stats top_heap_stack edit_top_heap_stack units;
             Printf.eprintf "%t ... done (%9.2fs) %9.3gs edit %9.3gs\n%!"
                 header (get_time () -. start_time) setup_stats.time (update_stats.time +. take_stats.time)
         end else begin
             Printf.printf "{ \"setup\": { %a, %a }, %s }\n%!"
-                stats setup_stats max_heap_stack setup_top_heap_stack units;
+                stats setup_stats top_heap_stack setup_top_heap_stack units;
             Printf.eprintf "%t ... done (%9.2fs) %9.3gs\n%!" header (get_time () -. start_time) setup_stats.time
         end
     with e ->

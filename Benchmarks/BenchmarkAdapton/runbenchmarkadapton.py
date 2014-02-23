@@ -66,7 +66,8 @@ def physical_cpu_count():
 
 
 if __name__ == "__main__":
-    import argparse, errno, gzip, multiprocessing, pprint, re, urllib
+    import argparse, errno, gzip, multiprocessing, re, urllib
+    from pprint import pprint, pformat
 
     config = json.loads(subprocess.check_output([ runbenchmarkadapton_native, "-c" ]))
     config["modules"] = map(str, config["modules"])
@@ -396,11 +397,11 @@ if __name__ == "__main__":
                         if not units:
                             units = record["units"]
                         elif units != record["units"]:
-                            raise ValueError("inconsistent units in results:\nexpected: %s\ngot: %s" % ( pprint.pformat(units), pprint.pformat(record["units"]) ))
+                            raise ValueError("inconsistent units in results:\nexpected: %s\ngot: %s" % ( pformat(units), pformat(record["units"]) ))
                     except Exception:
                         traceback.print_exc()
                         if "error" in record:
-                            pprint.pprint(dict(record))
+                            pprint(dict(record))
                     else:
                         if "edits" in record:
                             editables.add(record["module"])
@@ -417,7 +418,7 @@ if __name__ == "__main__":
                             except Exception:
                                 traceback.print_exc()
                                 if "error" in record:
-                                    pprint.pprint(dict(record))
+                                    pprint(dict(record))
 
                 ymax = {}
                 for measurement, measurement_table in table.iteritems():
