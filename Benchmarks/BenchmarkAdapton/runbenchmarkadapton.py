@@ -395,14 +395,14 @@ if __name__ == "__main__":
                         if "edits" in record:
                             editables.add(record["module"])
                             try:
-                                edit_count = float(sum( edit["edit-count"] for edit in record["edits"] ))
+                                edit_count = float(sum(record["edits"]["edit-count"]))
                                 for key in table.iterkeys():
                                     if key.startswith("max-"):
                                         table[key].setdefault("propagate", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record[results["x-axis"]], []).append(record["edits"][-1][key])
+                                            .setdefault(record[results["x-axis"]], []).append(record["edits"][key][-1])
                                     else:
-                                        update = sum( edit["update"][key] for edit in record["edits"] ) / edit_count
-                                        take = sum( edit["take"][key] for edit in record["edits"] ) / edit_count
+                                        update = sum(record["edits"]["update"][key]) / edit_count
+                                        take = sum(record["edits"]["take"][key]) / edit_count
                                         table[key].setdefault("propagate", {}).setdefault(record["module"], {}) \
                                             .setdefault(record[results["x-axis"]], []).append(update + take)
                                         table[key].setdefault("update", {}).setdefault(record["module"], {}) \

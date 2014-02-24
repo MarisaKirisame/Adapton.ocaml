@@ -124,30 +124,37 @@ let do_benchmark (module A : AdaptonUtil.Signatures.AType) ~make_input ~setup ~d
             in
             do_edits 0. !opt_edit_count;
             close_out stats_out;
-            Printf.printf "{ %t, \"setup\": { %a, %a }, \"edits\": [ "
-                config stats setup_stats top_heap_stack setup_top_heap_stack;
             let edit_time = ref 0. in
-            let first = ref true in
-            begin try
-                while true do
-                    let update_stats, take_stats, edit_count, edit_heap, edit_stack = input_value stats_in in
-
-                    if not !first then begin
-                        print_string ", ";
-                    end;
-                    first := false;
-                    Printf.printf "{ \"update\": { %a }, \"take\": { %a }, \"edit-count\": %d, %a }"
-                         stats update_stats
-                         stats take_stats
-                         edit_count
-                         top_heap_stack ( edit_heap, edit_stack );
-                    edit_time := !edit_time +. update_stats.time +. take_stats.time;
-                done
-            with End_of_file ->
-                ()
-            end;
-            Printf.printf " ], %s }\n%!" units;
+            let stats_array = Array.init !opt_edit_count begin fun _ ->
+                let ( update_stats, take_stats, _, _, _ ) as stat = input_value stats_in in
+                edit_time := !edit_time +. update_stats.time +. take_stats.time;
+                stat
+            end in
             close_in stats_in;
+            let print_stats_list fmt get ff =
+                Array.iteri begin fun k stat ->
+                    if k > 0 then output_string ff ", ";
+                    Printf.fprintf ff fmt (get stat);
+                end stats_array;
+            in
+            let print_stats_lists get ff =
+                Printf.fprintf ff "\"time\": [ %t ], \"heap\": [ %t ], \"stack\": [ %t ], \"update\": [ %t ], \"evaluate\": [ %t ], \"dirty\": [ %t ], \"clean\": [ %t ]"
+                    (print_stats_list "%.17g" (fun x -> (get x).time))
+                    (print_stats_list "%d" (fun x -> (get x).heap))
+                    (print_stats_list "%d" (fun x -> (get x).stack))
+                    (print_stats_list "%d" (fun x -> (get x).update))
+                    (print_stats_list "%d" (fun x -> (get x).evaluate))
+                    (print_stats_list "%d" (fun x -> (get x).dirty))
+                    (print_stats_list "%d" (fun x -> (get x).clean))
+            in
+            Printf.printf "{ %t, \"setup\": { %a, %a }, \"edits\": { \"update\": { %t }, \"take\": { %t }, \"edit-count\": [ %t ], \"max-heap\": [ %t ], \"max-stack\": [ %t ] }, %s }\n%!"
+                config stats setup_stats top_heap_stack setup_top_heap_stack
+                (print_stats_lists (fun ( u, _, _, _, _ ) -> u))
+                (print_stats_lists (fun ( _, t, _, _, _ ) -> t))
+                (print_stats_list "%d" (fun ( _, _, e, _, _ ) -> e))
+                (print_stats_list "%d" (fun ( _, _, _, h, _ ) -> word_bytes h))
+                (print_stats_list "%d" (fun ( _, _, _, _, s ) -> word_bytes s))
+                units;
             Printf.eprintf "%t ... done (%9.2fs) %9.3gs edit %9.3gs\n%!"
                 header (get_time () -. start_time) setup_stats.time !edit_time
         end else begin
