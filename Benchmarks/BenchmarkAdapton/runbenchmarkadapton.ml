@@ -51,16 +51,19 @@ let opt_a = ref (fst (List.hd AdaptonZoo.All.a_list))
 let opt_task = ref "filter"
 let opt_input_size = ref 1
 let opt_repeat_count = ref 1
-let opt_edit_count = ref 1
 let opt_take_count = ref 1
-let opt_random_seed = ref 1
+let opt_edit_count = ref 1
 let opt_monotonic = ref false
+let opt_random_seed = ref 1
 
 let header ff = Printf.fprintf ff "%24s %24s %8d %8d %20d" !opt_a !opt_task !opt_take_count !opt_input_size !opt_random_seed
+let config ff =
+    Printf.fprintf ff "\"module\": \"%s\", \"task\": \"%s\", \"size\": %d, \"repeat\": %d, \"take\": %d, \"edit\": %d, \"monotonic\": %b, \"seed\": %d"
+        !opt_a !opt_task !opt_input_size !opt_repeat_count !opt_take_count !opt_edit_count !opt_monotonic !opt_random_seed
 let stats ff s =
-    Printf.fprintf ff "\"time\": %.17g, \"heap\": %.17g, \"stack\": %.17g, \"update\": %.17g, \"evaluate\": %.17g, \"dirty\": %.17g, \"clean\": %.17g"
+    Printf.fprintf ff "\"time\": %.17g, \"heap\": %d, \"stack\": %d, \"update\": %d, \"evaluate\": %d, \"dirty\": %d, \"clean\": %d"
         s.time s.heap s.stack s.update s.evaluate s.dirty s.clean
-let top_heap_stack ff ( heap, stack ) = Printf.fprintf ff "\"max-heap\": %.17g, \"max-stack\": %.17g" (word_bytes heap) (word_bytes stack)
+let top_heap_stack ff ( heap, stack ) = Printf.fprintf ff "\"max-heap\": %d, \"max-stack\": %d" (word_bytes heap) (word_bytes stack)
 let units =
     "\"units\": { \"time\": \"seconds\", \"heap\": \"bytes\", \"stack\": \"bytes\", "
     ^ "\"update\": null, \"evaluate\": null, \"dirty\": null, \"clean\": null, "
@@ -94,47 +97,67 @@ let do_benchmark (module A : AdaptonUtil.Signatures.AType) ~make_input ~setup ~d
             take ();
             take
         end in
-        let setup_stats = finish setup_stats 1 in
         let setup_top_heap_stack = get_top_heap_stack () in
 
         if A.is_incremental then begin
-            let rec do_edits past n update_stats take_stats edit_count =
-                if n == 0 then
-                    ( update_stats, take_stats, edit_count )
-                else
-                    let past =
-                        let now = get_time () in
-                        if now -. past < 20. then
-                            past
-                        else begin
-                            let heap, stack = get_top_heap_stack () in
-                            Printf.eprintf "%t edit %10d %9.2fMB %9.2fMB\n%!"
-                                header n (word_megabytes heap) (word_megabytes stack);
-                            now
-                        end
-                    in
-                    let update_stats', take_stats', edit_count' = do_edit input (fun () -> A.refresh (); take ()) in
-                    do_edits past (pred n)
-                        (add update_stats update_stats')
-                        (add take_stats take_stats')
-                        (edit_count + edit_count')
+            let stats_file, stats_out = Filename.open_temp_file ~mode:[ Open_append; Open_binary ] "runbenchmarkadapton." ".stats" in
+            let stats_in = open_in_bin stats_file in
+            Unix.unlink stats_file;
+            let rec do_edits past n = if n == 0 then () else
+                let past =
+                    let now = get_time () in
+                    if now -. past < 20. then
+                        past
+                    else begin
+                        let heap, stack = get_top_heap_stack () in
+                        Printf.eprintf "%t edit %10d %9.2fMB %9.2fMB\n%!"
+                            header n (word_megabytes heap) (word_megabytes stack);
+                        now
+                    end
+                in
+                let update_stats, take_stats, edit_count = do_edit input (fun () -> A.refresh (); take ()) in
+
+                let edit_heap, edit_stack = get_top_heap_stack () in
+                output_value stats_out ( update_stats, take_stats, edit_count, edit_heap, edit_stack );
+
+                do_edits past (pred n)
             in
-            let update_stats, take_stats, edit_count = do_edits 0. !opt_edit_count zero zero 0 in
-            let edit_top_heap_stack = get_top_heap_stack () in
-            let update_stats = finish update_stats edit_count in
-            let take_stats = finish take_stats edit_count in
-            Printf.printf "{ \"setup\": { %a, %a }, \"edits\": { \"update\": { %a }, \"take\": { %a }, %a }, %s }\n%!"
-                stats setup_stats top_heap_stack setup_top_heap_stack stats update_stats stats take_stats top_heap_stack edit_top_heap_stack units;
+            do_edits 0. !opt_edit_count;
+            close_out stats_out;
+            Printf.printf "{ %t, \"setup\": { %a, %a }, \"edits\": [ "
+                config stats setup_stats top_heap_stack setup_top_heap_stack;
+            let edit_time = ref 0. in
+            let first = ref true in
+            begin try
+                while true do
+                    let update_stats, take_stats, edit_count, edit_heap, edit_stack = input_value stats_in in
+
+                    if not !first then begin
+                        print_string ", ";
+                    end;
+                    first := false;
+                    Printf.printf "{ \"update\": { %a }, \"take\": { %a }, \"edit-count\": %d, %a }"
+                         stats update_stats
+                         stats take_stats
+                         edit_count
+                         top_heap_stack ( edit_heap, edit_stack );
+                    edit_time := !edit_time +. update_stats.time +. take_stats.time;
+                done
+            with End_of_file ->
+                ()
+            end;
+            Printf.printf " ], %s }\n%!" units;
+            close_in stats_in;
             Printf.eprintf "%t ... done (%9.2fs) %9.3gs edit %9.3gs\n%!"
-                header (get_time () -. start_time) setup_stats.time (update_stats.time +. take_stats.time)
+                header (get_time () -. start_time) setup_stats.time !edit_time
         end else begin
-            Printf.printf "{ \"setup\": { %a, %a }, %s }\n%!"
-                stats setup_stats top_heap_stack setup_top_heap_stack units;
+            Printf.printf "{ %t, \"setup\": { %a, %a }, %s }\n%!"
+                config stats setup_stats top_heap_stack setup_top_heap_stack units;
             Printf.eprintf "%t ... done (%9.2fs) %9.3gs\n%!" header (get_time () -. start_time) setup_stats.time
         end
     with e ->
         let err = Printexc.to_string e in
-        Printf.printf ("{ \"error\": %S }\n%!") err;
+        Printf.printf ("{ %t, \"error\": %S }\n%!") config err;
         Printf.eprintf "%s\n%!" err;
         Printf.eprintf "%t ... done (%9.2fs)\n%!" header (get_time () -. start_time)
 
@@ -413,8 +436,8 @@ let _ =
         ( "-R", Arg.Set_int opt_repeat_count, "count repeat count" );
         ( "-T", Arg.Set_int opt_take_count, "count take count" );
         ( "-E", Arg.Set_int opt_edit_count, "count edit count" );
-        ( "-S", Arg.Set_int opt_random_seed, "seed random seed" );
         ( "-M", Arg.Set opt_monotonic, "monotonic edits" );
+        ( "-S", Arg.Set_int opt_random_seed, "seed random seed" );
     ]) (fun s -> raise (Arg.Bad ("extraneous argument " ^ s))) (Sys.argv.(0) ^ " [options]");
 
     let rng = Random.State.make [| !opt_random_seed |] in

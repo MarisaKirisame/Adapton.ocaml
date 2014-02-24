@@ -10,25 +10,22 @@ runbenchmarkadapton_native = "%s%s%s" % ( os.path.splitext(__file__)[0], os.path
 def driver(( module, task, size, repeat, take, edit, monotonic, seed )):
     driver_start_time = time.time()
     rng = random.Random(seed)
-    results = OrderedDict((
-        ( "module", module ), ( "task", task ),
-        ( "size", size ), ( "repeat", repeat), ( "take", take ), ( "edit", edit ), ( "monotonic", monotonic ),
-        ( "seed", seed ) ))
     try:
-        cmd = [ runbenchmarkadapton_native, "-m", "%s" % ( module, ), "-t", str(task), "-I", str(size), "-R", str(repeat), "-T", str(take), "-E", str(edit) ]
+        cmd = [ runbenchmarkadapton_native, "-m", str(module), "-t", str(task), "-I", str(size), "-R", str(repeat), "-T", str(take), "-E", str(edit) ]
         if monotonic:
             cmd.append("-M")
         cmd.extend(( "-S", str(seed) ))
         native = subprocess.Popen(cmd, stdout=subprocess.PIPE, env={ "BENCHMARK_SALIST_ENV": " " * rng.randrange(4096) })
-        results.update(json.load(native.stdout, object_pairs_hook=OrderedDict))
-        return results
+        return native.stdout.read()
 
     except Exception, KeyboardInterrupt:
         error = traceback.format_exc()
-        results["error"] = error
         print>>sys.stderr, error
         print>>sys.stderr, "%32s %24s %4d %10d %20d ... error (%9.2fs)" % ( module, task, take, size, seed, time.time() - driver_start_time )
-        return results
+        return json.dumps(OrderedDict((
+            ( "module", module ), ( "task", task ),
+            ( "size", size ), ( "repeat", repeat), ( "take", take ), ( "edit", edit ), ( "monotonic", monotonic ),
+            ( "seed", seed ), ( "error", error ) )))
     finally:
         try:
             native.kill()
@@ -259,30 +256,22 @@ if __name__ == "__main__":
                 finally:
                     if len(args.input_sizes) > 1:
                         assert len(args.take_counts) == 1
-                        results = OrderedDict((
-                            ( "label", "take count = %d" % ( args.take_counts[0], ) ),
-                            ( "x-axis", "size" ),
-                            ( "x-label", "input size" ),
-                            ( "data", results )
-                        ))
+                        label = "take count = %d" % ( args.take_counts[0], )
+                        x_axis = "size"
+                        x_label = "input size"
                     elif len(args.take_counts) > 1:
                         assert len(args.input_sizes) == 1
-                        results = OrderedDict((
-                            ( "label", "input size = %d" % ( args.input_sizes[0], ) ),
-                            ( "x-axis", "take" ),
-                            ( "x-label", "take count" ),
-                            ( "data", results )
-                        ))
+                        label = "input size = %d" % ( args.input_sizes[0], )
+                        x_axis = "take"
+                        x_label = "take count"
                     else:
                         assert len(args.take_counts) == 1 and len(args.input_sizes) == 1
-                        results = OrderedDict((
-                            ( "label", "input size = %d; count = %d" % ( args.input_sizes[0], args.take_counts[0] ) ),
-                            ( "x-axis", "size" ),
-                            ( "x-label", "" ),
-                            ( "data", results )
-                        ))
+                        label = "input size = %d; count = %d" % ( args.input_sizes[0], args.take_counts[0] )
+                        x_axis = "size"
+                        x_label = ""
                     with gzip.open(os.path.join(output, "%s-%04d.json.gz" % ( task, len(results) )), "w") as jsonfile:
-                        json.dump(results, jsonfile, indent=4, separators=( ",", ":" ))
+                        print>>jsonfile, "{ \"label\": \"%s\", \"x-axis\": \"%s\", \"x-label\": \"%s\", \"data\": [ %s ] }" \
+                            % ( label, x_axis, x_label, ", ".join(results) )
 
     if not args.summaries:
         sys.exit()
@@ -406,15 +395,18 @@ if __name__ == "__main__":
                         if "edits" in record:
                             editables.add(record["module"])
                             try:
+                                edit_count = float(sum( edit["edit-count"] for edit in record["edits"] ))
                                 for key in table.iterkeys():
                                     if key.startswith("max-"):
                                         table[key].setdefault("propagate", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record[results["x-axis"]], []).append(record["edits"][key])
+                                            .setdefault(record[results["x-axis"]], []).append(record["edits"][-1][key])
                                     else:
+                                        update = sum( edit["update"][key] for edit in record["edits"] ) / edit_count
+                                        take = sum( edit["take"][key] for edit in record["edits"] ) / edit_count
                                         table[key].setdefault("propagate", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record[results["x-axis"]], []).append(record["edits"]["update"][key] + record["edits"]["take"][key])
+                                            .setdefault(record[results["x-axis"]], []).append(update + take)
                                         table[key].setdefault("update", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record[results["x-axis"]], []).append(record["edits"]["update"][key])
+                                            .setdefault(record[results["x-axis"]], []).append(update)
                             except Exception:
                                 traceback.print_exc()
                                 if "error" in record:
