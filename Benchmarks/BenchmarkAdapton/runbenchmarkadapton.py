@@ -592,18 +592,20 @@ if __name__ == "__main__":
                         for baseline in args.baselines:
                             htmltable.th(baseline, colspan=2)
                         for editable in editables:
-                            htmltable.th(editable, colspan=2 * (len(args.baselines) + 1))
+                            htmltable.th(editable, colspan=2 * (len(args.baselines) + 2))
                     with htmltable.tr():
                         for _ in args.baselines:
                             htmltable.th("time", rowspan=2)
                             htmltable.th("max-heap", rowspan=2)
                         for _ in editables:
-                            htmltable.th("from-scratch", colspan=len(args.baselines) + 1)
-                            htmltable.th("incremental", colspan=len(args.baselines) + 1)
+                            htmltable.th("from-scratch", colspan=len(args.baselines) + 2)
+                            htmltable.th("incremental", colspan=len(args.baselines) + 2)
                     with htmltable.tr():
                         for _ in editables:
+                            htmltable.th("time")
                             htmltable.th("overhead", colspan=len(args.baselines))
                             htmltable.th("max-heap")
+                            htmltable.th("time")
                             htmltable.th("speed-up", colspan=len(args.baselines))
                             htmltable.th("max-heap")
                     with htmltable.tr():
@@ -611,6 +613,7 @@ if __name__ == "__main__":
                             htmltable.th(units["time"])
                             htmltable.th(units["max-heap"])
                         for _ in xrange(len(editables) * 2):
+                            htmltable.th(units["time"])
                             for baseline in args.baselines:
                                 htmltable.th(baseline)
                             htmltable.th(units["max-heap"])
@@ -642,11 +645,13 @@ if __name__ == "__main__":
                                 max_heap = table["max-heap"]["propagate"][editable].values()[-1]
                                 best["max-heap"] = min(max_heap, best.get("max-heap", max_heap))
                             for editable in editables:
+                                htmltable.td(engFormatter(table["time"]["from-scratch"][editable].values()[-1]))
                                 for baseline in args.baselines:
                                     overhead = performance[editable][baseline][0]
                                     htmltable.td(engFormatter(overhead))
                                 max_heap = table["max-heap"]["from-scratch"][editable].values()[-1]
                                 htmltable.td(engFormatter(max_heap))
+                                htmltable.td(engFormatter(table["time"]["propagate"][editable].values()[-1]))
                                 for baseline in args.baselines:
                                     speedup = performance[editable][baseline][1]
                                     htmltable.td(engFormatter(speedup), cls="" if speedup != best[baseline] else "highlight")

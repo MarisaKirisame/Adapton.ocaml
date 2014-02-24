@@ -85,6 +85,7 @@ let do_benchmark (module A : AdaptonUtil.Signatures.AType) ~make_input ~setup ~d
     let start_time = get_time () in
 
     let input = make_input () in
+    Gc.compact ();
 
     Printf.eprintf "%t\n%!" header;
     try
