@@ -270,7 +270,7 @@ if __name__ == "__main__":
                         x_axis = "size"
                         x_label = ""
                     with gzip.open(os.path.join(output, "%s-%04d.json.gz" % ( task, len(results) )), "w") as jsonfile:
-                        print>>jsonfile, "{ \"label\": \"%s\", \"x-axis\": \"%s\", \"x-label\": \"%s\", \"data\": [ %s ] }" \
+                        print>>jsonfile, "{\"label\":\"%s\",\"x-axis\":\"%s\",\"x-label\":\"%s\",\"data\":[%s]}" \
                             % ( label, x_axis, x_label, ", ".join(results) )
 
     if not args.summaries:

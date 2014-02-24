@@ -58,26 +58,24 @@ let opt_random_seed = ref 1
 
 let header ff = Printf.fprintf ff "%24s %24s %8d %8d %20d" !opt_a !opt_task !opt_take_count !opt_input_size !opt_random_seed
 let config ff =
-    Printf.fprintf ff "\"module\": \"%s\", \"task\": \"%s\", \"size\": %d, \"repeat\": %d, \"take\": %d, \"edit\": %d, \"monotonic\": %b, \"seed\": %d"
+    Printf.fprintf ff "\"module\":\"%s\",\"task\":\"%s\",\"size\":%d,\"repeat\":%d,\"take\":%d,\"edit\":%d,\"monotonic\":%b,\"seed\":%d"
         !opt_a !opt_task !opt_input_size !opt_repeat_count !opt_take_count !opt_edit_count !opt_monotonic !opt_random_seed
 let stats ff s =
-    Printf.fprintf ff "\"time\": %.17g, \"heap\": %d, \"stack\": %d, \"update\": %d, \"evaluate\": %d, \"dirty\": %d, \"clean\": %d"
+    Printf.fprintf ff "\"time\":%.17g,\"heap\":%d,\"stack\":%d,\"update\":%d,\"evaluate\":%d,\"dirty\":%d,\"clean\":%d"
         s.time s.heap s.stack s.update s.evaluate s.dirty s.clean
-let top_heap_stack ff ( heap, stack ) = Printf.fprintf ff "\"max-heap\": %d, \"max-stack\": %d" (word_bytes heap) (word_bytes stack)
+let top_heap_stack ff ( heap, stack ) = Printf.fprintf ff "\"max-heap\":%d,\"max-stack\":%d" (word_bytes heap) (word_bytes stack)
 let units =
-    "\"units\": { \"time\": \"seconds\", \"heap\": \"bytes\", \"stack\": \"bytes\", "
-    ^ "\"update\": null, \"evaluate\": null, \"dirty\": null, \"clean\": null, "
-    ^ "\"max-heap\": \"bytes\", \"max-stack\": \"bytes\" }"
+    "\"units\":{\"time\":\"seconds\",\"heap\":\"bytes\",\"stack\":\"bytes\",\"update\":null,\"evaluate\":null,\"dirty\":null,\"clean\":null,\"max-heap\":\"bytes\",\"max-stack\":\"bytes\"}"
 
 let show_config () =
     let list_printer printer ff list =
-        ignore (List.fold_left (fun b x -> Printf.fprintf ff "%(%)%a" b printer x; ", ") "" list)
+        ignore (List.fold_left (fun b x -> Printf.fprintf ff "%(%)%a" b printer x; ",") "" list)
     in
     let task_printer ff task =
-        Printf.fprintf ff "{ \"name\": %S, \"take\": %S }"
+        Printf.fprintf ff "{\"name\":%S,\"take\":%S}"
             (fst task) (match snd task with `One _ -> "one" | `List _ -> "list" | `Flip _ -> "flip" | `ExpTree -> "exptree")
     in
-    Printf.printf "{ \"modules\": [ %a ], \"tasks\": [ %a ] }\n%!"
+    Printf.printf "{\"modules\":[%a],\"tasks\":[%a]}\n%!"
         (list_printer (fun ff -> Printf.fprintf ff "%S")) (fst (List.split AdaptonZoo.All.a_list))
         (list_printer task_printer) tasks;
     exit 0
@@ -133,12 +131,12 @@ let do_benchmark (module A : AdaptonUtil.Signatures.AType) ~make_input ~setup ~d
             close_in stats_in;
             let print_stats_list fmt get ff =
                 Array.iteri begin fun k stat ->
-                    if k > 0 then output_string ff ", ";
+                    if k > 0 then output_string ff ",";
                     Printf.fprintf ff fmt (get stat);
                 end stats_array;
             in
             let print_stats_lists get ff =
-                Printf.fprintf ff "\"time\": [ %t ], \"heap\": [ %t ], \"stack\": [ %t ], \"update\": [ %t ], \"evaluate\": [ %t ], \"dirty\": [ %t ], \"clean\": [ %t ]"
+                Printf.fprintf ff "\"time\":[%t],\"heap\":[%t],\"stack\":[%t],\"update\":[%t],\"evaluate\":[%t],\"dirty\":[%t],\"clean\":[%t]"
                     (print_stats_list "%.17g" (fun x -> (get x).time))
                     (print_stats_list "%d" (fun x -> (get x).heap))
                     (print_stats_list "%d" (fun x -> (get x).stack))
@@ -147,7 +145,7 @@ let do_benchmark (module A : AdaptonUtil.Signatures.AType) ~make_input ~setup ~d
                     (print_stats_list "%d" (fun x -> (get x).dirty))
                     (print_stats_list "%d" (fun x -> (get x).clean))
             in
-            Printf.printf "{ %t, \"setup\": { %a, %a }, \"edits\": { \"update\": { %t }, \"take\": { %t }, \"edit-count\": [ %t ], \"max-heap\": [ %t ], \"max-stack\": [ %t ] }, %s }\n%!"
+            Printf.printf "{%t,\"setup\":{%a,%a},\"edits\":{\"update\":{%t},\"take\":{%t},\"edit-count\":[%t],\"max-heap\":[%t],\"max-stack\":[%t]},%s}\n%!"
                 config stats setup_stats top_heap_stack setup_top_heap_stack
                 (print_stats_lists (fun ( u, _, _, _, _ ) -> u))
                 (print_stats_lists (fun ( _, t, _, _, _ ) -> t))
@@ -158,13 +156,13 @@ let do_benchmark (module A : AdaptonUtil.Signatures.AType) ~make_input ~setup ~d
             Printf.eprintf "%t ... done (%9.2fs) %9.3gs edit %9.3gs\n%!"
                 header (get_time () -. start_time) setup_stats.time !edit_time
         end else begin
-            Printf.printf "{ %t, \"setup\": { %a, %a }, %s }\n%!"
+            Printf.printf "{%t,\"setup\":{%a,%a},%s}\n%!"
                 config stats setup_stats top_heap_stack setup_top_heap_stack units;
             Printf.eprintf "%t ... done (%9.2fs) %9.3gs\n%!" header (get_time () -. start_time) setup_stats.time
         end
     with e ->
         let err = Printexc.to_string e in
-        Printf.printf ("{ %t, \"error\": %S }\n%!") config err;
+        Printf.printf "{%t,\"error\":%S}\n%!" config err;
         Printf.eprintf "%s\n%!" err;
         Printf.eprintf "%t ... done (%9.2fs)\n%!" header (get_time () -. start_time)
 
