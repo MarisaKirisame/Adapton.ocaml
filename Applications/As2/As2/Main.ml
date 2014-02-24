@@ -13,16 +13,24 @@ module Make (AA : AdaptonUtil.Signatures.AType) = struct
     ps "=========================================================================\n" ;
     ps "AS2 HELP:                                                                \n" ;
     ps "-------------------------------------------------------------------------\n" ;
-    ps "Commands:                                                                \n" ;
-    ps " 'help'            -- this help                                          \n" ;
-    ps " 'exit'            -- use excel instead                                  \n" ;
-    ps "                                                                         \n" ;
-    ps " = frm .           -- set formula of current cell to frm                 \n" ;
-    ps "                      Note: start with equals; terminate with a dot.     \n" ;
-    ps "                                                                         \n" ;
-    ps " 'goto' coord      -- goto a specific (sheet), row and column            \n" ;
-    ps " 'next' nav-thing  -- next col/row/sheet                                 \n" ;
-    ps " 'prev' nav-thing  -- prev col/row/sheet                                 \n" ;
+    ps " Note 1: all keywords, below in quotes, are also valid in all caps       \n" ;
+    ps " Note 2: all commands are terminated with a period                       \n" ;
+    ps "-------------------------------------------------------------------------\n" ;
+(*    ps "                                                                         \n" ; *)
+    ps "Command syntax                                                           \n" ;
+    ps " cmd ::=                                                                 \n" ;
+    ps " | 'help'               -- this help                                     \n" ;
+    ps " | 'exit'               -- use excel instead                             \n" ;
+(*    ps "                                                                         \n" ; *)
+    ps " | = frm                -- set formula of current cell to frm            \n" ;
+    ps " | 'print'              -- print the current sheet                       \n" ;
+(*    ps "                                                                         \n" ; *)
+    ps " | 'goto' coord         -- goto a specific (sheet), row and column       \n" ;
+    ps " | 'next' nav-thing     -- next col/row/sheet                            \n" ;
+    ps " | 'prev' nav-thing     -- prev col/row/sheet                            \n" ;
+(*    ps "                                                                         \n" ; *)
+    ps " | cmd1 ; cmd2          -- command sequencing                            \n" ;
+    ps " | 'repeat' n 'do' cmd  -- repeat a command n times                      \n" ;
     ps "                                                                         \n" ;
     ps "-------------------------------------------------------------------------\n" ;
     ps "Formula & Coordinate Syntax                                              \n" ;
@@ -38,8 +46,6 @@ module Make (AA : AdaptonUtil.Signatures.AType) = struct
     ps " Coordinates  coord     ::= lc | 'sheet' num ! lc                        \n" ;
     ps " Local coord  lc        ::= letters num                                  \n" ;
     ps " Local region lr        ::= lc : lc                                      \n" ;
-    ps "-------------------------------------------------------------------------\n" ;
-    ps " All keywords, above in quotes, are also valid in all caps               \n" ;
     ps "-------------------------------------------------------------------------\n" ;
     ()
 
@@ -205,7 +211,7 @@ module Make (AA : AdaptonUtil.Signatures.AType) = struct
               )
     in
     let _, m = measure (fun _ -> eval_cmd cmd cur) in
-    let out = open_out_gen [Open_append] 0 (!Global.stats_out) in
+    let out = open_out_gen [Open_creat;Open_append] 0 (!Global.stats_out) in
     output_string out (Printf.sprintf "%d, %d, %f, %d, %d, %d, %d, %d, %d\n"
                          sht_to_demand
                          num_changes

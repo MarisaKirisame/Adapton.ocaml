@@ -46,22 +46,22 @@ Quick-start
 
 4. Run Adapton.ocaml benchmarks:
 
-    * for systems with at least 8 cores and 16GB memory (runs up to 8 benchmarks in parallel)
+    * for systems with at least 8 cores and 16GB memory (runs up to 8 benchmarks in parallel; takes a good part of a
+      day)
 
             % make pldi2014-benchmarks
 
-    * for smaller systems with at least 1GB memory (similar to above except 10% of the input sizes, not run in parallel)
+    * for smaller systems with at least 1GB memory (similar to above except 10% of the input sizes, not run in parallel;
+      takes a couple of hours)
 
             % make small-pldi2014-benchmarks
 
-    * for the impatient (similar to above except 1% of the input sizes, not run in parallel)
+    * for the impatient (similar to above except 1% of the input sizes, not run in parallel; takes a few minutes)
 
             % make tiny-pldi2014-benchmarks
 
-    Note the larger benchmark will take a good part of a day to complete, whereas the smaller benchmark will take a few
-    hours, and the tiny benchmark takes a few minutes. Results will be written to
-    `Results/BenchmarkAdapton/*pldi2014-benchmarks-*/{lazy,batch,swap,switch}/summary` for a HTML or text summary of the
-    results, in particular, look under the _incremental_ columns:
+    Results will be written to `Results/BenchmarkAdapton/*pldi2014-benchmarks-*/{lazy,batch,swap,switch}/summary` as
+    HTML as well as text-only tables. In particular, look under the _incremental_ columns, e.g.:
 
                                     Adapton |                         EagerTotalOrder
                                 incremental |                             incremental
@@ -73,6 +73,46 @@ Quick-start
            674e+0 * |   630e+0 * | 163e+6 * |        493e+0   |   461e+0   | 169e+6
 
     Cells marked `*` show the highest speed-up over *NonInc or smallest memory usage.
+
+5. Run Adapton SpreadSheet (AS2) application:
+
+   * To run the native binary for the application interactively:
+
+            % ./_product/runas2.native
+
+     The interactive command "help." (with terminating period) will
+     cause the system to display a summary of its other commands, and
+     its formula syntax.
+
+   * To see a summary of command-line options:
+
+            % ./_product/runas2.native --help
+
+   * The application offers different implementations of the Adapton
+     primitives for comparison purposes. The command line switch
+     --adapton-module controls which implementation is used:
+
+            % ./_product/runas2.native --adapton-module <impl>
+
+     Where <impl> is one of:
+            * Adapton (this is the default)
+            * EagerTotalOrder
+            * EagerNonInc
+            * LazyNonInc
+
+  * The following test script works for all versions, and can be
+    entered interactively:
+
+        scrambled; goto 10!a1 ; print ; repeat 5 do scramble1 ; print done .
+
+  * Alternatively, this script can be invoked at the command-line as follows:
+
+        % ./_product/runas2.native --num-changes 5 --stats-test 10
+
+    In this mode, the program prints statistics and appends this
+    information to the file as2-stats.out, then exits.  The numbers 5
+    and 10 control the number of changes and total number of sheets,
+    respectively.  Of course, they can be changed to other integers.
 
 
 Requirements

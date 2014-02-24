@@ -10,25 +10,22 @@ runbenchmarkadapton_native = "%s%s%s" % ( os.path.splitext(__file__)[0], os.path
 def driver(( module, task, size, repeat, take, edit, monotonic, seed )):
     driver_start_time = time.time()
     rng = random.Random(seed)
-    results = OrderedDict((
-        ( "module", module ), ( "task", task ),
-        ( "size", size ), ( "repeat", repeat), ( "take", take ), ( "edit", edit ), ( "monotonic", monotonic ),
-        ( "seed", seed ) ))
     try:
-        cmd = [ runbenchmarkadapton_native, "-m", "%s" % ( module, ), "-t", str(task), "-I", str(size), "-R", str(repeat), "-T", str(take), "-E", str(edit) ]
+        cmd = [ runbenchmarkadapton_native, "-m", str(module), "-t", str(task), "-I", str(size), "-R", str(repeat), "-T", str(take), "-E", str(edit) ]
         if monotonic:
             cmd.append("-M")
         cmd.extend(( "-S", str(seed) ))
         native = subprocess.Popen(cmd, stdout=subprocess.PIPE, env={ "BENCHMARK_SALIST_ENV": " " * rng.randrange(4096) })
-        results.update(json.load(native.stdout, object_pairs_hook=OrderedDict))
-        return results
+        return native.stdout.read()
 
     except Exception, KeyboardInterrupt:
         error = traceback.format_exc()
-        results["error"] = error
         print>>sys.stderr, error
         print>>sys.stderr, "%32s %24s %4d %10d %20d ... error (%9.2fs)" % ( module, task, take, size, seed, time.time() - driver_start_time )
-        return results
+        return json.dumps(OrderedDict((
+            ( "module", module ), ( "task", task ),
+            ( "size", size ), ( "repeat", repeat), ( "take", take ), ( "edit", edit ), ( "monotonic", monotonic ),
+            ( "seed", seed ), ( "error", error ) )))
     finally:
         try:
             native.kill()
@@ -43,12 +40,12 @@ def physical_cpu_count():
         import re
         re_lscpu = re.compile(r"Core\(s\) per socket:\s+([0-9]+).*Socket\(s\):\s+([0-9]+)", re.MULTILINE | re.DOTALL)
         try:
-            m = re_lscpu.find(subprocess.check_output("lscpu"))
+            m = re_lscpu.search(subprocess.check_output("lscpu"))
         except Exception:
             cpu_count = 0
         else:
             if m:
-                cpu_count = int(m.group(1) * m.group(2))
+                cpu_count = int(m.group(1)) * int(m.group(2))
             else:
                 cpu_count = 0
         if cpu_count == 0:
@@ -66,7 +63,8 @@ def physical_cpu_count():
 
 
 if __name__ == "__main__":
-    import argparse, errno, gzip, multiprocessing, pprint, re, urllib
+    import argparse, errno, gzip, multiprocessing, re, urllib
+    from pprint import pprint, pformat
 
     config = json.loads(subprocess.check_output([ runbenchmarkadapton_native, "-c" ]))
     config["modules"] = map(str, config["modules"])
@@ -258,30 +256,22 @@ if __name__ == "__main__":
                 finally:
                     if len(args.input_sizes) > 1:
                         assert len(args.take_counts) == 1
-                        results = OrderedDict((
-                            ( "label", "take count = %d" % ( args.take_counts[0], ) ),
-                            ( "x-axis", "size" ),
-                            ( "x-label", "input size" ),
-                            ( "data", results )
-                        ))
+                        label = "take count = %d" % ( args.take_counts[0], )
+                        x_axis = "size"
+                        x_label = "input size"
                     elif len(args.take_counts) > 1:
                         assert len(args.input_sizes) == 1
-                        results = OrderedDict((
-                            ( "label", "input size = %d" % ( args.input_sizes[0], ) ),
-                            ( "x-axis", "take" ),
-                            ( "x-label", "take count" ),
-                            ( "data", results )
-                        ))
+                        label = "input size = %d" % ( args.input_sizes[0], )
+                        x_axis = "take"
+                        x_label = "take count"
                     else:
                         assert len(args.take_counts) == 1 and len(args.input_sizes) == 1
-                        results = OrderedDict((
-                            ( "label", "input size = %d; count = %d" % ( args.input_sizes[0], args.take_counts[0] ) ),
-                            ( "x-axis", "size" ),
-                            ( "x-label", "" ),
-                            ( "data", results )
-                        ))
+                        label = "input size = %d; count = %d" % ( args.input_sizes[0], args.take_counts[0] )
+                        x_axis = "size"
+                        x_label = ""
                     with gzip.open(os.path.join(output, "%s-%04d.json.gz" % ( task, len(results) )), "w") as jsonfile:
-                        json.dump(results, jsonfile, indent=4, separators=( ",", ":" ))
+                        print>>jsonfile, "{\"units\":%s,\"label\":\"%s\",\"x-axis\":\"%s\",\"x-label\":\"%s\",\"data\":[%s]}" \
+                            % ( json.dumps(config["units"]), label, x_axis, x_label, ", ".join(results) )
 
     if not args.summaries:
         sys.exit()
@@ -352,7 +342,6 @@ if __name__ == "__main__":
 
         with Tee(sys.stderr, os.path.join(output, "summary.txt"), "w") as txtfile:
             tasks = OrderedDict()
-            units = {}
             editables = set()
             for file in files:
                 label = file[:-13]
@@ -367,6 +356,8 @@ if __name__ == "__main__":
                         if not results:
                             results = more_results
                         else:
+                            if more_results["units"] != results["units"]:
+                                raise ValueError("inconsistent units in results:\nexpected: %s\ngot: %s" % ( pformat(results["units"]), pformat(more_results["units"]) ))
                             if more_results["label"] != results["label"]:
                                 raise ValueError("inconsistent label in results:\nexpected: %s\ngot: %s" % ( results["label"], more_results["label"] ))
                             if more_results["x-axis"] != results["x-axis"]:
@@ -393,31 +384,30 @@ if __name__ == "__main__":
                                 .setdefault(record[results["x-axis"]], []).append(record["setup"][key])
                             sizes.add(record["size"])
                             takes.add(record["take"])
-                        if not units:
-                            units = record["units"]
-                        elif units != record["units"]:
-                            raise ValueError("inconsistent units in results:\nexpected: %s\ngot: %s" % ( pprint.pformat(units), pprint.pformat(record["units"]) ))
                     except Exception:
                         traceback.print_exc()
                         if "error" in record:
-                            pprint.pprint(dict(record))
+                            pprint(dict(record))
                     else:
                         if "edits" in record:
                             editables.add(record["module"])
                             try:
+                                edit_count = float(sum(record["edits"]["edit-count"]))
                                 for key in table.iterkeys():
                                     if key.startswith("max-"):
                                         table[key].setdefault("propagate", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record[results["x-axis"]], []).append(record["edits"][key])
+                                            .setdefault(record[results["x-axis"]], []).append(record["edits"][key][-1])
                                     else:
+                                        update = sum(record["edits"]["update"][key]) / edit_count
+                                        take = sum(record["edits"]["take"][key]) / edit_count
                                         table[key].setdefault("propagate", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record[results["x-axis"]], []).append(record["edits"]["update"][key] + record["edits"]["take"][key])
+                                            .setdefault(record[results["x-axis"]], []).append(update + take)
                                         table[key].setdefault("update", {}).setdefault(record["module"], {}) \
-                                            .setdefault(record[results["x-axis"]], []).append(record["edits"]["update"][key])
+                                            .setdefault(record[results["x-axis"]], []).append(update)
                             except Exception:
                                 traceback.print_exc()
                                 if "error" in record:
-                                    pprint.pprint(dict(record))
+                                    pprint(dict(record))
 
                 ymax = {}
                 for measurement, measurement_table in table.iteritems():
@@ -591,28 +581,31 @@ if __name__ == "__main__":
                         for baseline in args.baselines:
                             htmltable.th(baseline, colspan=2)
                         for editable in editables:
-                            htmltable.th(editable, colspan=2 * (len(args.baselines) + 1))
+                            htmltable.th(editable, colspan=2 * (len(args.baselines) + 2))
                     with htmltable.tr():
                         for _ in args.baselines:
                             htmltable.th("time", rowspan=2)
                             htmltable.th("max-heap", rowspan=2)
                         for _ in editables:
-                            htmltable.th("from-scratch", colspan=len(args.baselines) + 1)
-                            htmltable.th("incremental", colspan=len(args.baselines) + 1)
+                            htmltable.th("from-scratch", colspan=len(args.baselines) + 2)
+                            htmltable.th("incremental", colspan=len(args.baselines) + 2)
                     with htmltable.tr():
                         for _ in editables:
+                            htmltable.th("time")
                             htmltable.th("overhead", colspan=len(args.baselines))
                             htmltable.th("max-heap")
+                            htmltable.th("time")
                             htmltable.th("speed-up", colspan=len(args.baselines))
                             htmltable.th("max-heap")
                     with htmltable.tr():
                         for _ in args.baselines:
-                            htmltable.th(units["time"])
-                            htmltable.th(units["max-heap"])
+                            htmltable.th(results["units"]["time"])
+                            htmltable.th(results["units"]["max-heap"])
                         for _ in xrange(len(editables) * 2):
+                            htmltable.th(results["units"]["time"])
                             for baseline in args.baselines:
                                 htmltable.th(baseline)
-                            htmltable.th(units["max-heap"])
+                            htmltable.th(results["units"]["max-heap"])
                 engFormatter = EngFormatter(exp0=True)
                 with htmltable.tbody():
                     for label, task in tasks.iteritems():
@@ -641,11 +634,13 @@ if __name__ == "__main__":
                                 max_heap = table["max-heap"]["propagate"][editable].values()[-1]
                                 best["max-heap"] = min(max_heap, best.get("max-heap", max_heap))
                             for editable in editables:
+                                htmltable.td(engFormatter(table["time"]["from-scratch"][editable].values()[-1]))
                                 for baseline in args.baselines:
                                     overhead = performance[editable][baseline][0]
                                     htmltable.td(engFormatter(overhead))
                                 max_heap = table["max-heap"]["from-scratch"][editable].values()[-1]
                                 htmltable.td(engFormatter(max_heap))
+                                htmltable.td(engFormatter(table["time"]["propagate"][editable].values()[-1]))
                                 for baseline in args.baselines:
                                     speedup = performance[editable][baseline][1]
                                     htmltable.td(engFormatter(speedup), cls="" if speedup != best[baseline] else "highlight")
@@ -682,8 +677,8 @@ if __name__ == "__main__":
                                 ax = fig.add_subplot(1, 1, 1)
                                 ax.set_title(results["label"], fontsize=8)
                                 ax.set_xlabel(results["x-label"], fontsize=8)
-                                if units[measurement]:
-                                    ax.set_ylabel("%s (%s)" % ( measurement, units[measurement] ), fontsize=8)
+                                if results["units"][measurement]:
+                                    ax.set_ylabel("%s (%s)" % ( measurement, results["units"][measurement] ), fontsize=8)
                                 else:
                                     ax.set_ylabel("%s" % ( measurement, ), fontsize=8)
                                 for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
@@ -858,7 +853,7 @@ if __name__ == "__main__":
                                 ax = fig.add_subplot(1, 1, 1)
                                 ax.set_title("%s details; %s" % ( module, results["label"] ), fontsize=8)
                                 ax.set_xlabel(results["x-label"], fontsize=8)
-                                ax.set_ylabel("time (%s)" % ( units["time"], ), fontsize=8)
+                                ax.set_ylabel("time (%s)" % ( results["units"]["time"], ), fontsize=8)
                                 for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
                                     axis.set_major_formatter(EngFormatter())
                                     axis.set_ticks_position("none")

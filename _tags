@@ -1,1 +1,1 @@
-<**/*.cm*> or <**/*.top> or <**/*.mli> or <**/*.native>: package(unix)
+<**/*.cm*> or <**/*.top> or <**/*.mli> or <**/*.native> or <**/*.byte>: package(unix)
