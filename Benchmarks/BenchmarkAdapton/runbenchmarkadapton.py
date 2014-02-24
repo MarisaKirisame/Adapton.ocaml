@@ -270,8 +270,8 @@ if __name__ == "__main__":
                         x_axis = "size"
                         x_label = ""
                     with gzip.open(os.path.join(output, "%s-%04d.json.gz" % ( task, len(results) )), "w") as jsonfile:
-                        print>>jsonfile, "{\"label\":\"%s\",\"x-axis\":\"%s\",\"x-label\":\"%s\",\"data\":[%s]}" \
-                            % ( label, x_axis, x_label, ", ".join(results) )
+                        print>>jsonfile, "{\"units\":%s,\"label\":\"%s\",\"x-axis\":\"%s\",\"x-label\":\"%s\",\"data\":[%s]}" \
+                            % ( json.dumps(config["units"]), label, x_axis, x_label, ", ".join(results) )
 
     if not args.summaries:
         sys.exit()
@@ -342,7 +342,6 @@ if __name__ == "__main__":
 
         with Tee(sys.stderr, os.path.join(output, "summary.txt"), "w") as txtfile:
             tasks = OrderedDict()
-            units = {}
             editables = set()
             for file in files:
                 label = file[:-13]
@@ -357,6 +356,8 @@ if __name__ == "__main__":
                         if not results:
                             results = more_results
                         else:
+                            if more_results["units"] != results["units"]:
+                                raise ValueError("inconsistent units in results:\nexpected: %s\ngot: %s" % ( pformat(results["units"]), pformat(more_results["units"]) ))
                             if more_results["label"] != results["label"]:
                                 raise ValueError("inconsistent label in results:\nexpected: %s\ngot: %s" % ( results["label"], more_results["label"] ))
                             if more_results["x-axis"] != results["x-axis"]:
@@ -383,10 +384,6 @@ if __name__ == "__main__":
                                 .setdefault(record[results["x-axis"]], []).append(record["setup"][key])
                             sizes.add(record["size"])
                             takes.add(record["take"])
-                        if not units:
-                            units = record["units"]
-                        elif units != record["units"]:
-                            raise ValueError("inconsistent units in results:\nexpected: %s\ngot: %s" % ( pformat(units), pformat(record["units"]) ))
                     except Exception:
                         traceback.print_exc()
                         if "error" in record:
@@ -602,13 +599,13 @@ if __name__ == "__main__":
                             htmltable.th("max-heap")
                     with htmltable.tr():
                         for _ in args.baselines:
-                            htmltable.th(units["time"])
-                            htmltable.th(units["max-heap"])
+                            htmltable.th(results["units"]["time"])
+                            htmltable.th(results["units"]["max-heap"])
                         for _ in xrange(len(editables) * 2):
-                            htmltable.th(units["time"])
+                            htmltable.th(results["units"]["time"])
                             for baseline in args.baselines:
                                 htmltable.th(baseline)
-                            htmltable.th(units["max-heap"])
+                            htmltable.th(results["units"]["max-heap"])
                 engFormatter = EngFormatter(exp0=True)
                 with htmltable.tbody():
                     for label, task in tasks.iteritems():
@@ -680,8 +677,8 @@ if __name__ == "__main__":
                                 ax = fig.add_subplot(1, 1, 1)
                                 ax.set_title(results["label"], fontsize=8)
                                 ax.set_xlabel(results["x-label"], fontsize=8)
-                                if units[measurement]:
-                                    ax.set_ylabel("%s (%s)" % ( measurement, units[measurement] ), fontsize=8)
+                                if results["units"][measurement]:
+                                    ax.set_ylabel("%s (%s)" % ( measurement, results["units"][measurement] ), fontsize=8)
                                 else:
                                     ax.set_ylabel("%s" % ( measurement, ), fontsize=8)
                                 for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
@@ -856,7 +853,7 @@ if __name__ == "__main__":
                                 ax = fig.add_subplot(1, 1, 1)
                                 ax.set_title("%s details; %s" % ( module, results["label"] ), fontsize=8)
                                 ax.set_xlabel(results["x-label"], fontsize=8)
-                                ax.set_ylabel("time (%s)" % ( units["time"], ), fontsize=8)
+                                ax.set_ylabel("time (%s)" % ( results["units"]["time"], ), fontsize=8)
                                 for axis in ( ax.get_xaxis(), ax.get_yaxis() ):
                                     axis.set_major_formatter(EngFormatter())
                                     axis.set_ticks_position("none")
