@@ -557,7 +557,7 @@ if __name__ == "__main__":
                                     elif isinstance(cell, TCell):
                                         line.append("%*s" % ( sum(colw[col:col + cell.colspan]) + len(sep) * (cell.colspan - 1), formatter(cell.val, cell.cls) ))
                                         pos += cell.colspan
-                                lines.append(sep.join(line))
+                                lines.append(sep.join(line).rstrip())
                         return "\n".join(lines)
                     def __str__(self):
                         if self.cur is not None:
