@@ -75,7 +75,7 @@ let show_config () =
         Printf.fprintf ff "{\"name\":%S,\"take\":%S}"
             (fst task) (match snd task with `One _ -> "one" | `List _ -> "list" | `Flip _ -> "flip" | `ExpTree -> "exptree")
     in
-    Printf.printf "{\"modules\":[%a],\"tasks\":[%a],%s}\n%!"
+    Printf.printf "{\"modules\":[%a],\"tasks\":[%a],%s}%!"
         (list_printer (fun ff -> Printf.fprintf ff "%S")) (fst (List.split AdaptonZoo.All.a_list))
         (list_printer task_printer) tasks
         units;
@@ -146,7 +146,7 @@ let do_benchmark (module A : AdaptonUtil.Signatures.AType) ~make_input ~setup ~d
                     (print_stats_list "%d" (fun x -> (get x).dirty))
                     (print_stats_list "%d" (fun x -> (get x).clean))
             in
-            Printf.printf "{%t,\"setup\":{%a,%a},\"edits\":{\"update\":{%t},\"take\":{%t},\"edit-count\":[%t],\"max-heap\":[%t],\"max-stack\":[%t]}}\n%!"
+            Printf.printf "{%t,\"setup\":{%a,%a},\"edits\":{\"update\":{%t},\"take\":{%t},\"edit-count\":[%t],\"max-heap\":[%t],\"max-stack\":[%t]}}%!"
                 config stats setup_stats top_heap_stack setup_top_heap_stack
                 (print_stats_lists (fun ( u, _, _, _, _ ) -> u))
                 (print_stats_lists (fun ( _, t, _, _, _ ) -> t))
@@ -156,13 +156,13 @@ let do_benchmark (module A : AdaptonUtil.Signatures.AType) ~make_input ~setup ~d
             Printf.eprintf "%t ... done (%9.2fs) %9.3gs edit %9.3gs\n%!"
                 header (get_time () -. start_time) setup_stats.time !edit_time
         end else begin
-            Printf.printf "{%t,\"setup\":{%a,%a}}\n%!"
+            Printf.printf "{%t,\"setup\":{%a,%a}}%!"
                 config stats setup_stats top_heap_stack setup_top_heap_stack;
             Printf.eprintf "%t ... done (%9.2fs) %9.3gs\n%!" header (get_time () -. start_time) setup_stats.time
         end
     with e ->
         let err = Printexc.to_string e in
-        Printf.printf "{%t,\"error\":%S}\n%!" config err;
+        Printf.printf "{%t,\"error\":%S}%!" config err;
         Printf.eprintf "%s\n%!" err;
         Printf.eprintf "%t ... done (%9.2fs)\n%!" header (get_time () -. start_time)
 

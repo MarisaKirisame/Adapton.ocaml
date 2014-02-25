@@ -271,7 +271,7 @@ if __name__ == "__main__":
                         x_label = ""
                     with gzip.open(os.path.join(output, "%s-%04d.json.gz" % ( task, len(results) )), "w") as jsonfile:
                         print>>jsonfile, "{\"units\":%s,\"label\":\"%s\",\"x-axis\":\"%s\",\"x-label\":\"%s\",\"data\":[%s]}" \
-                            % ( json.dumps(config["units"]), label, x_axis, x_label, ", ".join(results) )
+                            % ( json.dumps(config["units"]), label, x_axis, x_label, ",".join(results) )
 
     if not args.summaries:
         sys.exit()
