@@ -1,0 +1,13 @@
+    Loading updown1 ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/switch/2013-07-10-22-34-45 non-monotonic-take-all/updown1-0004.json.gz ...  done
+    Loading updown2 ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/switch/2013-07-10-22-34-45 non-monotonic-take-all/updown2-0004.json.gz ...  done
+    Tabulating updown1 ...
+    Tabulating updown2 ...
+   task | input # | take # |         NonSAEager |          NonSALazy |                                                                                LazySABidi |                                                                          EagerSATotalOrder
+        |         |        |    time | max-heap |    time | max-heap |                                from-scratch |                                 incremental |                                from-scratch |                                  incremental
+        |         |        |         |          |         |          |    time |               overhead | max-heap |    time |               speed-up | max-heap |    time |               overhead | max-heap |    time |               speed-up |  max-heap
+        |         |        | seconds |    bytes | seconds |    bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |     bytes
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+updown1 |   40000 |      1 |  198e-3 |  15.2e+6 | 32.8e-3 |  8.63e+6 |  714e-3 |     3.6e+0 |   21.8e+0 |  73.4e+6 | 1.47e-3 |   135e+0 * | 22.4e+0 * | 121e+6 * | 14.1e+0 |    70.9e+0 |    429e+0 |   987e+6 | 13.3e+0 |    15e-3   | 2.47e-3   | 3.71e+9  
+updown2 |   40000 |      1 |  409e-3 |  19.3e+6 | 32.6e-3 |  8.63e+6 |  713e-3 |    1.74e+0 |   21.9e+0 |  73.4e+6 | 1.32e-3 |   309e+0 * | 24.7e+0 * | 119e+6 * | 29.8e+0 |    72.9e+0 |    915e+0 |  1.93e+9 | 7.62e-3 |  53.7e+0   | 4.28e+0   | 2.12e+9  

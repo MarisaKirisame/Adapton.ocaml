@@ -1,0 +1,143 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>summary</title>
+<style>figure.inline-figure { display: inline-block; margin: 0; }</style>
+<h1 id="table">Table</h1>
+<style>
+table, th, td { border: 1px solid black; border-collapse: collapse; font-size: smaller }
+td { text-align: right }
+td.highlight { background: silver }
+</style>
+<table>
+<thead>
+<tr>
+<th rowspan="4">task</th>
+<th rowspan="4">input #</th>
+<th rowspan="4">take #</th>
+<th colspan="2">NonSAEager</th>
+<th colspan="2">NonSALazy</th>
+<th colspan="8">LazySABidi</th>
+<th colspan="8">EagerSATotalOrder</th>
+</tr>
+<tr>
+<th rowspan="2">time</th>
+<th rowspan="2">max-heap</th>
+<th rowspan="2">time</th>
+<th rowspan="2">max-heap</th>
+<th colspan="4">from-scratch</th>
+<th colspan="4">incremental</th>
+<th colspan="4">from-scratch</th>
+<th colspan="4">incremental</th>
+</tr>
+<tr>
+<th>time</th>
+<th colspan="2">overhead</th>
+<th>max-heap</th>
+<th>time</th>
+<th colspan="2">speed-up</th>
+<th>max-heap</th>
+<th>time</th>
+<th colspan="2">overhead</th>
+<th>max-heap</th>
+<th>time</th>
+<th colspan="2">speed-up</th>
+<th>max-heap</th>
+</tr>
+<tr>
+<th>seconds</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>updown1</th>
+<td>40000</td>
+<td>1</td>
+<td>198e-3</td>
+<td>15.2e+6</td>
+<td>32.8e-3</td>
+<td>8.63e+6</td>
+<td>714e-3</td>
+<td>3.6e+0</td>
+<td>21.8e+0</td>
+<td>73.4e+6</td>
+<td>1.47e-3</td>
+<td class="highlight">135e+0</td>
+<td class="highlight">22.4e+0</td>
+<td class="highlight">121e+6</td>
+<td>14.1e+0</td>
+<td>70.9e+0</td>
+<td>429e+0</td>
+<td>987e+6</td>
+<td>13.3e+0</td>
+<td>15e-3</td>
+<td>2.47e-3</td>
+<td>3.71e+9</td>
+</tr>
+<tr>
+<th>updown2</th>
+<td>40000</td>
+<td>1</td>
+<td>409e-3</td>
+<td>19.3e+6</td>
+<td>32.6e-3</td>
+<td>8.63e+6</td>
+<td>713e-3</td>
+<td>1.74e+0</td>
+<td>21.9e+0</td>
+<td>73.4e+6</td>
+<td>1.32e-3</td>
+<td class="highlight">309e+0</td>
+<td class="highlight">24.7e+0</td>
+<td class="highlight">119e+6</td>
+<td>29.8e+0</td>
+<td>72.9e+0</td>
+<td>915e+0</td>
+<td>1.93e+9</td>
+<td>7.62e-3</td>
+<td>53.7e+0</td>
+<td>4.28e+0</td>
+<td>2.12e+9</td>
+</tr>
+</tbody>
+</table>
+<h1 id="summary">Summary</h1>
+<pre>
+    Loading updown1 ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/switch/2013-07-10-22-34-45 non-monotonic-take-all/updown1-0004.json.gz ...  done
+    Loading updown2 ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/switch/2013-07-10-22-34-45 non-monotonic-take-all/updown2-0004.json.gz ...  done
+    Tabulating updown1 ...
+    Tabulating updown2 ...
+   task | input # | take # |         NonSAEager |          NonSALazy |                                                                                LazySABidi |                                                                          EagerSATotalOrder
+        |         |        |    time | max-heap |    time | max-heap |                                from-scratch |                                 incremental |                                from-scratch |                                  incremental
+        |         |        |         |          |         |          |    time |               overhead | max-heap |    time |               speed-up | max-heap |    time |               overhead | max-heap |    time |               speed-up |  max-heap
+        |         |        | seconds |    bytes | seconds |    bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |     bytes
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+updown1 |   40000 |      1 |  198e-3 |  15.2e+6 | 32.8e-3 |  8.63e+6 |  714e-3 |     3.6e+0 |   21.8e+0 |  73.4e+6 | 1.47e-3 |   135e+0 * | 22.4e+0 * | 121e+6 * | 14.1e+0 |    70.9e+0 |    429e+0 |   987e+6 | 13.3e+0 |    15e-3   | 2.47e-3   | 3.71e+9  
+updown2 |   40000 |      1 |  409e-3 |  19.3e+6 | 32.6e-3 |  8.63e+6 |  713e-3 |    1.74e+0 |   21.9e+0 |  73.4e+6 | 1.32e-3 |   309e+0 * | 24.7e+0 * | 119e+6 * | 29.8e+0 |    72.9e+0 |    915e+0 |  1.93e+9 | 7.62e-3 |  53.7e+0   | 4.28e+0   | 2.12e+9  
+
+</pre>
+<style>div#header { position: fixed; top: 0; right: 0; padding: 0.5em; background: white }</style>
+<div id="header">
+<a href="#table">Table</a>
+<a href="#summary">Summary</a>
+</div>

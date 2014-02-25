@@ -1,0 +1,35 @@
+    Loading exptree ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/2013-07-10-20-38-47 monotonic monotonic-take-all/exptree-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/2013-07-10-21-16-53 monotonic monotonic-take-all/exptree-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/summary.old/exptree-0004.json.gz ...  not found
+    Loading filter ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/2013-07-10-20-38-47 monotonic monotonic-take-all/filter-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/2013-07-10-21-16-53 monotonic monotonic-take-all/filter-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/summary.old/filter-0004.json.gz ...  not found
+    Loading map ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/2013-07-10-20-38-47 monotonic monotonic-take-all/map-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/2013-07-10-21-16-53 monotonic monotonic-take-all/map-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/summary.old/map-0004.json.gz ...  not found
+    Loading tfold(min) ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/2013-07-10-20-38-47 monotonic monotonic-take-all/tfold(min)-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/2013-07-10-21-16-53 monotonic monotonic-take-all/tfold(min)-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/summary.old/tfold(min)-0004.json.gz ...  not found
+    Loading tfold(sum) ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/2013-07-10-20-38-47 monotonic monotonic-take-all/tfold(sum)-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/2013-07-10-21-16-53 monotonic monotonic-take-all/tfold(sum)-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/batch/summary.old/tfold(sum)-0004.json.gz ...  not found
+    Tabulating exptree ...
+    Tabulating filter ...
+    Tabulating map ...
+    Tabulating tfold(min) ...
+    Tabulating tfold(sum) ...
+      task | input # |  take # |         NonSAEager |          NonSALazy |                                                                                 LazySABidi |                                                                          EagerSATotalOrder
+           |         |         |    time | max-heap |    time | max-heap |                                from-scratch |                                  incremental |                                from-scratch |                                  incremental
+           |         |         |         |          |         |          |    time |               overhead | max-heap |    time |               speed-up |  max-heap |    time |               overhead | max-heap |    time |               speed-up |  max-heap
+           |         |         | seconds |    bytes | seconds |    bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |     bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |     bytes
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   exptree | 1000000 |       1 |  143e-3 |   153e+6 |  308e-3 |   152e+6 | 87.9e+0 |     613e+0 |    285e+0 |  1.78e+9 |  620e-6 |   231e+0   |  497e+0   | 1.78e+9   | 18.5e+0 |     129e+0 |   60.1e+0 |  1.48e+9 |  207e-6 |   694e+0 * | 1.49e+3 * | 1.48e+9 *
+    filter | 1000000 | 1000001 | 1.05e+0 |   155e+6 |  629e-3 |   157e+6 |   13e+0 |    12.4e+0 |   20.7e+0 |   913e+6 |  309e-3 |  3.39e+0   | 2.04e+0   | 1.58e+9   |   12e+0 |    11.5e+0 |   19.1e+0 |   773e+6 |  153e-3 |  6.84e+0 * | 4.11e+0 * | 1.41e+9 *
+       map | 1000000 | 1000001 | 1.79e+0 |   232e+6 |  1.2e+0 |   232e+6 | 12.9e+0 |    7.22e+0 |   10.8e+0 |   934e+6 |  542e-3 |  3.31e+0   | 2.21e+0   |  1.6e+9   | 13.2e+0 |    7.35e+0 |     11e+0 |   806e+6 |  360e-3 |  4.97e+0 * | 3.32e+0 * | 1.54e+9 *
+tfold(min) | 1000000 |       1 | 2.43e+0 |   240e+6 | 1.43e+0 |   179e+6 | 44.5e+0 |    18.3e+0 |   31.2e+0 |  1.61e+9 |  328e-6 |   7.4e+3 * | 4.35e+3 * | 1.61e+9   | 22.1e+0 |    9.08e+0 |   15.5e+0 |  1.41e+9 |  461e-6 |  5.26e+3   | 3.09e+3   | 1.44e+9 *
+tfold(sum) | 1000000 |       1 | 2.44e+0 |   255e+6 | 1.48e+0 |   180e+6 |   45e+0 |    18.4e+0 |   30.5e+0 |  1.63e+9 |  903e-6 |   2.7e+3   | 1.64e+3   | 1.63e+9   | 22.5e+0 |    9.22e+0 |   15.2e+0 |  1.44e+9 |  350e-6 |  6.97e+3 * | 4.22e+3 * | 1.44e+9 *

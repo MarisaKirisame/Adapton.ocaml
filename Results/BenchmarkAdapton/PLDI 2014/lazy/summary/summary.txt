@@ -1,0 +1,35 @@
+    Loading filter ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-19-44 monotonic monotonic-take-1/filter-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-22-44 monotonic monotonic-take-1/filter-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-08-46-01 monotonic monotonic-take-1/filter-0004.json.gz ...  not found
+    Loading map ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-19-44 monotonic monotonic-take-1/map-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-22-44 monotonic monotonic-take-1/map-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-08-46-01 monotonic monotonic-take-1/map-0004.json.gz ...  not found
+    Loading mergesort ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-19-44 monotonic monotonic-take-1/mergesort-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-22-44 monotonic monotonic-take-1/mergesort-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-08-46-01 monotonic monotonic-take-1/mergesort-0004.json.gz ...  done
+    Loading quicksort ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-19-44 monotonic monotonic-take-1/quicksort-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-22-44 monotonic monotonic-take-1/quicksort-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-08-46-01 monotonic monotonic-take-1/quicksort-0004.json.gz ...  not found
+    Loading sum ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-19-44 monotonic monotonic-take-1/sum-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-22-44 monotonic monotonic-take-1/sum-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-08-46-01 monotonic monotonic-take-1/sum-0004.json.gz ...  not found
+    Tabulating filter ...
+    Tabulating map ...
+    Tabulating mergesort ...
+    Tabulating quicksort ...
+    Tabulating sum ...
+     task | input # | take # |         NonSAEager |          NonSALazy |                                                                                 LazySABidi |                                                                          EagerSATotalOrder
+          |         |        |    time | max-heap |    time | max-heap |                                from-scratch |                                  incremental |                                from-scratch |                                  incremental
+          |         |        |         |          |         |          |    time |               overhead | max-heap |    time |               speed-up |  max-heap |    time |               overhead | max-heap |    time |               speed-up |  max-heap
+          |         |        | seconds |    bytes | seconds |    bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |     bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |     bytes
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   filter | 1000000 |      1 |  863e-3 |   132e+6 | 11.6e-6 |  96.7e+6 | 30.5e-6 |    35.4e-6 |   2.63e+0 |   264e+6 |  908e-9 |   951e+3 * | 12.8e+0 * |  264e+6 * | 11.1e+0 |    12.8e+0 |    953e+3 |   773e+6 |  5.2e-6 |   166e+3   | 2.24e+0   |  773e+6
+      map | 1000000 |      1 | 1.35e+0 |   184e+6 | 6.85e-6 |  96.7e+6 | 24.8e-6 |    18.4e-6 |   3.61e+0 |   264e+6 |  879e-9 |  1.54e+6 * |  7.8e+0 * |  264e+6 * | 11.5e+0 |    8.54e+0 |   1.68e+6 |   773e+6 | 4.49e-6 |   301e+3   | 1.53e+0   |  773e+6
+mergesort |  100000 |      1 | 1.04e+0 |  49.2e+6 |  346e-3 |  50.8e+6 | 5.93e+0 |    5.72e+0 |   17.2e+0 |   380e+6 | 1.03e-3 |  1.01e+3 * |  336e+0 * |  395e+6 * | 20.9e+0 |    20.1e+0 |   60.3e+0 |  1.39e+9 | 2.34e+0 |   443e-3   |  148e-3   |  4.9e+9
+quicksort |  100000 |      1 |  793e-3 |    35e+6 | 74.1e-3 |  18.6e+6 | 1.77e+0 |    2.23e+0 |   23.8e+0 |   161e+6 | 36.7e-6 |  21.6e+3 * | 2.02e+3 * |  162e+6 * | 42.3e+0 |    53.3e+0 |    570e+0 |  2.61e+9 | 3.24e-3 |   245e+0   | 22.9e+0   | 2.68e+9
+      sum | 1000000 |      1 | 2.48e+0 |   255e+6 | 1.49e+0 |   180e+6 |   45e+0 |    18.2e+0 |   30.3e+0 |  1.63e+9 |  890e-6 |  2.78e+3   | 1.67e+3   | 1.63e+9   | 22.7e+0 |    9.14e+0 |   15.2e+0 |  1.44e+9 |  283e-6 |  8.75e+3 * | 5.25e+3 * | 1.44e+9 *

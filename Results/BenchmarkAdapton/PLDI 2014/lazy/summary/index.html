@@ -1,0 +1,240 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>summary</title>
+<style>figure.inline-figure { display: inline-block; margin: 0; }</style>
+<h1 id="table">Table</h1>
+<style>
+table, th, td { border: 1px solid black; border-collapse: collapse; font-size: smaller }
+td { text-align: right }
+td.highlight { background: silver }
+</style>
+<table>
+<thead>
+<tr>
+<th rowspan="4">task</th>
+<th rowspan="4">input #</th>
+<th rowspan="4">take #</th>
+<th colspan="2">NonSAEager</th>
+<th colspan="2">NonSALazy</th>
+<th colspan="8">LazySABidi</th>
+<th colspan="8">EagerSATotalOrder</th>
+</tr>
+<tr>
+<th rowspan="2">time</th>
+<th rowspan="2">max-heap</th>
+<th rowspan="2">time</th>
+<th rowspan="2">max-heap</th>
+<th colspan="4">from-scratch</th>
+<th colspan="4">incremental</th>
+<th colspan="4">from-scratch</th>
+<th colspan="4">incremental</th>
+</tr>
+<tr>
+<th>time</th>
+<th colspan="2">overhead</th>
+<th>max-heap</th>
+<th>time</th>
+<th colspan="2">speed-up</th>
+<th>max-heap</th>
+<th>time</th>
+<th colspan="2">overhead</th>
+<th>max-heap</th>
+<th>time</th>
+<th colspan="2">speed-up</th>
+<th>max-heap</th>
+</tr>
+<tr>
+<th>seconds</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>filter</th>
+<td>1000000</td>
+<td>1</td>
+<td>863e-3</td>
+<td>132e+6</td>
+<td>11.6e-6</td>
+<td>96.7e+6</td>
+<td>30.5e-6</td>
+<td>35.4e-6</td>
+<td>2.63e+0</td>
+<td>264e+6</td>
+<td>908e-9</td>
+<td class="highlight">951e+3</td>
+<td class="highlight">12.8e+0</td>
+<td class="highlight">264e+6</td>
+<td>11.1e+0</td>
+<td>12.8e+0</td>
+<td>953e+3</td>
+<td>773e+6</td>
+<td>5.2e-6</td>
+<td>166e+3</td>
+<td>2.24e+0</td>
+<td>773e+6</td>
+</tr>
+<tr>
+<th>map</th>
+<td>1000000</td>
+<td>1</td>
+<td>1.35e+0</td>
+<td>184e+6</td>
+<td>6.85e-6</td>
+<td>96.7e+6</td>
+<td>24.8e-6</td>
+<td>18.4e-6</td>
+<td>3.61e+0</td>
+<td>264e+6</td>
+<td>879e-9</td>
+<td class="highlight">1.54e+6</td>
+<td class="highlight">7.8e+0</td>
+<td class="highlight">264e+6</td>
+<td>11.5e+0</td>
+<td>8.54e+0</td>
+<td>1.68e+6</td>
+<td>773e+6</td>
+<td>4.49e-6</td>
+<td>301e+3</td>
+<td>1.53e+0</td>
+<td>773e+6</td>
+</tr>
+<tr>
+<th>mergesort</th>
+<td>100000</td>
+<td>1</td>
+<td>1.04e+0</td>
+<td>49.2e+6</td>
+<td>346e-3</td>
+<td>50.8e+6</td>
+<td>5.93e+0</td>
+<td>5.72e+0</td>
+<td>17.2e+0</td>
+<td>380e+6</td>
+<td>1.03e-3</td>
+<td class="highlight">1.01e+3</td>
+<td class="highlight">336e+0</td>
+<td class="highlight">395e+6</td>
+<td>20.9e+0</td>
+<td>20.1e+0</td>
+<td>60.3e+0</td>
+<td>1.39e+9</td>
+<td>2.34e+0</td>
+<td>443e-3</td>
+<td>148e-3</td>
+<td>4.9e+9</td>
+</tr>
+<tr>
+<th>quicksort</th>
+<td>100000</td>
+<td>1</td>
+<td>793e-3</td>
+<td>35e+6</td>
+<td>74.1e-3</td>
+<td>18.6e+6</td>
+<td>1.77e+0</td>
+<td>2.23e+0</td>
+<td>23.8e+0</td>
+<td>161e+6</td>
+<td>36.7e-6</td>
+<td class="highlight">21.6e+3</td>
+<td class="highlight">2.02e+3</td>
+<td class="highlight">162e+6</td>
+<td>42.3e+0</td>
+<td>53.3e+0</td>
+<td>570e+0</td>
+<td>2.61e+9</td>
+<td>3.24e-3</td>
+<td>245e+0</td>
+<td>22.9e+0</td>
+<td>2.68e+9</td>
+</tr>
+<tr>
+<th>sum</th>
+<td>1000000</td>
+<td>1</td>
+<td>2.48e+0</td>
+<td>255e+6</td>
+<td>1.49e+0</td>
+<td>180e+6</td>
+<td>45e+0</td>
+<td>18.2e+0</td>
+<td>30.3e+0</td>
+<td>1.63e+9</td>
+<td>890e-6</td>
+<td>2.78e+3</td>
+<td>1.67e+3</td>
+<td>1.63e+9</td>
+<td>22.7e+0</td>
+<td>9.14e+0</td>
+<td>15.2e+0</td>
+<td>1.44e+9</td>
+<td>283e-6</td>
+<td class="highlight">8.75e+3</td>
+<td class="highlight">5.25e+3</td>
+<td class="highlight">1.44e+9</td>
+</tr>
+</tbody>
+</table>
+<h1 id="summary">Summary</h1>
+<pre>
+    Loading filter ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-19-44 monotonic monotonic-take-1/filter-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-22-44 monotonic monotonic-take-1/filter-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-08-46-01 monotonic monotonic-take-1/filter-0004.json.gz ...  not found
+    Loading map ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-19-44 monotonic monotonic-take-1/map-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-22-44 monotonic monotonic-take-1/map-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-08-46-01 monotonic monotonic-take-1/map-0004.json.gz ...  not found
+    Loading mergesort ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-19-44 monotonic monotonic-take-1/mergesort-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-22-44 monotonic monotonic-take-1/mergesort-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-08-46-01 monotonic monotonic-take-1/mergesort-0004.json.gz ...  done
+    Loading quicksort ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-19-44 monotonic monotonic-take-1/quicksort-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-22-44 monotonic monotonic-take-1/quicksort-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-08-46-01 monotonic monotonic-take-1/quicksort-0004.json.gz ...  not found
+    Loading sum ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-19-44 monotonic monotonic-take-1/sum-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-05-22-44 monotonic monotonic-take-1/sum-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/lazy/2013-07-10-08-46-01 monotonic monotonic-take-1/sum-0004.json.gz ...  not found
+    Tabulating filter ...
+    Tabulating map ...
+    Tabulating mergesort ...
+    Tabulating quicksort ...
+    Tabulating sum ...
+     task | input # | take # |         NonSAEager |          NonSALazy |                                                                                 LazySABidi |                                                                          EagerSATotalOrder
+          |         |        |    time | max-heap |    time | max-heap |                                from-scratch |                                  incremental |                                from-scratch |                                  incremental
+          |         |        |         |          |         |          |    time |               overhead | max-heap |    time |               speed-up |  max-heap |    time |               overhead | max-heap |    time |               speed-up |  max-heap
+          |         |        | seconds |    bytes | seconds |    bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |     bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |     bytes
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   filter | 1000000 |      1 |  863e-3 |   132e+6 | 11.6e-6 |  96.7e+6 | 30.5e-6 |    35.4e-6 |   2.63e+0 |   264e+6 |  908e-9 |   951e+3 * | 12.8e+0 * |  264e+6 * | 11.1e+0 |    12.8e+0 |    953e+3 |   773e+6 |  5.2e-6 |   166e+3   | 2.24e+0   |  773e+6
+      map | 1000000 |      1 | 1.35e+0 |   184e+6 | 6.85e-6 |  96.7e+6 | 24.8e-6 |    18.4e-6 |   3.61e+0 |   264e+6 |  879e-9 |  1.54e+6 * |  7.8e+0 * |  264e+6 * | 11.5e+0 |    8.54e+0 |   1.68e+6 |   773e+6 | 4.49e-6 |   301e+3   | 1.53e+0   |  773e+6
+mergesort |  100000 |      1 | 1.04e+0 |  49.2e+6 |  346e-3 |  50.8e+6 | 5.93e+0 |    5.72e+0 |   17.2e+0 |   380e+6 | 1.03e-3 |  1.01e+3 * |  336e+0 * |  395e+6 * | 20.9e+0 |    20.1e+0 |   60.3e+0 |  1.39e+9 | 2.34e+0 |   443e-3   |  148e-3   |  4.9e+9
+quicksort |  100000 |      1 |  793e-3 |    35e+6 | 74.1e-3 |  18.6e+6 | 1.77e+0 |    2.23e+0 |   23.8e+0 |   161e+6 | 36.7e-6 |  21.6e+3 * | 2.02e+3 * |  162e+6 * | 42.3e+0 |    53.3e+0 |    570e+0 |  2.61e+9 | 3.24e-3 |   245e+0   | 22.9e+0   | 2.68e+9
+      sum | 1000000 |      1 | 2.48e+0 |   255e+6 | 1.49e+0 |   180e+6 |   45e+0 |    18.2e+0 |   30.3e+0 |  1.63e+9 |  890e-6 |  2.78e+3   | 1.67e+3   | 1.63e+9   | 22.7e+0 |    9.14e+0 |   15.2e+0 |  1.44e+9 |  283e-6 |  8.75e+3 * | 5.25e+3 * | 1.44e+9 *
+
+</pre>
+<style>div#header { position: fixed; top: 0; right: 0; padding: 0.5em; background: white }</style>
+<div id="header">
+<a href="#table">Table</a>
+<a href="#summary">Summary</a>
+</div>

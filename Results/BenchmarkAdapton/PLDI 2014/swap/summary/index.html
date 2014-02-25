@@ -1,0 +1,245 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>summary</title>
+<style>figure.inline-figure { display: inline-block; margin: 0; }</style>
+<h1 id="table">Table</h1>
+<style>
+table, th, td { border: 1px solid black; border-collapse: collapse; font-size: smaller }
+td { text-align: right }
+td.highlight { background: silver }
+</style>
+<table>
+<thead>
+<tr>
+<th rowspan="4">task</th>
+<th rowspan="4">input #</th>
+<th rowspan="4">take #</th>
+<th colspan="2">NonSAEager</th>
+<th colspan="2">NonSALazy</th>
+<th colspan="8">LazySABidi</th>
+<th colspan="8">EagerSATotalOrder</th>
+</tr>
+<tr>
+<th rowspan="2">time</th>
+<th rowspan="2">max-heap</th>
+<th rowspan="2">time</th>
+<th rowspan="2">max-heap</th>
+<th colspan="4">from-scratch</th>
+<th colspan="4">incremental</th>
+<th colspan="4">from-scratch</th>
+<th colspan="4">incremental</th>
+</tr>
+<tr>
+<th>time</th>
+<th colspan="2">overhead</th>
+<th>max-heap</th>
+<th>time</th>
+<th colspan="2">speed-up</th>
+<th>max-heap</th>
+<th>time</th>
+<th colspan="2">overhead</th>
+<th>max-heap</th>
+<th>time</th>
+<th colspan="2">speed-up</th>
+<th>max-heap</th>
+</tr>
+<tr>
+<th>seconds</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+<th>seconds</th>
+<th>NonSAEager</th>
+<th>NonSALazy</th>
+<th>bytes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>exptree</th>
+<td>1000000</td>
+<td>1</td>
+<td>145e-3</td>
+<td>153e+6</td>
+<td>307e-3</td>
+<td>152e+6</td>
+<td>85.5e+0</td>
+<td>590e+0</td>
+<td>278e+0</td>
+<td>1.78e+9</td>
+<td>461e-6</td>
+<td class="highlight">315e+0</td>
+<td class="highlight">667e+0</td>
+<td class="highlight">1.78e+9</td>
+<td>18.6e+0</td>
+<td>128e+0</td>
+<td>60.6e+0</td>
+<td>1.48e+9</td>
+<td>30.3e-3</td>
+<td>4.78e+0</td>
+<td>10.1e+0</td>
+<td>1.81e+9</td>
+</tr>
+<tr>
+<th>filter</th>
+<td>1000000</td>
+<td>1000001</td>
+<td>868e-3</td>
+<td>155e+6</td>
+<td>502e-3</td>
+<td>157e+6</td>
+<td>10.4e+0</td>
+<td>12e+0</td>
+<td>20.7e+0</td>
+<td>913e+6</td>
+<td>253e-3</td>
+<td class="highlight">3.43e+0</td>
+<td class="highlight">1.99e+0</td>
+<td class="highlight">1.58e+9</td>
+<td>9.59e+0</td>
+<td>11e+0</td>
+<td>19.1e+0</td>
+<td>773e+6</td>
+<td>3.51e+0</td>
+<td>247e-3</td>
+<td>143e-3</td>
+<td>2.71e+9</td>
+</tr>
+<tr>
+<th>map</th>
+<td>1000000</td>
+<td>1000001</td>
+<td>1.42e+0</td>
+<td>232e+6</td>
+<td>894e-3</td>
+<td>232e+6</td>
+<td>9.43e+0</td>
+<td>6.63e+0</td>
+<td>10.5e+0</td>
+<td>934e+6</td>
+<td>379e-3</td>
+<td class="highlight">3.75e+0</td>
+<td class="highlight">2.36e+0</td>
+<td class="highlight">1.6e+9</td>
+<td>10.5e+0</td>
+<td>7.35e+0</td>
+<td>11.7e+0</td>
+<td>806e+6</td>
+<td>3.61e+0</td>
+<td>394e-3</td>
+<td>248e-3</td>
+<td>2.9e+9</td>
+</tr>
+<tr>
+<th>tfold(min)</th>
+<td>1000000</td>
+<td>1</td>
+<td>1.92e+0</td>
+<td>240e+6</td>
+<td>1.04e+0</td>
+<td>179e+6</td>
+<td>37.7e+0</td>
+<td>19.6e+0</td>
+<td>36.3e+0</td>
+<td>1.61e+9</td>
+<td>2.2e-3</td>
+<td class="highlight">872e+0</td>
+<td class="highlight">472e+0</td>
+<td class="highlight">1.62e+9</td>
+<td>18.2e+0</td>
+<td>9.49e+0</td>
+<td>17.5e+0</td>
+<td>1.42e+9</td>
+<td>8.48e+0</td>
+<td>226e-3</td>
+<td>123e-3</td>
+<td>6.07e+9</td>
+</tr>
+<tr>
+<th>tfold(sum)</th>
+<td>1000000</td>
+<td>1</td>
+<td>1.97e+0</td>
+<td>255e+6</td>
+<td>1.11e+0</td>
+<td>180e+6</td>
+<td>37.8e+0</td>
+<td>19.1e+0</td>
+<td>34e+0</td>
+<td>1.63e+9</td>
+<td>2.22e-3</td>
+<td class="highlight">888e+0</td>
+<td class="highlight">501e+0</td>
+<td class="highlight">1.64e+9</td>
+<td>18.9e+0</td>
+<td>9.6e+0</td>
+<td>17e+0</td>
+<td>1.44e+9</td>
+<td>8.68e+0</td>
+<td>228e-3</td>
+<td>128e-3</td>
+<td>6.09e+9</td>
+</tr>
+</tbody>
+</table>
+<h1 id="summary">Summary</h1>
+<pre>
+    Loading exptree ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-16-06-17 non-monotonic-take-all/exptree-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-17-36-43 non-monotonic-take-all/exptree-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-17-39-33 non-monotonic-take-all/exptree-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-11-02-49-30 non-monotonic-take-all/exptree-0004.json.gz ...  not found
+    Loading filter ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-16-06-17 non-monotonic-take-all/filter-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-17-36-43 non-monotonic-take-all/filter-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-17-39-33 non-monotonic-take-all/filter-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-11-02-49-30 non-monotonic-take-all/filter-0004.json.gz ...  not found
+    Loading map ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-16-06-17 non-monotonic-take-all/map-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-17-36-43 non-monotonic-take-all/map-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-17-39-33 non-monotonic-take-all/map-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-11-02-49-30 non-monotonic-take-all/map-0004.json.gz ...  not found
+    Loading tfold(min) ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-16-06-17 non-monotonic-take-all/tfold(min)-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-17-36-43 non-monotonic-take-all/tfold(min)-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-17-39-33 non-monotonic-take-all/tfold(min)-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-11-02-49-30 non-monotonic-take-all/tfold(min)-0004.json.gz ...  done
+    Loading tfold(sum) ...
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-16-06-17 non-monotonic-take-all/tfold(sum)-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-17-36-43 non-monotonic-take-all/tfold(sum)-0004.json.gz ...  not found
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-10-17-39-33 non-monotonic-take-all/tfold(sum)-0004.json.gz ...  done
+        Loading Results/BenchmarkAdapton/PLDI 2014/swap/2013-07-11-02-49-30 non-monotonic-take-all/tfold(sum)-0004.json.gz ...  not found
+    Tabulating exptree ...
+    Tabulating filter ...
+    Tabulating map ...
+    Tabulating tfold(min) ...
+    Tabulating tfold(sum) ...
+      task | input # |  take # |         NonSAEager |          NonSALazy |                                                                                 LazySABidi |                                                                          EagerSATotalOrder
+           |         |         |    time | max-heap |    time | max-heap |                                from-scratch |                                  incremental |                                from-scratch |                                  incremental
+           |         |         |         |          |         |          |    time |               overhead | max-heap |    time |               speed-up |  max-heap |    time |               overhead | max-heap |    time |               speed-up |  max-heap
+           |         |         | seconds |    bytes | seconds |    bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |     bytes | seconds | NonSAEager | NonSALazy |    bytes | seconds | NonSAEager | NonSALazy |     bytes
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+   exptree | 1000000 |       1 |  145e-3 |   153e+6 |  307e-3 |   152e+6 | 85.5e+0 |     590e+0 |    278e+0 |  1.78e+9 |  461e-6 |   315e+0 * |  667e+0 * | 1.78e+9 * | 18.6e+0 |     128e+0 |   60.6e+0 |  1.48e+9 | 30.3e-3 |  4.78e+0   | 10.1e+0   | 1.81e+9
+    filter | 1000000 | 1000001 |  868e-3 |   155e+6 |  502e-3 |   157e+6 | 10.4e+0 |      12e+0 |   20.7e+0 |   913e+6 |  253e-3 |  3.43e+0 * | 1.99e+0 * | 1.58e+9 * | 9.59e+0 |      11e+0 |   19.1e+0 |   773e+6 | 3.51e+0 |   247e-3   |  143e-3   | 2.71e+9
+       map | 1000000 | 1000001 | 1.42e+0 |   232e+6 |  894e-3 |   232e+6 | 9.43e+0 |    6.63e+0 |   10.5e+0 |   934e+6 |  379e-3 |  3.75e+0 * | 2.36e+0 * |  1.6e+9 * | 10.5e+0 |    7.35e+0 |   11.7e+0 |   806e+6 | 3.61e+0 |   394e-3   |  248e-3   |  2.9e+9
+tfold(min) | 1000000 |       1 | 1.92e+0 |   240e+6 | 1.04e+0 |   179e+6 | 37.7e+0 |    19.6e+0 |   36.3e+0 |  1.61e+9 |  2.2e-3 |   872e+0 * |  472e+0 * | 1.62e+9 * | 18.2e+0 |    9.49e+0 |   17.5e+0 |  1.42e+9 | 8.48e+0 |   226e-3   |  123e-3   | 6.07e+9
+tfold(sum) | 1000000 |       1 | 1.97e+0 |   255e+6 | 1.11e+0 |   180e+6 | 37.8e+0 |    19.1e+0 |     34e+0 |  1.63e+9 | 2.22e-3 |   888e+0 * |  501e+0 * | 1.64e+9 * | 18.9e+0 |     9.6e+0 |     17e+0 |  1.44e+9 | 8.68e+0 |   228e-3   |  128e-3   | 6.09e+9
+
+</pre>
+<style>div#header { position: fixed; top: 0; right: 0; padding: 0.5em; background: white }</style>
+<div id="header">
+<a href="#table">Table</a>
+<a href="#summary">Summary</a>
+</div>
