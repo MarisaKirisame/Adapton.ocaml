@@ -69,7 +69,7 @@ pldi2014-benchmarks-template :
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/lazy" -t quicksort $(INPUT_100k) $(TAKE_1) -M $(CPU_4) $(FLAGS)'
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/lazy" -t mergesort $(INPUT_100k) $(TAKE_1) -M $(CPU_2) $(FLAGS)'
 	-$(RESUMMARIZE) RESUMMARIZE_FLAGS='-I "$(OUTDIR)/lazy"/* -O "$(OUTDIR)/lazy/summary" $(SUMMARIES)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/batch" -t filter map $(INPUT_1M) $(INPUT_1M1) -M $(CPU_8) $(FLAGS)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/batch" -t filter map $(INPUT_1M) $(TAKE_1M1) -M $(CPU_8) $(FLAGS)'
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/batch" -t exptree "tfold(sum)" "tfold(min)" $(INPUT_1M) $(TAKE_1) -M $(CPU_8) $(FLAGS)'
 	-$(RESUMMARIZE) RESUMMARIZE_FLAGS='-I "$(OUTDIR)/batch"/* -O "$(OUTDIR)/batch/summary" $(SUMMARIES)'
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t filter map $(INPUT_1M) $(TAKE_1M1) $(CPU_4) $(FLAGS)'
