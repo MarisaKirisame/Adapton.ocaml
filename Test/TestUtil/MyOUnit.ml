@@ -53,10 +53,12 @@ let fork_test testfn = fun () ->
             | Failure s -> `Failure s
             | MyOUnitSkip s -> `Skip s
     in
-    match UnixPlus.fork_call helper with
+    try match UnixPlus.fork_call helper with
         | `None -> ()
         | `Failure s -> failwith s
         | `Skip s -> OUnit.skip_if true s
+    with UnixPlus.ForkCallException e ->
+        raise e
 
 
 (** Test wrapper that creates a temporary file and passes it to the test. The temporary file will be automatically
