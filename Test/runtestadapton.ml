@@ -9,6 +9,7 @@ end
 
 let _ =
     run_test_tt_main begin "TestAdapton" >::: [
+        TestAdaptonInternal.TestWeakSet.testsuite;
         TestAdapton.TestLazySparseArray.testsuite;
         TestAdapton.TestA.testsuite;
         TestAdapton.TestAArrayMappedTrie.testsuite;
