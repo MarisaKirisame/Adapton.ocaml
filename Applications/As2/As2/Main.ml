@@ -104,8 +104,8 @@ module Make (AA : AdaptonUtil.Signatures.AType) = struct
     let x, m = S.measure f
     in
     begin Printf.printf "time=%f, heap=%d, stack=%d, upd=%d, eval=%d, dirty=%d, clean=%d\n"
-        m.S.time' m.S.heap' m.S.stack'
-        m.S.update' m.S.evaluate' m.S.dirty' m.S.clean'
+        m.S.time m.S.heap m.S.stack
+        m.S.update m.S.evaluate m.S.dirty m.S.clean
       ;
       ( x , m )
     end
@@ -215,8 +215,8 @@ module Make (AA : AdaptonUtil.Signatures.AType) = struct
     output_string out (Printf.sprintf "%d, %d, %f, %d, %d, %d, %d, %d, %d\n"
                          sht_to_demand
                          num_changes
-                         m.S.time' m.S.heap' m.S.stack'
-                         m.S.update' m.S.evaluate' m.S.dirty' m.S.clean') ;
+                         m.S.time m.S.heap m.S.stack
+                         m.S.update m.S.evaluate m.S.dirty m.S.clean) ;
     flush out ;
     close_out out ;
     ()
