@@ -76,43 +76,40 @@ Quick-start
 
 5. Run Adapton SpreadSheet (AS2) application:
 
-   * To run the native binary for the application interactively:
+    * To run the native binary for the application interactively:
 
             % ./_product/runas2.native
 
-     The interactive command "help." (with terminating period) will
-     cause the system to display a summary of its other commands, and
-     its formula syntax.
+        The interactive command `help.` (with terminating period) will cause the system to display a summary of its
+        other commands, and its formula syntax.
 
-   * To see a summary of command-line options:
+    * To see a summary of command-line options:
 
             % ./_product/runas2.native --help
 
-   * The application offers different implementations of the Adapton
-     primitives for comparison purposes. The command line switch
-     --adapton-module controls which implementation is used:
+    * The application offers different implementations of the Adapton primitives for comparison purposes. The command
+      line switch --adapton-module controls which implementation is used:
 
             % ./_product/runas2.native --adapton-module <impl>
 
-     Where <impl> is one of:
-            * Adapton (this is the default)
-            * EagerTotalOrder
-            * EagerNonInc
-            * LazyNonInc
+        Where `<impl>` is one of:
 
-  * The following test script works for all versions, and can be
-    entered interactively:
+        * Adapton (this is the default)
+        * EagerTotalOrder
+        * EagerNonInc
+        * LazyNonInc
 
-        scrambled; goto 10!a1 ; print ; repeat 5 do scramble1 ; print done .
+    * The following test script works for all versions, and can be entered interactively:
 
-  * Alternatively, this script can be invoked at the command-line as follows:
+            scrambled; goto 10!a1 ; print ; repeat 5 do scramble1 ; print done .
 
-        % ./_product/runas2.native --num-changes 5 --stats-test 10
+    * Alternatively, this script can be invoked at the command-line as follows:
 
-    In this mode, the program prints statistics and appends this
-    information to the file as2-stats.out, then exits.  The numbers 5
-    and 10 control the number of changes and total number of sheets,
-    respectively.  Of course, they can be changed to other integers.
+            % ./_product/runas2.native --num-changes 5 --stats-test 10
+
+        In this mode, the program prints statistics and appends this information to the file as2-stats.out, then exits.
+        The numbers 5 and 10 control the number of changes and total number of sheets, respectively. Of course, they can
+        be changed to other integers.
 
 
 Requirements
