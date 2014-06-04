@@ -30,6 +30,16 @@ adaptime-test : check ounit//adaptimetest.native
 
 test : check ounit//runtestadapton.d.byte
 
+install : install-lib
+
+install-lib : lib META
+	umask 022 && $(OCAMLFIND) install Adapton META $(call products_for_mllib,Adapton)
+
+remove : remove-lib
+
+remove-lib :
+	$(OCAMLFIND) remove Adapton
+
 .PRECIOUS : $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py
 
 $(OCAMLBUILD_PRODUCTDIR)/runbenchmark%.py : runbenchmark%.py ocamlbuild//runbenchmark%.native

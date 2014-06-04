@@ -44,7 +44,31 @@ Quick-start
         # IntList.to_list zs;;
         - : IntList.data list = [11; 3; 4]
 
-4. Run Adapton.ocaml benchmarks:
+4. Install Adapton.ocaml and write an application (using ocamlbuild)
+
+        % make install
+        % mkdir /tmp/example
+        % cd /tmp/example
+        % cat > example.ml
+            module IntList = Adapton.AList.Make (AdaptonUtil.Types.Int)
+            let () =
+                let xs = IntList.of_list [1;2;3] in
+                let filter_gt_1 = IntList.memo_filter (fun x -> x > 1) in
+                let map_succ = IntList.memo_map (module IntList) succ in
+                let ys = filter_gt_1 xs in
+                let zs = map_succ ys in
+                List.iter (Printf.printf "%d ") (IntList.to_list zs);
+                print_newline ();
+                IntList.insert 0 10 xs;
+                List.iter (Printf.printf "%d ") (IntList.to_list zs);
+                print_newline ()
+            ^D
+        % ocamlbuild -pkg Adapton example.native
+        % ./example.native
+            3 4
+            11 3 4
+
+5. Run Adapton.ocaml benchmarks:
 
     * for systems with at least 8 cores and 16GB memory (runs up to 8 benchmarks in parallel; takes a good part of a
       day)
@@ -74,7 +98,7 @@ Quick-start
 
     Cells marked `*` show the highest speed-up over *NonInc or smallest memory usage.
 
-5. Run Adapton SpreadSheet (AS2) application:
+6. Run Adapton SpreadSheet (AS2) application:
 
     * To run the native binary for the application interactively:
 

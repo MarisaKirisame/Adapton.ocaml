@@ -37,6 +37,11 @@ define OCAMLBUILD.build
 	fi
 endef
 
+# helper to get .cmi files for an .mllib
+cmi_for_mllib = $(addsuffix .cmi,$(call read_file,$(1).mllib))
+
+# helper to get all product files for an .mllib
+products_for_mllib = $(addprefix $(OCAMLBUILD_PRODUCTDIR)/,$(sort $(addprefix $(1).,cmxa a cma cmi) $(call cmi_for_mllib,$(1))))
 
 # ocamlbuild: build and install into the appropriate directory
 .NOTPARALLEL : ocamlbuild//%
@@ -47,7 +52,7 @@ ocamlbuild//%.native : $(OCAMLBUILD_BUILDDIR)
 ocamlbuild//%.byte : $(OCAMLBUILD_BUILDDIR)
 	$(call OCAMLBUILD.build,$*.byte,$(OCAMLBUILD_PRODUCTDIR))
 
-ocamlbuild//%.cma ocamlbuild//%.cmi ocamlbuild//%.cmxa ocamlbuild//%.a : MORE_CMI = $(addsuffix .cmi,$(call read_file,$*.mllib))
+ocamlbuild//%.cma ocamlbuild//%.cmi ocamlbuild//%.cmxa ocamlbuild//%.a : MORE_CMI = $(call cmi_for_mllib,$*)
 
 ocamlbuild//%.cma ocamlbuild//%.cmi : $(OCAMLBUILD_BUILDDIR)
 	$(call OCAMLBUILD.build,$*.cma $*.cmi $(MORE_CMI),$(OCAMLBUILD_PRODUCTDIR))

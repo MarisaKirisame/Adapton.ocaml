@@ -1,0 +1,7 @@
+name = "Adapton.ocaml"
+version = "0.1.0"
+description = "incremental computation library"
+requires = "unix"
+
+archive(byte) = "Adapton.cma"
+archive(native) = "Adapton.cmxa"
