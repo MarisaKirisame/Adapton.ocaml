@@ -448,13 +448,13 @@ let listtasks (module A : AdaptonUtil.Signatures.AType) rng =
 let _ =
     Arg.parse (Arg.align [
         ( "-c", Arg.Unit show_config, " output available configuration" );
-        ( "-m", Arg.Symbol ( (fst (List.split AdaptonZoo.All.a_list)), (fun s -> opt_a := s) ), "list module" );
-        ( "-t", Arg.Symbol ( (fst (List.split tasks)), (fun s -> opt_task := s) ), "list task" );
+        ( "-m", Arg.Symbol ( (fst (List.split AdaptonZoo.All.a_list)), (fun s -> opt_a := s) ), " AdaptonZoo module" );
+        ( "-t", Arg.Symbol ( (fst (List.split tasks)), (fun s -> opt_task := s) ), " list task" );
         ( "-I", Arg.Set_int opt_input_size, "size input size" );
         ( "-R", Arg.Set_int opt_repeat_count, "count repeat count" );
         ( "-T", Arg.Set_int opt_take_count, "count take count" );
         ( "-E", Arg.Set_int opt_edit_count, "count edit count" );
-        ( "-M", Arg.Set opt_monotonic, "monotonic edits" );
+        ( "-M", Arg.Set opt_monotonic, " monotonic edits" );
         ( "-S", Arg.Set_int opt_random_seed, "seed random seed" );
     ]) (fun s -> raise (Arg.Bad ("extraneous argument " ^ s))) (Sys.argv.(0) ^ " [options]");
 
