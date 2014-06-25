@@ -72,12 +72,12 @@ pldi2014-benchmarks-template :
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/batch" -t filter map $(INPUT_1M) $(TAKE_1M1) -M $(CPU_8) $(FLAGS)'
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/batch" -t exptree "tfold(sum)" "tfold(min)" $(INPUT_1M) $(TAKE_1) -M $(CPU_8) $(FLAGS)'
 	-$(RESUMMARIZE) RESUMMARIZE_FLAGS='-I "$(OUTDIR)/batch"/* -O "$(OUTDIR)/batch/summary" $(SUMMARIES)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t filter map $(INPUT_1M) $(TAKE_1M1) $(CPU_4) $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t "tfold(sum)" "tfold(min)" $(INPUT_1M) $(TAKE_1) $(CPU_2) $(FLAGS)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t exptree $(INPUT_1M) $(TAKE_1) $(CPU_8) $(FLAGS)'
-	-$(RESUMMARIZE) RESUMMARIZE_FLAGS='-I "$(OUTDIR)/switch"/* -O "$(OUTDIR)/switch/summary" $(SUMMARIES)'
-	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/swap" -t updown1 updown2 $(INPUT_40k) $(TAKE_1) $(CPU_2) $(FLAGS)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/swap" -t filter map $(INPUT_1M) $(TAKE_1M1) $(CPU_4) $(FLAGS)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/swap" -t "tfold(sum)" "tfold(min)" $(INPUT_1M) $(TAKE_1) $(CPU_2) $(FLAGS)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/swap" -t exptree $(INPUT_1M) $(TAKE_1) $(CPU_8) $(FLAGS)'
 	-$(RESUMMARIZE) RESUMMARIZE_FLAGS='-I "$(OUTDIR)/swap"/* -O "$(OUTDIR)/swap/summary" $(SUMMARIES)'
+	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t updown1 updown2 $(INPUT_40k) $(TAKE_1) $(CPU_2) $(FLAGS)'
+	-$(RESUMMARIZE) RESUMMARIZE_FLAGS='-I "$(OUTDIR)/switch"/* -O "$(OUTDIR)/switch/summary" $(SUMMARIES)'
 
 pldi2014-trend-benchmarks-template :
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/trend" -t quicksort $(INPUT) $(TAKE) -M $(SEEDS) $(CPU) -m "Adapton" "EagerTotalOrder" "LazyNonInc" -b "EagerNonInc" -s plots'
