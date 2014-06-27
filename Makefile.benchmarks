@@ -79,6 +79,10 @@ pldi2014-benchmarks-template :
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/switch" -t updown1 updown2 $(INPUT_40k) $(TAKE_1) $(CPU_2) $(FLAGS)'
 	-$(RESUMMARIZE) RESUMMARIZE_FLAGS='-I "$(OUTDIR)/switch"/* -O "$(OUTDIR)/switch/summary" $(SUMMARIES)'
 
+pldi2014-trend-benchmarks-template : SEEDS = -S 1 2 3 4 5 6 7 8
+pldi2014-trend-benchmarks-template : SUMMARIES = -s table $(BASELINES)
+pldi2014-trend-benchmarks-template : BENCHMARK = $(MAKE) benchmark-adapton
+pldi2014-trend-benchmarks-template : RESUMMARIZE = $(MAKE) resummarize-benchmark-adapton
 pldi2014-trend-benchmarks-template :
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/trend" -t quicksort $(INPUT) $(TAKE) -M $(SEEDS) $(CPU) -m "Adapton" "EagerTotalOrder" "LazyNonInc" -b "EagerNonInc" -s plots'
 	-$(BENCHMARK) BENCHMARK_FLAGS='-O "$(OUTDIR)/trend" -t mergesort $(INPUT) $(TAKE) -M $(SEEDS) $(CPU) -m "Adapton" "LazyNonInc" -b "EagerNonInc" -s plots'
