@@ -61,11 +61,11 @@ let config ff =
     Printf.fprintf ff "\"module\":\"%s\",\"task\":\"%s\",\"size\":%d,\"repeat\":%d,\"take\":%d,\"edit\":%d,\"monotonic\":%b,\"seed\":%d"
         !opt_a !opt_task !opt_input_size !opt_repeat_count !opt_take_count !opt_edit_count !opt_monotonic !opt_random_seed
 let stats ff s =
-    Printf.fprintf ff "\"time\":%.17g,\"heap\":%d,\"stack\":%d,\"update\":%d,\"evaluate\":%d,\"dirty\":%d,\"clean\":%d"
-        s.time s.heap s.stack s.update s.evaluate s.dirty s.clean
+    Printf.fprintf ff "\"time\":%.17g,\"heap\":%d,\"stack\":%d,\"create\":%d,\"hit\":%d,\"miss\":%d,\"update\":%d,\"evaluate\":%d,\"dirty\":%d,\"clean\":%d"
+        s.time s.heap s.stack s.create s.hit s.miss s.update s.evaluate s.dirty s.clean
 let top_heap_stack ff ( heap, stack ) = Printf.fprintf ff "\"max-heap\":%d,\"max-stack\":%d" (word_bytes heap) (word_bytes stack)
 let units =
-    "\"units\":{\"time\":\"seconds\",\"heap\":\"bytes\",\"stack\":\"bytes\",\"update\":null,\"evaluate\":null,\"dirty\":null,\"clean\":null,\"max-heap\":\"bytes\",\"max-stack\":\"bytes\"}"
+    "\"units\":{\"time\":\"seconds\",\"heap\":\"bytes\",\"stack\":\"bytes\",\"create\":null,\"hit\":null,\"miss\":null,\"update\":null,\"evaluate\":null,\"dirty\":null,\"clean\":null,\"max-heap\":\"bytes\",\"max-stack\":\"bytes\"}"
 
 let show_config () =
     let list_printer printer ff list =
@@ -137,10 +137,13 @@ let do_benchmark (module A : AdaptonUtil.Signatures.AType) ~make_input ~setup ~d
                 end stats_array;
             in
             let print_stats_lists get ff =
-                Printf.fprintf ff "\"time\":[%t],\"heap\":[%t],\"stack\":[%t],\"update\":[%t],\"evaluate\":[%t],\"dirty\":[%t],\"clean\":[%t]"
+                Printf.fprintf ff "\"time\":[%t],\"heap\":[%t],\"stack\":[%t],\"create\":[%t],\"hit\":[%t],\"miss\":[%t],\"update\":[%t],\"evaluate\":[%t],\"dirty\":[%t],\"clean\":[%t]"
                     (print_stats_list "%.17g" (fun x -> (get x).time))
                     (print_stats_list "%d" (fun x -> (get x).heap))
                     (print_stats_list "%d" (fun x -> (get x).stack))
+                    (print_stats_list "%d" (fun x -> (get x).create))
+                    (print_stats_list "%d" (fun x -> (get x).hit))
+                    (print_stats_list "%d" (fun x -> (get x).miss))
                     (print_stats_list "%d" (fun x -> (get x).update))
                     (print_stats_list "%d" (fun x -> (get x).evaluate))
                     (print_stats_list "%d" (fun x -> (get x).dirty))

@@ -150,6 +150,7 @@ module Make (R : Hashtbl.SeededHashedType)
 
     (** Create an Adapton thunk from a constant value that does not depend on other Adapton thunks. *)
     let const x =
+        incr Statistics.Counts.create;
         let rec check : 'a . (bool -> 'a) -> 'a = fun k -> make_check m x k
         and m = { meta=make_meta (); thunk=Const ( x, { check } ) } in
         m
@@ -216,6 +217,7 @@ module Make (R : Hashtbl.SeededHashedType)
 
     (** Create an Adapton thunk from a function that may depend on other Adapton thunks. *)
     let thunk f =
+        incr Statistics.Counts.create;
         let rec evaluate () = make_evaluate m f ()
         and m = { meta=make_meta (); thunk=Thunk evaluate } in
         m
@@ -253,7 +255,14 @@ module Make (R : Hashtbl.SeededHashedType)
                     m.thunk <- MemoValue ( repair, value, receipt, dependencies, evaluate, unmemo );
                     ( value, receipt )
                 and m = { meta=make_meta (); thunk=MemoThunk ( evaluate, unmemo ) } in
-                snd (Memotable.merge memotable binding)
+                let _, m' = Memotable.merge memotable binding in
+                if m' == m then begin
+                    incr Statistics.Counts.create;
+                    incr Statistics.Counts.miss
+                end else begin
+                    incr Statistics.Counts.hit;
+                end;
+                m'
             in
             memo
     end)

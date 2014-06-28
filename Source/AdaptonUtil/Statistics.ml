@@ -1,6 +1,9 @@
 (** Adapton performance statistics and measurement function. *)
 
 module Counts = struct
+    let create = ref 0
+    let hit = ref 0
+    let miss = ref 0
     let update = ref 0
     let dirty = ref 0
     let clean = ref 0
@@ -33,6 +36,9 @@ type t = {
     time : float; (** Elapsed time in seconds. *)
     heap : int; (** Max heap delta in bytes. *)
     stack : int; (** Max stack delta in bytes. *)
+    create : int; (** Thunks created. *)
+    hit : int; (** Thunks memo-hit. *)
+    miss : int; (** Thunks memo-missed. *)
     update : int; (** Thunks updated. *)
     evaluate : int; (** Thunks re-evaluated. *)
     dirty : int; (** For {!Adapton}, dependencies to be checked; for {!EagerTotalOrder}, thunks scheduled for re-evaluation. *)
@@ -43,6 +49,9 @@ let add s s' = {
     time=s.time +. s'.time;
     heap=s.heap + s'.heap;
     stack=s.stack + s'.stack;
+    create=s.create + s'.create;
+    hit=s.hit + s'.hit;
+    miss=s.miss + s'.miss;
     update=s.update + s'.update;
     evaluate=s.evaluate + s'.evaluate;
     dirty=s.dirty + s'.dirty;
@@ -52,6 +61,9 @@ let add s s' = {
 let measure f =
     let heap' = ref 0 in
     let stack' = ref 0 in
+    let create = !Counts.create in
+    let hit = !Counts.hit in
+    let miss = !Counts.miss in
     let update = !Counts.update in
     let dirty = !Counts.dirty in
     let clean = !Counts.clean in
@@ -69,6 +81,9 @@ let measure f =
         time;
         heap=word_bytes (!heap' - heap);
         stack=word_bytes (!stack' - stack);
+        create=(!Counts.create - create);
+        hit=(!Counts.hit - hit);
+        miss=(!Counts.miss - miss);
         update=(!Counts.update - update);
         evaluate=(!Counts.evaluate - evaluate);
         dirty=(!Counts.dirty - dirty);

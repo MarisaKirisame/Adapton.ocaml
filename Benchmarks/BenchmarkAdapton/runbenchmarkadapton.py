@@ -374,7 +374,8 @@ if __name__ == "__main__":
                     else:
                         print>>txtfile, " done"
 
-                table = OrderedDict( ( key, {} ) for key in ( "time", "heap", "stack", "update", "evaluate", "clean", "dirty", "max-heap", "max-stack" ) )
+                table = OrderedDict( ( key, {} ) for key in
+                    ( "time", "heap", "stack", "create", "hit", "miss", "update", "evaluate", "clean", "dirty", "max-heap", "max-stack" ) )
                 sizes = set()
                 takes = set()
                 for record in results["data"]:

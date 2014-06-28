@@ -147,6 +147,7 @@ module Make (R : Hashtbl.SeededHashedType)
 
     (** Create an EagerTotalOrder thunk from a constant value. *)
     let const x =
+        incr Statistics.Counts.create;
         let m = {
             id=Types.Counter.next eager_id_counter;
             value=x;
@@ -193,6 +194,7 @@ module Make (R : Hashtbl.SeededHashedType)
 
     (** Create an EagerTotalOrder thunk from a function that may depend on other EagerTotalOrder thunks. *)
     let thunk f =
+        incr Statistics.Counts.create;
         let meta = {
             evaluate=nop;
             unmemo=nop;
@@ -248,12 +250,15 @@ module Make (R : Hashtbl.SeededHashedType)
                     | Some m when TotalOrder.is_valid m.meta.start_timestamp
                             && TotalOrder.compare m.meta.start_timestamp !eager_now > 0
                             && TotalOrder.compare m.meta.end_timestamp !eager_finger < 0 ->
+                        incr Statistics.Counts.hit;
                         TotalOrder.splice !eager_now m.meta.start_timestamp;
                         eager_now := m.meta.end_timestamp;
                         m
                     | _ ->
                         (* note that m.meta.unmemo indirectly holds a reference to binding (via unmemo's closure);
                             this prevents the GC from collecting binding from memotable until m itself is collected *)
+                        incr Statistics.Counts.create;
+                        incr Statistics.Counts.miss;
                         let m = thunk (fun () -> f memo x) in
                         m.meta.unmemo <- (fun () -> Memotable.remove memotable binding);
                         binding.Binding.value <- Some m;
