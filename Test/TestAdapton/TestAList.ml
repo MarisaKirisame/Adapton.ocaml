@@ -4,7 +4,7 @@ open Format
 let assert_int_equal = assert_equal ~printer:pp_print_int
 let assert_list_equal = assert_equal ~printer:(list_printer pp_print_int ",")
 
-let make_correctness_testsuite name (module L : AdaptonUtil.Signatures.AListType) =
+let make_correctness_testsuite (module L : AdaptonUtil.Signatures.AListType) =
     let module I = L.Make (AdaptonUtil.Types.Int) in
 
     let test_alist_op_with_test ?(count=25) ?incl op a_op ~test =
@@ -193,7 +193,7 @@ let make_correctness_testsuite name (module L : AdaptonUtil.Signatures.AListType
 
 let make_testsuite ( name, alist ) =
     name >::: [
-        make_correctness_testsuite name alist
+        make_correctness_testsuite alist
     ]
 
 
