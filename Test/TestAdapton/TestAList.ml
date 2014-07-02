@@ -7,18 +7,18 @@ let assert_list_equal = assert_equal ~printer:(list_printer pp_print_int ",")
 let make_correctness_testsuite (module L : AdaptonUtil.Signatures.AListType) =
     let module I = L.Make (AdaptonUtil.Types.Int) in
 
-    let test_alist_op_with_test ?(count=25) ?incl op a_op ~test =
+    let test_alist_op_with_test ?(count=40) ?incl op a_op ~test =
         Gc.compact (); (* try to make GC effects consistent across tests *)
-        QC.forall ~count ?incl (QC.pair (QC.list QC.int) (QC.list (QC.list (QC.triple QC.bool QC.int QC.int)))) begin fun ( xs, kss ) ->
+        QC.forall ~count ?incl (QC.triple (QC.list QC.int) QC.int (QC.list (QC.pair (QC.list (QC.triple QC.bool QC.int QC.int)) QC.int))) begin fun ( xs, o, kss ) ->
             let n = List.length xs in
             let ys = op xs in
 
             let xs' = I.of_list xs in
             let ys' = a_op xs' in
 
-            test ~msg:"initial" ys ys';
+            test ~msg:"initial" (abs o mod (n + 1) + 1) ys ys';
 
-            ignore begin List.fold_left begin fun ( xs, xs', n ) ks ->
+            ignore begin List.fold_left begin fun ( xs, xs', n ) ( ks, o ) ->
                 let xs, n' = List.fold_left begin fun ( xs, n ) ( i, k, x ) ->
                     if n = 0 then
                         ( [ x ], 1 )
@@ -63,13 +63,19 @@ let make_correctness_testsuite (module L : AdaptonUtil.Signatures.AListType) =
                     ( xs', ys' )
                 end in
 
-                test ~msg:"update" ys ys';
+                test ~msg:"update" (abs o mod (n + 1) + 1) ys ys';
                 ( xs, xs', n' )
             end ( xs, xs', n ) kss end
         end ()
     in
 
-    let test_alist_op = test_alist_op_with_test ~test:(fun ~msg expected actual -> assert_list_equal ~msg expected (I.to_list actual)) in
+    let test_alist_op = test_alist_op_with_test ~test:begin fun ~msg length expected actual ->
+        let rec take k xs acc = if k = 0 then List.rev acc else match xs with
+            |  x::xs -> take (pred k) xs (x::acc)
+            | [] -> List.rev acc
+        in
+        assert_list_equal ~msg (take length expected []) (I.take length actual)
+    end in
 
     "Correctness" >::: [
         "filter" >:: QC.forall QC.int begin fun p ->
@@ -93,22 +99,13 @@ let make_correctness_testsuite (module L : AdaptonUtil.Signatures.AListType) =
             let fn = (+) in
             let tfold_fn = I.memo_tfold fn in
             test_alist_op_with_test
-                ~test:(fun ~msg expected actual -> assert_int_equal ~msg expected (I.AData.force actual))
+                ~test:(fun ~msg _ expected actual -> assert_int_equal ~msg expected (I.AData.force actual))
                 (List.fold_left fn 0) (fun xs' -> tfold_fn (I.const (`Cons ( 0, xs' )))) (* prepend 0 to avoid empty lists *)
         end;
 
         "quicksort" >:: begin fun () ->
             let quicksort = I.memo_quicksort compare in
-            test_alist_op
-                ~incl:
-                    [ ( [ 8; 0; -7; 3; -2; 7; -1 ],
-                        [ [ ( true, -3, -4 ); ( false, -8, 6 ); ( true, 5, 8 ); ( true, 0, 6 ); ( true, -5, -2 ) ];
-                            [ ( false, -4, -9 ) ];
-                            [ ( false, -1, -7 ); ( false, -7, 5 ); ( true, -2, -3 ); ( true, -5, -6 ); ( false, -8, -7 ) ];
-                            [ ( false, -9, -2 ); ( true, -8, 6 ); ( true, -7, -4 ); ( false, -1, -6 ); ( true, -4, 0 ); ( true, 1, 6 ) ];
-                            [ ( true, -9, -5 ); ( true, 5, 5 ); ( false, 1, 1 ); ( true, 2, -9 ); ( false, 8, -8 ); ( false, 6, -4 ); ( false, 5, 6 ); ( true, -6, -6 ) ];
-                            [ ( false, -2, -3 ); ( true, 7, 4 ); ( false, -9, -5 ) ] ] ) ]
-                (List.sort compare) quicksort
+            test_alist_op (List.sort compare) quicksort
         end;
 
         "mergesort" >:: begin fun () ->
