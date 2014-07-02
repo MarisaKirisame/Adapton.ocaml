@@ -58,12 +58,12 @@ module Make (M : Signatures.AType)
             to_ids [] xs
 
         (** Create a regular list from the first [k] elements of an Adapton list. *)
-        let take xs k =
-            let rec take acc xs k = if k = 0 then List.rev acc else match force xs with
-                | `Cons ( x, xs ) -> take (x::acc) xs (pred k)
+        let take k xs =
+            let rec take k xs acc = if k = 0 then List.rev acc else match force xs with
+                | `Cons ( x, xs ) -> take (pred k) xs (x::acc)
                 | `Nil -> List.rev acc
             in
-            take [] xs k
+            take k xs []
 
         (** Return the head of an Adapton list. *)
         let hd xs = match force xs with

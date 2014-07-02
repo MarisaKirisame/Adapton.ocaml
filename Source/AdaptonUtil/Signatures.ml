@@ -64,7 +64,7 @@ module rec AListType : sig
         val force : t -> t'
         val to_list : t -> data list
         val to_ids : t -> int list
-        val take : t -> int -> data list
+        val take : int -> t -> data list
         val hd : t -> data
         val tl : t -> t
         val const : t' -> t
@@ -121,7 +121,7 @@ module type AListType = sig
     val force : 'a alist -> 'a alist'
     val to_list : 'a alist -> 'a list
     val to_ids : 'a alist -> int list
-    val take : 'a alist -> int -> 'a list
+    val take : int -> 'a alist -> 'a list
     val hd : 'a alist -> 'a
     val tl : 'a alist -> 'a alist
     module type BasicS = AListType.BasicS

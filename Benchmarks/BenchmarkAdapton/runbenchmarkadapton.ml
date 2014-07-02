@@ -353,7 +353,7 @@ let listtasks (module A : AdaptonUtil.Signatures.AType) rng =
         | `List task ->
             fun ( xs, _, _, b ) ->
                 let yss = Array.init !opt_repeat_count (fun _ -> task xs) in
-                (fun () -> Array.iter (fun ys -> ignore (AFloatList.take ys !opt_take_count)) yss)
+                (fun () -> Array.iter (fun ys -> ignore (AFloatList.take !opt_take_count ys)) yss)
         | `One task ->
             fun ( xs, _, _, b ) ->
                 let ys = Array.init !opt_repeat_count (fun _ -> task xs) in
@@ -361,7 +361,7 @@ let listtasks (module A : AdaptonUtil.Signatures.AType) rng =
         | `Flip task ->
             fun ( xs, _, _, b ) ->
                 let yss = Array.init !opt_repeat_count (fun _ -> task xs b) in
-                (fun () -> Array.iter (fun ys -> ignore (AFloatList.take ys !opt_take_count)) yss)
+                (fun () -> Array.iter (fun ys -> ignore (AFloatList.take !opt_take_count ys)) yss)
         | `ExpTree ->
             failwith "exptree"
     in
