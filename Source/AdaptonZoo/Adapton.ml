@@ -135,7 +135,7 @@ module Make (R : Hashtbl.SeededHashedType)
                         incr Statistics.Counts.dirty;
                         d.flag <- Dirty;
                         d.dependent.dependents::ds
-                    end else
+                    end else (* either Clean or Obsolete *)
                         ds
                 end d ds end
             | [] ->
@@ -197,8 +197,10 @@ module Make (R : Hashtbl.SeededHashedType)
                         if d.flag == Dirty then begin
                             d.flag <- Clean;
                             d.receipt.check (fun c -> if c then (incr Statistics.Counts.clean; repair ds) else k (evaluate ()))
-                        end else
+                        end else begin
+                            assert (d.flag == Clean);
                             repair ds
+                        end
                     | [] ->
                         k ( value, receipt )
                 in
