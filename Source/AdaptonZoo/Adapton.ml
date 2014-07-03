@@ -30,10 +30,14 @@ module T = struct
         and receipt = { check : 'a . (bool -> 'a) -> 'a }
         and 'a repair = { repair : 'b . ('a * receipt -> 'b) -> 'b }
         and dependency = { (* 3 words (meta shared with 'a thunk) *)
-            mutable dirty : bool;
+            mutable flag : flag;
             mutable receipt : receipt;
             dependent : meta;
         }
+        and flag =
+            | Clean
+            | Dirty
+            | Obsolete
         (**/**)
     end = TT
     (**/**) (* more auxiliary types *)
@@ -84,9 +88,9 @@ module T = struct
         (* add dependency to caller *)
         begin match !lazy_stack with
             | ( dependent, dependencies )::_ ->
-                let dependency = Dependents.merge m.meta.dependents { dirty=false; receipt; dependent } in
+                let dependency = Dependents.merge m.meta.dependents { flag=Clean; receipt; dependent } in
                 (* an existing dependency may be reused *)
-                dependency.dirty <- false;
+                dependency.flag <- Clean;
                 dependency.receipt <- receipt;
                 dependencies := dependency::!dependencies
             | _ ->
@@ -127,13 +131,12 @@ module Make (R : Hashtbl.SeededHashedType)
         let rec dirty = function
             | d::ds ->
                 dirty begin Dependents.fold begin fun d ds ->
-                    if d.dirty then
-                        ds
-                    else begin
+                    if d.flag == Clean then begin
                         incr Statistics.Counts.dirty;
-                        d.dirty <- true;
+                        d.flag <- Dirty;
                         d.dependent.dependents::ds
-                    end
+                    end else
+                        ds
                 end d ds end
             | [] ->
                 ()
@@ -167,8 +170,14 @@ module Make (R : Hashtbl.SeededHashedType)
 
     (**/**) (* helper function to evaluate a thunk *)
     let evaluate_actual m f =
-        (* add self to call stack and evaluate *)
+        (* remove existing dependencies, add self to call stack and evaluate *)
         incr Statistics.Counts.evaluate;
+        begin match m.thunk with
+            | MemoValue ( _, _, _, dependencies, _, _ ) | Value ( _, _, _, dependencies, _ ) ->
+                List.iter (fun d -> d.flag <- Obsolete) dependencies
+            | MemoThunk _ | Thunk _ | Const _ ->
+                ()
+        end;
         let dependencies = ref [] in
         lazy_stack := ( m.meta, dependencies )::!lazy_stack;
         let value = try
@@ -185,8 +194,8 @@ module Make (R : Hashtbl.SeededHashedType)
             | MemoValue ( _, value, receipt, dependencies, evaluate, _ ) | Value ( _, value, receipt, dependencies, evaluate ) ->
                 let rec repair = function
                     | d::ds ->
-                        if d.dirty then begin
-                            d.dirty <- false;
+                        if d.flag == Dirty then begin
+                            d.flag <- Clean;
                             d.receipt.check (fun c -> if c then (incr Statistics.Counts.clean; repair ds) else k (evaluate ()))
                         end else
                             repair ds
