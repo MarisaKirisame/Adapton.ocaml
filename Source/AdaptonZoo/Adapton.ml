@@ -135,7 +135,7 @@ module Make (R : Hashtbl.SeededHashedType)
                         incr Statistics.Counts.dirty;
                         d.flag <- Dirty;
                         d.dependent.dependents::ds
-                    end else (* either Clean or Obsolete *)
+                    end else (* either Dirty or Obsolete *)
                         ds
                 end d ds end
             | [] ->
