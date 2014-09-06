@@ -141,7 +141,7 @@ Requirements
 
 To compile Adapton.ocaml:
 
-* [OCaml](http://ocaml.org)
+* [OCaml](http://ocaml.org) (at least version 4.02)
 * [Findlib](http://projects.camlcity.org/projects/findlib.html)
 * [Menhir](http://cristal.inria.fr/~fpottier/menhir)
 

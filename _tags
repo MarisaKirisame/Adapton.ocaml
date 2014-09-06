@@ -1,2 +1,2 @@
-true: use_menhir, warn_error_A, debug
+true: use_menhir, warn_error_A, safe_string, debug
 <**/*.cm*> or <**/*.top> or <**/*.mli> or <**/*.native> or <**/*.byte>: package(unix)

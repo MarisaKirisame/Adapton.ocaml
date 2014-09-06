@@ -261,11 +261,7 @@ module QC = struct
         method print = Format.pp_print_char
     end
     let string = object
-        method generate rng size =
-            let n = Random.State.int rng size in
-            let s = String.create n in
-            for i = 0 to n - 1 do s.[i] <- char_of_int (Random.State.int rng 256) done;
-            s
+        method generate rng size = String.init (Random.State.int rng size) (fun _ -> char_of_int (Random.State.int rng 256))
         method print = Format.pp_print_string
     end
     let int = object
