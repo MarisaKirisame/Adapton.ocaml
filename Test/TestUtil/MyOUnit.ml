@@ -234,7 +234,7 @@ let option_printer printer ff = function
     | Some x -> Format.fprintf ff "Some (@[%a@]@,)" printer x
     | None -> Format.fprintf ff "None"
 
-let rec list_equal eq x y = match x, y with
+let rec list_equal eq xs ys = match xs, ys with
     | x::xs, y::ys when eq x y -> list_equal eq xs ys
     | [], [] -> true
     | _ -> false
