@@ -242,6 +242,11 @@ let rec list_equal eq xs ys = match xs, ys with
 let list_printer printer sep ff list =
     ignore (List.fold_left (fun b x -> Format.fprintf ff "%(%)@[%a@]" b printer x; sep) "" list)
 
+let array_equal eq xs ys =
+    let length = Array.length xs in
+    let rec array_equal k = k = length || eq xs.(k) ys.(k) && array_equal (k + 1) in
+    length = Array.length ys && array_equal 0
+
 let array_printer printer sep ff arr =
     ignore (Array.fold_left (fun b x -> Format.fprintf ff "%(%)@[%a@]" b printer x; sep) "" arr)
 
