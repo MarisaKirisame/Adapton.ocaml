@@ -2,5 +2,5 @@ AdaptonInternal/LazySparseArray
 AdaptonInternal/MemoN
 AdaptonInternal/PrioritySet
 AdaptonInternal/TotalOrder
-AdaptonInternal/WeakDyn
+AdaptonInternal/WeakBucket
 AdaptonInternal/WeakSet

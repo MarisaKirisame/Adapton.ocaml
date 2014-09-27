@@ -22,12 +22,12 @@ module T = struct
         meta : meta;
     }
     (**/**) (* auxiliary types *)
-    and meta = { (* 5 + 5 + 5 = 15 words (not including closures of evaluate and unmemo as well as WeakDyn.t) *)
+    and meta = { (* 5 + 5 + 5 = 15 words (not including closures of evaluate and unmemo as well as WeakBucket.t) *)
         mutable evaluate : unit -> unit;
         mutable unmemo : unit -> unit;
         mutable start_timestamp : TotalOrder.t; (* for const thunks, {start,end}_timestamp == TotalOrder.null and evaluate == nop *)
         mutable end_timestamp : TotalOrder.t; (* while evaluating non-const thunk, end_timestamp == TotalOrder.null *)
-        dependents : meta WeakDyn.t;
+        dependents : meta WeakBucket.t;
         (* dependents doesn't have to be a set since it is cleared and dependents are immediately re-evaluated and re-added if updated;
             also, start_timestamp invalidators should provide strong references to dependencies to prevent the GC from breaking the dependents graph *)
     }
@@ -68,12 +68,12 @@ module T = struct
     let dequeue () = PriorityQueue.pop eager_queue
 
     let enqueue_dependents dependents =
-        ignore begin WeakDyn.fold begin fun d () ->
+        ignore begin WeakBucket.fold begin fun d () ->
             if TotalOrder.is_valid d.start_timestamp then
                 if PriorityQueue.add eager_queue d then
                     incr Statistics.Counts.dirty
         end dependents () end;
-        WeakDyn.clear dependents
+        WeakBucket.clear dependents
     (**/**)
 
 
@@ -107,7 +107,7 @@ module T = struct
     let force m =
         (* add dependency to caller *)
         begin match !eager_stack with
-            | dependent::_ -> WeakDyn.add m.meta.dependents dependent
+            | dependent::_ -> WeakBucket.add m.meta.dependents dependent
             | [] -> ()
         end;
         m.value
@@ -138,7 +138,7 @@ module Make (R : Hashtbl.SeededHashedType)
         meta.unmemo <- nop;
         meta.evaluate <- nop;
         unqueue meta;
-        WeakDyn.clear meta.dependents
+        WeakBucket.clear meta.dependents
     let update m x = if not (R.equal m.value x) then begin
         m.value <- x;
         enqueue_dependents m.meta.dependents
@@ -156,7 +156,7 @@ module Make (R : Hashtbl.SeededHashedType)
                 unmemo=nop;
                 start_timestamp=TotalOrder.null;
                 end_timestamp=TotalOrder.null;
-                dependents=WeakDyn.create 0;
+                dependents=WeakBucket.create 0;
             };
         } in
         m
@@ -200,7 +200,7 @@ module Make (R : Hashtbl.SeededHashedType)
             unmemo=nop;
             start_timestamp=add_timestamp ();
             end_timestamp=TotalOrder.null;
-            dependents=WeakDyn.create 0;
+            dependents=WeakBucket.create 0;
         } in
         let m = { id=Types.Counter.next eager_id_counter; value=evaluate_meta meta f; meta } in
         meta.end_timestamp <- add_timestamp ();

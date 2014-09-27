@@ -1,4 +1,4 @@
-(** Dynamic weak array. *)
+(** Weak bucket (multiset), implemented as a self-compacting dynamic array. *)
 
 type 'a t = {
     mutable size : int;
