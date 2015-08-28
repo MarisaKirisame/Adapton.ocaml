@@ -1,4 +1,4 @@
-(** Lazy incremental computation based a demand-computation graph. *)
+(** Lazy incremental computation based on a demanded-computation graph. *)
 
 open AdaptonInternal
 open AdaptonUtil
@@ -22,7 +22,7 @@ module T = struct
         and 'a thunk' =
             | MemoValue of 'a repair * 'a * receipt * dependency list * 'a evaluate * unmemo (* 7 words *)
             | Value of 'a repair * 'a * receipt * dependency list * 'a evaluate (* 6 words *)
-            | MemoThunk of 'a evaluate * unmemo (* 3  words *)
+            | MemoThunk of 'a evaluate * unmemo (* 3 words *)
             | Thunk of 'a evaluate (* 2 words *)
             | Const of 'a * receipt (* 3 words *)
         and unmemo = unit -> unit
