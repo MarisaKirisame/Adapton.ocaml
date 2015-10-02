@@ -259,17 +259,71 @@ module Make (R : Hashtbl.SeededHashedType)
             let rec memo x =
                 (* note that m contains unmemo that indirectly holds a reference to binding (via unmemo's closure);
                     this prevents the GC from collecting binding from memotable until m itself is collected (or unmemo is removed from m) *)
+
+                (* note that dep holds a reference to the current list of dependencies of m, and m indirectly holds a
+                    reference to dep via a finalizer; this fixes a correctness issue involving the GC where the weak
+                    dependent references are collected before the memo cache entry is collected; e.g., consider the
+                    following dependency graph, where m is a memo thunk:
+
+                                    outer ==> x ==> m ==> y ==> input
+
+                    then, say that x is updated such that it memo-matches a different thunk:
+
+                                    outer ==> x ==> n
+                                                    m ==> y ==> input
+
+                    now, m is no longer referenced strongly from the outer layer, so the weak dependent references from
+                    input to y and y to m as well as m can be collected by the GC; the problem arises if the GC collects
+                    the weak dependent references first, e.g. the dependent reference from y to m:
+
+                                    outer ==> x ==> n
+                                                    m --> y ==> input
+
+                    next, before m is collected, x is updated such that it memo-matches m again:
+
+                                    outer ==> x ==> m --> y ==> input
+
+                    after this point, a key invariant is broken: the dependent graph no longer matches the dependency
+                    graph; in particular, if input is updated, i.e., dirtied, m would not be dirtied as it should:
+
+                                    outer ==> x ==> m --> y* ==> input*
+
+                    because outer, x and m are not dirtied, forcing outer will not cause any recomputation, leading to
+                    incorrect results; dep fixes this issue by adding a strong reference via the finalizer (which are
+                    GC roots) to the dependencies (and thus the weak dependent references):
+
+                                    outer ==> x ==> n
+                                                    m ==> y ==> input
+                          GC --> finalizer --> dep --/
+
+                    with this fix, only m can be collected (after running the finalizer), not the dependent references
+                    from input to y or y to m:
+
+                                    outer ==> x ==> n
+                                                      --> y ==> input
+
+                    then, if x is updated such that it would have memo-matched m, m won't be available, so a new m'
+                    will be created correctly with new dependent references:
+
+                                    outer ==> x ==> m' ==> y' ==> input
+                                                       --> y =//
+
+                    this fixes the "Correctness:memo cache" test *)
+
                 let rec binding = ( x, m )
+                and dep = ref [] (* 2 words *)
                 and unmemo () = Memotable.remove memotable binding
                 and evaluate () =
                     let repair, value, receipt, dependencies = evaluate_actual m (fun () -> f memo x) in
                     m.thunk <- MemoValue ( repair, value, receipt, dependencies, evaluate, unmemo );
+                    dep := dependencies;
                     ( value, receipt )
                 and m = { meta=make_meta (); thunk=MemoThunk ( evaluate, unmemo ) } in
                 let _, m' = Memotable.merge memotable binding in
                 if m' == m then begin
                     incr Statistics.Counts.create;
-                    incr Statistics.Counts.miss
+                    incr Statistics.Counts.miss;
+                    Gc.finalise (fun _ -> dep := []) m' (* 2 words (finalizer + closure) + 2 words for dep + 4 word in the finalizer table (1 word for the entry + 3 words for the data) = 8 words *)
                 end else begin
                     incr Statistics.Counts.hit;
                 end;
