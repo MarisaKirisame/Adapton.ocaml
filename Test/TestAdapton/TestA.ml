@@ -77,7 +77,45 @@ let make_correctness_testsuite (module L : AdaptonUtil.Signatures.AType) =
                     check "memo"
                 done
             end
-        end
+        end;
+
+        "memo cache gc" >:::
+            let test (type a) (module P : AdaptonUtil.Signatures.AType.S with type t = a) (memo_p : int -> a) =
+                let module W = Weak.Make (struct include P let hash = hash 0 end) in
+                let n = I.const 10 in
+                let w = W.create 0 in
+                ignore @@ I.force @@ I.thunk (fun () -> for k = 1 to (I.force n) do ignore @@ P.force (W.merge w (memo_p k)) done; 0);
+                assert_int_equal ~msg:"count before gc" (I.force n) (W.count w);
+                if L.is_incremental then (I.update_const n 0; L.refresh ());
+                Gc.full_major ();
+                assert_int_equal ~msg:"count after gc" 0 (W.count w)
+            in [
+                "lazy" >:: begin fun () ->
+                    let module P = L.Make (struct
+                        type t = [ `S of t L.thunk | `Z ]
+                        let hash seed = function
+                            | `S x -> L.hash seed x
+                            | `Z -> seed
+                        let equal x x' = x == x' || match x, x' with
+                            | `S x, `S x' -> L.equal x x'
+                            | _, _ -> false
+                    end) in
+                    test (module P) (P.memo (module AdaptonUtil.Types.Int) (fun memo_p n -> if n = 0 then `Z else `S (memo_p (n - 1))))
+                end;
+
+                "eager" >:: begin fun () ->
+                    let module P = L.Make (struct
+                        type t = [ `S of t | `Z ]
+                        let rec hash seed = function
+                            | `S x -> hash seed x
+                            | `Z -> seed
+                        let rec equal x x' = x == x' || match x, x' with
+                            | `S x, `S x' -> equal x x'
+                            | _, _ -> false
+                    end) in
+                    test (module P) (P.memo (module AdaptonUtil.Types.Int) (fun memo_p n -> if n = 0 then `Z else `S (L.force (memo_p (n - 1)))))
+                end
+            ]
     ]
 
 let make_testsuite ( name, atype ) =
