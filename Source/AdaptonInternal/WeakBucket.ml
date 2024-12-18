@@ -10,7 +10,7 @@ let create n = { size=0; array=Weak.create (max 1 n) }
 let clear xs =
     let threshold = Weak.length xs.array * 2 / 3 in
     if xs.size < threshold then
-        Obj.truncate (Obj.repr xs.array) (1 + threshold); (* from weak.ml *)
+        xs.array <- Weak.create (1 + threshold);
     xs.size <- 0
 
 let add xs x =

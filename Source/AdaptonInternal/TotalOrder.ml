@@ -116,8 +116,8 @@ end = struct
     (** Compare two total-order elements. *)
     let compare ts ts' =
         if ts == null || ts' == null then invalid_arg "TotalOrder.compare";
-        let p = Pervasives.compare (pos ts.parent.parent_label) (pos ts'.parent.parent_label) in
-        if p != 0 then p else Pervasives.compare (pos ts.label) (pos ts'.label)
+        let p = Stdlib.compare (pos ts.parent.parent_label) (pos ts'.parent.parent_label) in
+        if p != 0 then p else Stdlib.compare (pos ts.label) (pos ts'.label)
 
     (** Add a new total-order element after the given element. *)
     let add_next ts =
